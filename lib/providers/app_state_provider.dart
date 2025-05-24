@@ -202,7 +202,7 @@ class AppStateProvider extends ChangeNotifier {
       for (final product in productsToImport) {
         final existingIndex = _products.indexWhere(
                 (p) => p.name.toLowerCase() == product.name.toLowerCase() &&
-                       p.unit == product.unit
+                p.unit == product.unit
         );
 
         if (existingIndex != -1) {
@@ -306,27 +306,61 @@ class AppStateProvider extends ChangeNotifier {
     return _multiLevelQuotes.where((q) => q.customerId == customerId).toList();
   }
 
+  // Enhanced multi-level quote creation method
+  // Enhanced multi-level quote creation method
   Future<MultiLevelQuote> createMultiLevelQuoteFromScope(
-    String customerId,
-    RoofScopeData scopeData,
-    List<String> selectedLevels,
-  ) async {
+      String customerId,
+      RoofScopeData scopeData,
+      List<String> selectedLevels, {
+        double? manualTaxRate, // Allow manual override
+      }) async {
+    // Get tax rate - try location-based first, then manual, then default
+    double taxRate = 0.0;
+
+    if (manualTaxRate != null) {
+      taxRate = manualTaxRate;
+      print('Using manual tax rate: ${taxRate}%');
+    } else {
+      // TODO: Implement GPS-based tax rate lookup
+      // For now, we'll use a default and let user override in the UI
+      taxRate = 8.5; // Temporary default
+      print('Using default tax rate: ${taxRate}% (GPS lookup not implemented yet)');
+    }
+
     final quote = MultiLevelQuote(
       customerId: customerId,
       roofScopeDataId: scopeData.id,
-      taxRate: 0.0,
+      taxRate: taxRate,
     );
 
+    // 1. Get all level-defining products (primary products like different shingle types)
     final levelDefiningProducts = _products.where((p) =>
-      p.definesLevel &&
-      p.levelName != null &&
-      selectedLevels.contains(p.levelName!.toLowerCase())
+    p.definesLevel &&
+        p.levelName != null &&
+        selectedLevels.any((level) => level.toLowerCase() == p.levelName!.toLowerCase())
     ).toList();
 
-    for (final product in levelDefiningProducts) {
-      final levelId = product.levelName!.toLowerCase();
-      final levelName = product.levelName!;
-      final levelNumber = product.levelNumber ?? selectedLevels.indexOf(levelId) + 1;
+    print('Found ${levelDefiningProducts.length} level-defining products');
+
+    // 2. Get common supporting materials that apply to all levels
+    final supportingProducts = _products.where((p) =>
+    !p.definesLevel &&
+        !p.isUpgrade &&
+        !p.isAddon &&
+        p.isActive &&
+        ['underlayment', 'ice and water', 'ridge', 'valley', 'flashing'].contains(p.category.toLowerCase())
+    ).toList();
+
+    print('Found ${supportingProducts.length} supporting products');
+
+    // 3. Create each level
+    for (final levelProduct in levelDefiningProducts) {
+      final levelId = levelProduct.levelName!.toLowerCase();
+      final levelName = levelProduct.levelName!;
+      final levelNumber = levelProduct.levelNumber ??
+          (selectedLevels.indexOf(levelId) + 1);
+
+      print('Creating level: $levelName (ID: $levelId)');
 
       final level = quote.addLevel(
         levelId: levelId,
@@ -334,20 +368,115 @@ class AppStateProvider extends ChangeNotifier {
         levelNumber: levelNumber,
       );
 
+      // Add the primary level-defining product (e.g., specific shingle type)
       level.items.add(QuoteItem(
-        productId: product.id,
-        productName: product.name,
+        productId: levelProduct.id,
+        productName: levelProduct.name,
         quantity: scopeData.numberOfSquares,
-        unitPrice: product.getPriceForLevel(levelId),
-        unit: product.unit,
-        description: product.description,
+        unitPrice: levelProduct.getPriceForLevel(levelId),
+        unit: levelProduct.unit,
+        description: levelProduct.description,
       ));
+
+      // Add supporting materials with level-specific pricing
+      for (final supportingProduct in supportingProducts) {
+        double quantity = _calculateQuantityForProduct(supportingProduct, scopeData);
+        if (quantity > 0) {
+          level.items.add(QuoteItem(
+            productId: supportingProduct.id,
+            productName: supportingProduct.name,
+            quantity: quantity,
+            unitPrice: supportingProduct.getPriceForLevel(levelId),
+            unit: supportingProduct.unit,
+            description: supportingProduct.description,
+          ));
+          print('Added ${supportingProduct.name} to $levelName: $quantity ${supportingProduct.unit}');
+        }
+      }
+
+      // Add labor costs specific to this level
+      final laborProducts = _products.where((p) =>
+      p.category.toLowerCase() == 'labor' &&
+          !p.isAddon &&
+          !p.isUpgrade &&
+          p.isActive
+      ).toList();
+
+      for (final laborProduct in laborProducts) {
+        double quantity = _calculateLaborQuantity(laborProduct, scopeData);
+        if (quantity > 0) {
+          level.items.add(QuoteItem(
+            productId: laborProduct.id,
+            productName: laborProduct.name,
+            quantity: quantity,
+            unitPrice: laborProduct.getPriceForLevel(levelId),
+            unit: laborProduct.unit,
+            description: laborProduct.description,
+          ));
+          print('Added ${laborProduct.name} to $levelName: $quantity ${laborProduct.unit}');
+        }
+      }
     }
 
+    // 4. Add common items that apply to all levels (like permits, base fees)
+    final commonItems = _products.where((p) =>
+    p.isActive &&
+        (p.category.toLowerCase() == 'permit' ||
+            p.category.toLowerCase() == 'fee' ||
+            p.category.toLowerCase() == 'disposal')
+    ).toList();
+
+    for (final commonItem in commonItems) {
+      quote.addCommonItem(QuoteItem(
+        productId: commonItem.id,
+        productName: commonItem.name,
+        quantity: 1.0, // Usually permits/fees are per-job
+        unitPrice: commonItem.unitPrice,
+        unit: commonItem.unit,
+        description: commonItem.description,
+      ));
+      print('Added common item: ${commonItem.name}');
+    }
+
+    // 5. Calculate all totals
     quote.calculateTotals();
 
     await addMultiLevelQuote(quote);
     return quote;
+  }
+
+  // Method to get tax rate based on location (GPS coordinates)
+  Future<double> getTaxRateByLocation(double latitude, double longitude) async {
+    try {
+      // TODO: Implement GPS-based tax rate lookup
+      // This would call a tax rate API service based on coordinates
+      // For now, return a default rate
+
+      // Example implementation structure:
+      // 1. Use coordinates to determine county/city
+      // 2. Look up tax rate from database or API
+      // 3. Return the rate
+
+      print('GPS tax rate lookup not implemented yet for lat: $latitude, lng: $longitude');
+      return 8.5; // Temporary default
+    } catch (e) {
+      print('Error getting tax rate by location: $e');
+      return 8.5; // Fallback default
+    }
+  }
+
+  // Method to get tax rate based on customer address
+  Future<double> getTaxRateByAddress(String address) async {
+    try {
+      // TODO: Implement address-based tax rate lookup
+      // This would geocode the address first, then get tax rate
+
+      print('Address-based tax rate lookup not implemented yet for: $address');
+      return 8.5; // Temporary default
+    } catch (e) {
+      print('Error getting tax rate by address: $e');
+      return 8.5; // Fallback default
+    }
   }
 
   Future<String> generateMultiLevelPdfQuote(MultiLevelQuote quote, Customer customer) async {
@@ -432,26 +561,26 @@ class AppStateProvider extends ChangeNotifier {
     final mlqRevenue = _multiLevelQuotes
         .where((q) => q.status == 'accepted')
         .fold(0.0, (sum, quote) {
-          final levelIds = quote.levels.keys.toList();
-          if (levelIds.isEmpty) return sum;
+      final levelIds = quote.levels.keys.toList();
+      if (levelIds.isEmpty) return sum;
 
-          levelIds.sort((a, b) =>
-            (quote.levels[b]?.levelNumber ?? 0) -
-            (quote.levels[a]?.levelNumber ?? 0)
-          );
+      levelIds.sort((a, b) =>
+      (quote.levels[b]?.levelNumber ?? 0) -
+          (quote.levels[a]?.levelNumber ?? 0)
+      );
 
-          return sum + quote.getLevelTotal(levelIds.first);
-        });
+      return sum + quote.getLevelTotal(levelIds.first);
+    });
 
     final totalQuotes = _quotes.length + _multiLevelQuotes.length;
     final pendingQuotes = _quotes.where((q) => q.status == 'sent').length +
-                         _multiLevelQuotes.where((q) => q.status == 'sent').length;
+        _multiLevelQuotes.where((q) => q.status == 'sent').length;
     final draftQuotes = _quotes.where((q) => q.status == 'draft').length +
-                       _multiLevelQuotes.where((q) => q.status == 'draft').length;
+        _multiLevelQuotes.where((q) => q.status == 'draft').length;
     final acceptedQuotes = _quotes.where((q) => q.status == 'accepted').length +
-                          _multiLevelQuotes.where((q) => q.status == 'accepted').length;
+        _multiLevelQuotes.where((q) => q.status == 'accepted').length;
     final declinedQuotes = _quotes.where((q) => q.status == 'declined').length +
-                          _multiLevelQuotes.where((q) => q.status == 'declined').length;
+        _multiLevelQuotes.where((q) => q.status == 'declined').length;
 
     return {
       'totalCustomers': _customers.length,
@@ -465,5 +594,50 @@ class AppStateProvider extends ChangeNotifier {
       'activeQuotes': totalQuotes - declinedQuotes,
     };
   }
-}
 
+  // Helper method to calculate quantity needed for different product types
+  double _calculateQuantityForProduct(Product product, RoofScopeData scopeData) {
+    switch (product.category.toLowerCase()) {
+      case 'underlayment':
+      case 'sheathing':
+        return scopeData.numberOfSquares; // Same as roof area in squares
+
+      case 'ridge':
+      case 'ridge cap':
+        return scopeData.ridgeLength;
+
+      case 'valley':
+        return scopeData.valleyLength;
+
+      case 'flashing':
+        return scopeData.flashingLength;
+
+      case 'gutters':
+        return scopeData.gutterLength;
+
+      case 'ice and water':
+      // Typically 2 courses around perimeter, convert to squares
+        return (scopeData.perimeterLength * 2) / 100;
+
+      default:
+        return 0.0; // Unknown category, skip
+    }
+  }
+
+  // Helper method to calculate labor quantities
+  double _calculateLaborQuantity(Product laborProduct, RoofScopeData scopeData) {
+    final productName = laborProduct.name.toLowerCase();
+
+    if (productName.contains('install') || productName.contains('labor')) {
+      if (productName.contains('shingle') || productName.contains('roof')) {
+        return scopeData.numberOfSquares;
+      } else if (productName.contains('gutter')) {
+        return scopeData.gutterLength;
+      } else if (productName.contains('flashing')) {
+        return scopeData.flashingLength;
+      }
+    }
+
+    return scopeData.numberOfSquares; // Default to roof area
+  }
+}
