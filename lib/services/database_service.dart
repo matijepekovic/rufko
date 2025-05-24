@@ -4,6 +4,8 @@ import '../models/product.dart';
 import '../models/quote.dart';
 import '../models/roof_scope_data.dart';
 import '../models/project_media.dart';
+import '../models/app_settings.dart';
+import '../models/multi_level_quote.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -17,6 +19,8 @@ class DatabaseService {
   late Box<Quote> _quoteBox;
   late Box<RoofScopeData> _roofScopeBox;
   late Box<ProjectMedia> _mediaBox;
+  late Box<AppSettings> _settingsBox;
+  late Box<MultiLevelQuote> _multiLevelQuoteBox;
 
   bool _isInitialized = false;
 
@@ -31,6 +35,8 @@ class DatabaseService {
       _quoteBox = await Hive.openBox<Quote>('quotes');
       _roofScopeBox = await Hive.openBox<RoofScopeData>('roofscope_data');
       _mediaBox = await Hive.openBox<ProjectMedia>('project_media');
+      _settingsBox = await Hive.openBox<AppSettings>('app_settings');
+      _multiLevelQuoteBox = await Hive.openBox<MultiLevelQuote>('multi_level_quotes');
 
       _isInitialized = true;
       print('Database initialized successfully');
@@ -201,6 +207,40 @@ class DatabaseService {
     await _mediaBox.delete(id);
   }
 
+  // AppSettings operations
+  Future<AppSettings?> getAppSettings() async {
+    _ensureInitialized();
+    if (_settingsBox.isEmpty) return null;
+    return _settingsBox.values.first;
+  }
+
+  Future<void> saveAppSettings(AppSettings settings) async {
+    _ensureInitialized();
+    await _settingsBox.clear(); // Only keep one settings object
+    await _settingsBox.put(settings.id, settings);
+  }
+
+  // Multi-Level Quote operations
+  Future<void> saveMultiLevelQuote(MultiLevelQuote quote) async {
+    _ensureInitialized();
+    await _multiLevelQuoteBox.put(quote.id, quote);
+  }
+
+  Future<MultiLevelQuote?> getMultiLevelQuote(String id) async {
+    _ensureInitialized();
+    return _multiLevelQuoteBox.get(id);
+  }
+
+  Future<List<MultiLevelQuote>> getAllMultiLevelQuotes() async {
+    _ensureInitialized();
+    return _multiLevelQuoteBox.values.toList();
+  }
+
+  Future<void> deleteMultiLevelQuote(String id) async {
+    _ensureInitialized();
+    await _multiLevelQuoteBox.delete(id);
+  }
+
   // Statistics and analytics
   Future<Map<String, dynamic>> getDashboardStats() async {
     _ensureInitialized();
@@ -267,6 +307,7 @@ class DatabaseService {
       'quotes': (await getAllQuotes()).map((q) => q.toMap()).toList(),
       'roofScopeData': (await getAllRoofScopeData()).map((r) => r.toMap()).toList(),
       'projectMedia': (await getAllProjectMedia()).map((m) => m.toMap()).toList(),
+      'multiLevelQuotes': (await getAllMultiLevelQuotes()).map((q) => q.toMap()).toList(),
       'exportDate': DateTime.now().toIso8601String(),
     };
   }
@@ -281,6 +322,7 @@ class DatabaseService {
       await _quoteBox.clear();
       await _roofScopeBox.clear();
       await _mediaBox.clear();
+      await _multiLevelQuoteBox.clear();
 
       // Import customers
       if (data['customers'] != null) {
@@ -322,6 +364,14 @@ class DatabaseService {
         }
       }
 
+      // Import multi-level quotes
+      if (data['multiLevelQuotes'] != null) {
+        for (final quoteData in data['multiLevelQuotes']) {
+          final quote = MultiLevelQuote.fromMap(quoteData);
+          await saveMultiLevelQuote(quote);
+        }
+      }
+
       print('Data import completed successfully');
     } catch (e) {
       print('Error importing data: $e');
@@ -338,7 +388,10 @@ class DatabaseService {
     await _quoteBox.close();
     await _roofScopeBox.close();
     await _mediaBox.close();
+    await _settingsBox.close();
+    await _multiLevelQuoteBox.close();
 
     _isInitialized = false;
   }
 }
+

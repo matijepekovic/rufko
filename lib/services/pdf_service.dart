@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../models/customer.dart';
 import '../models/quote.dart';
 import '../models/roof_scope_data.dart';
+import '../models/multi_level_quote.dart';
 
 class PdfService {
   final DateFormat _dateFormat = DateFormat('MM/dd/yyyy');
@@ -54,6 +55,60 @@ class PdfService {
       return file.path;
     } catch (e) {
       print('Error generating PDF quote: $e');
+      rethrow;
+    }
+  }
+
+  // Generate PDF for multi-level quote
+  Future<String> generateMultiLevelQuotePdf(MultiLevelQuote quote, Customer customer) async {
+    try {
+      final pdf = pw.Document();
+
+      // Sort levels by number
+      final sortedLevels = quote.levels.values.toList()
+        ..sort((a, b) => a.levelNumber.compareTo(b.levelNumber));
+
+      // Add pages to PDF
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.all(32),
+          build: (pw.Context context) {
+            return [
+              _buildHeader(),
+              pw.SizedBox(height: 20),
+              _buildCustomerInfo(customer),
+              pw.SizedBox(height: 20),
+              _buildMultiLevelQuoteInfo(quote),
+              pw.SizedBox(height: 20),
+              _buildMultiLevelComparison(quote, sortedLevels),
+              if (quote.commonItems.isNotEmpty) ...[
+                pw.SizedBox(height: 20),
+                _buildCommonItemsTable(quote),
+              ],
+              if (quote.addons.isNotEmpty) ...[
+                pw.SizedBox(height: 20),
+                _buildAddonsTable(quote),
+              ],
+              pw.SizedBox(height: 30),
+              _buildTermsAndConditions(),
+              pw.Spacer(),
+              _buildFooter(),
+            ];
+          },
+        ),
+      );
+
+      // Save PDF file
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = 'multi_level_quote_${quote.quoteNumber}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final file = File('${directory.path}/$fileName');
+
+      await file.writeAsBytes(await pdf.save());
+
+      return file.path;
+    } catch (e) {
+      print('Error generating multi-level quote PDF: $e');
       rethrow;
     }
   }
@@ -155,6 +210,345 @@ class PdfService {
             pw.SizedBox(height: 4),
             pw.Text('Valid Until: ${_dateFormat.format(quote.validUntil)}',
                 style: const pw.TextStyle(fontSize: 12)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Build multi-level quote info section
+  pw.Widget _buildMultiLevelQuoteInfo(MultiLevelQuote quote) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        color: PdfColors.grey100,
+        borderRadius: pw.BorderRadius.circular(5),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'Quote Information',
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 10),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('Quote #: ${quote.quoteNumber}'),
+                  pw.Text('Date: ${_dateFormat.format(quote.createdAt)}'),
+                  pw.Text('Valid Until: ${_dateFormat.format(quote.validUntil)}'),
+                ],
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 15, vertical: 7),
+                decoration: pw.BoxDecoration(
+                  color: _getStatusColor(quote.status),
+                  borderRadius: pw.BorderRadius.circular(10),
+                ),
+                child: pw.Text(
+                  quote.status.toUpperCase(),
+                  style: pw.TextStyle(
+                    color: PdfColors.white,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build multi-level comparison table
+  pw.Widget _buildMultiLevelComparison(MultiLevelQuote quote, List<LevelQuote> levels) {
+    if (levels.isEmpty) {
+      return pw.Container();
+    }
+
+    // Collect all unique product IDs across all levels
+    final allProducts = <String, Map<String, QuoteItem>>{};
+    for (final level in levels) {
+      for (final item in level.items) {
+        if (!allProducts.containsKey(item.productId)) {
+          allProducts[item.productId] = {};
+        }
+        allProducts[item.productId]![level.levelId] = item;
+      }
+    }
+
+    // Calculate column widths (first column 40%, remaining columns evenly split remaining 60%)
+    final levelColumnWidth = (0.60 / levels.length);
+    final List<pw.TableColumnWidth> columnWidths = [
+      const pw.FlexColumnWidth(0.40),
+      ...List.generate(levels.length, (_) => pw.FlexColumnWidth(levelColumnWidth)),
+    ];
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Compare Options',
+          style: pw.TextStyle(
+            fontSize: 16,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.SizedBox(height: 10),
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.grey400),
+          columnWidths: {
+            for (int i = 0; i < columnWidths.length; i++) i: columnWidths[i],
+          },
+          children: [
+            // Header row with level names and prices
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(
+                    'Product',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                ),
+                ...levels.map((level) {
+                  return pw.Padding(
+                    padding: const pw.EdgeInsets.all(5),
+                    child: pw.Column(
+                      children: [
+                        pw.Text(
+                          level.levelName,
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Text(
+                          _currencyFormat.format(quote.getLevelTotal(level.levelId)),
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+            // Product rows
+            ...allProducts.entries.map((entry) {
+              final productId = entry.key;
+              final levelItems = entry.value;
+              final firstLevelWithProduct = levelItems.values.first;
+
+              return pw.TableRow(
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(5),
+                    child: pw.Text(firstLevelWithProduct.productName),
+                  ),
+                  ...levels.map((level) {
+                    final hasProduct = levelItems.containsKey(level.levelId);
+                    if (hasProduct) {
+                      final item = levelItems[level.levelId]!;
+                      return pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Text('${item.quantity} ${item.unit}'),
+                      );
+                    } else {
+                      return pw.Padding(
+                        padding: const pw.EdgeInsets.all(5),
+                        child: pw.Text('—'),
+                      );
+                    }
+                  }).toList(),
+                ],
+              );
+            }).toList(),
+            // Total row
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(
+                    'TOTAL',
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                ),
+                ...levels.map((level) {
+                  return pw.Padding(
+                    padding: const pw.EdgeInsets.all(5),
+                    child: pw.Text(
+                      _currencyFormat.format(quote.getLevelTotal(level.levelId)),
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Build table for common items
+  pw.Widget _buildCommonItemsTable(MultiLevelQuote quote) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Common Items (Included in All Options)',
+          style: pw.TextStyle(
+            fontSize: 14,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.SizedBox(height: 10),
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.grey400),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(0.4),
+            1: pw.FlexColumnWidth(0.2),
+            2: pw.FlexColumnWidth(0.2),
+            3: pw.FlexColumnWidth(0.2),
+          },
+          children: [
+            // Header row
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text('Item', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text('Quantity', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text('Unit Price', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text('Total', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                ),
+              ],
+            ),
+            // Item rows
+            ...quote.commonItems.map((item) => pw.TableRow(
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(item.productName),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text('${item.quantity} ${item.unit}'),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(_currencyFormat.format(item.unitPrice)),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(_currencyFormat.format(item.totalPrice)),
+                ),
+              ],
+            )).toList(),
+            // Total row
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.grey100),
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text('Common Items Subtotal', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.Container(),
+                pw.Container(),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(
+                    _currencyFormat.format(quote.commonSubtotal),
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Build table for add-on items
+  pw.Widget _buildAddonsTable(MultiLevelQuote quote) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          'Optional Add-ons',
+          style: pw.TextStyle(
+            fontSize: 14,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.SizedBox(height: 10),
+        pw.Table(
+          border: pw.TableBorder.all(color: PdfColors.grey400),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(0.4),
+            1: pw.FlexColumnWidth(0.2),
+            2: pw.FlexColumnWidth(0.2),
+            3: pw.FlexColumnWidth(0.2),
+          },
+          children: [
+            // Header row
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text('Add-on', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text('Quantity', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text('Unit Price', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text('Total', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                ),
+              ],
+            ),
+            // Add-on rows
+            ...quote.addons.map((item) => pw.TableRow(
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(item.productName),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text('${item.quantity} ${item.unit}'),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(_currencyFormat.format(item.unitPrice)),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(5),
+                  child: pw.Text(_currencyFormat.format(item.totalPrice)),
+                ),
+              ],
+            )).toList(),
           ],
         ),
       ],
@@ -493,6 +887,22 @@ class PdfService {
     } catch (e) {
       print('Error getting PDF info: $e');
       rethrow;
+    }
+  }
+
+  // Helper function to get color for status
+  PdfColor _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'draft':
+        return PdfColors.grey;
+      case 'sent':
+        return PdfColors.blue;
+      case 'accepted':
+        return PdfColors.green;
+      case 'declined':
+        return PdfColors.red;
+      default:
+        return PdfColors.grey;
     }
   }
 }

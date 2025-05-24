@@ -5,8 +5,11 @@ import '../models/customer.dart';
 import '../models/quote.dart';
 import '../models/roof_scope_data.dart';
 import '../models/project_media.dart';
+import '../models/multi_level_quote.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/quote_card.dart';
+import '../widgets/multi_level_quotes_list.dart';
+import '../screens/create_multi_level_quote_screen.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final Customer customer;
@@ -23,6 +26,7 @@ class CustomerDetailScreen extends StatefulWidget {
 class _CustomerDetailScreenState extends State<CustomerDetailScreen> with TickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _communicationController = TextEditingController();
+  bool _showMultiLevelQuotes = false;
 
   @override
   void initState() {
@@ -47,6 +51,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
             icon: const Icon(Icons.edit),
             onPressed: _editCustomer,
           ),
+          IconButton(
+            icon: Icon(_showMultiLevelQuotes ? Icons.list : Icons.layers),
+            onPressed: () {
+              setState(() {
+                _showMultiLevelQuotes = !_showMultiLevelQuotes;
+              });
+            },
+          ),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -62,7 +74,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
         controller: _tabController,
         children: [
           _buildInfoTab(),
-          _buildQuotesTab(),
+          _showMultiLevelQuotes ? _buildMultiLevelQuotesTab() : _buildQuotesTab(),
           _buildRoofScopeTab(),
           _buildMediaTab(),
         ],
@@ -261,6 +273,53 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                   SnackBar(content: Text('Opening quote ${quote.quoteNumber}')),
                 );
               },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildMultiLevelQuotesTab() {
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, child) {
+        final multiLevelQuotes = appState.getMultiLevelQuotesForCustomer(widget.customer.id);
+        multiLevelQuotes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        if (multiLevelQuotes.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.layers_outlined,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No multi-level quotes for this customer',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: _createMultiLevelQuote,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Create Multi-Level Quote'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return MultiLevelQuotesList(
+          quotes: multiLevelQuotes,
+          onTap: (multiLevelQuote) {
+            // TODO: Navigate to multi-level quote detail
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Opening multi-level quote ${multiLevelQuote.id}')),
             );
           },
         );
@@ -604,6 +663,30 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
     );
   }
 
+  void _createMultiLevelQuote() {
+    final roofScopeData = context.read<AppStateProvider>().getRoofScopeDataForCustomer(widget.customer.id);
+
+    if (roofScopeData.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please import RoofScope data before creating a multi-level quote'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CreateMultiLevelQuoteScreen(
+          customer: widget.customer,
+          roofScopeData: roofScopeData.first,
+        ),
+      ),
+    );
+  }
+
   void _importRoofScope() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('RoofScope import functionality coming soon')),
@@ -630,6 +713,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
               onTap: () {
                 Navigator.pop(context);
                 _createQuote();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.layers),
+              title: const Text('Create Multi-Level Quote'),
+              onTap: () {
+                Navigator.pop(context);
+                _createMultiLevelQuote();
               },
             ),
             ListTile(
@@ -662,3 +753,4 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
     );
   }
 }
+

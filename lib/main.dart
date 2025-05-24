@@ -8,6 +8,8 @@ import 'models/product.dart';
 import 'models/quote.dart';
 import 'models/roof_scope_data.dart';
 import 'models/project_media.dart';
+import 'models/app_settings.dart';
+import 'models/multi_level_quote.dart';
 import 'providers/app_state_provider.dart';
 import 'screens/home_screen.dart';
 import 'services/database_service.dart';
@@ -21,9 +23,13 @@ void main() async {
   // Register Hive adapters
   Hive.registerAdapter(CustomerAdapter());
   Hive.registerAdapter(ProductAdapter());
+  Hive.registerAdapter(QuoteItemAdapter());
   Hive.registerAdapter(QuoteAdapter());
   Hive.registerAdapter(RoofScopeDataAdapter());
   Hive.registerAdapter(ProjectMediaAdapter());
+  Hive.registerAdapter(AppSettingsAdapter());
+  Hive.registerAdapter(LevelQuoteAdapter());
+  Hive.registerAdapter(MultiLevelQuoteAdapter());
 
   // Initialize database service
   await DatabaseService.instance.init();

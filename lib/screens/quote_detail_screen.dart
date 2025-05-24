@@ -236,7 +236,38 @@ class _QuoteDetailScreenState extends State<QuoteDetailScreen> with TickerProvid
           margin: const EdgeInsets.only(bottom: 12),
           child: ListTile(
             title: Text(item.productName),
-            subtitle: Text(item.description ?? ''),
+            subtitle: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      '${item.quantity.toStringAsFixed(2)} ${item.unit}',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Flexible(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        '${NumberFormat.currency(symbol: '\$').format(item.unitPrice)} each',
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                  Flexible(
+                    child: Text(
+                      NumberFormat.currency(symbol: '\$').format(item.totalPrice),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.right,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             trailing: PopupMenuButton<String>(
               onSelected: (value) {
                 switch (value) {
@@ -271,22 +302,6 @@ class _QuoteDetailScreenState extends State<QuoteDetailScreen> with TickerProvid
                 ),
               ],
             ),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('${item.quantity.toStringAsFixed(2)} ${item.unit}'),
-                    Text('${NumberFormat.currency(symbol: '\$').format(item.unitPrice)} each'),
-                    Text(
-                      NumberFormat.currency(symbol: '\$').format(item.totalPrice),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
         );
       },
@@ -856,3 +871,4 @@ class _EditItemDialogState extends State<_EditItemDialog> {
     Navigator.pop(context);
   }
 }
+

@@ -4,6 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import '../providers/app_state_provider.dart';
 import '../models/product.dart';
 import '../widgets/product_card.dart';
+import 'excel_mapping_screen.dart'; // Import the mapping screen
+import '../services/excel_service.dart'; // Import ExcelService
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -347,24 +349,68 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['xlsx', 'xls'],
+        allowedExtensions: ['xlsx', 'xls'], // Consider adding .csv if supported
       );
 
       if (result != null && result.files.single.path != null) {
         final filePath = result.files.single.path!;
+        final appState = context.read<AppStateProvider>();
+        final excelService = ExcelService(); // Instantiate ExcelService
 
-        await context.read<AppStateProvider>().loadProductsFromExcel(filePath);
+        appState.setLoading(true, 'Analyzing Excel file...');
+        try {
+          // Get structure for mapping
+          final excelStructure = await excelService.getExcelStructureForMapping(filePath);
+          appState.setLoading(false);
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Products imported successfully'),
-          ),
-        );
+          if (!mounted) return;
+
+          // Navigate to the mapping screen
+          final importedProductCount = await Navigator.push<int?>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ExcelMappingScreen(
+                filePath: filePath,
+                excelInfo: excelStructure, // Pass the whole structure
+                headers: List<String>.from(excelStructure['headers'] ?? []),
+                levels: List<String>.from(excelStructure['potentialLevels'] ?? []),
+              ),
+            ),
+          );
+
+          if (importedProductCount != null && importedProductCount > 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('$importedProductCount products imported successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else if (importedProductCount == 0) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No products were imported. Please check the Excel file and mappings.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+          // If importedProductCount is null, it means the user cancelled or an error handled by mapping screen.
+
+        } catch (e) {
+          appState.setLoading(false);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error analyzing Excel file: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
-    } catch (e) {
+    } catch (e) { // Catch errors from FilePicker itself
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error importing products: $e'),
+          content: Text('Error picking file: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -402,6 +448,7 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
   ];
 
   final List<String> _units = [
+    'sq',
     'sq ft',
     'lin ft',
     'each',
@@ -607,3 +654,4 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
     );
   }
 }
+

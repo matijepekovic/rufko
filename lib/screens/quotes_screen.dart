@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
 import '../models/quote.dart';
+import '../models/customer.dart';
 import '../widgets/quote_card.dart';
 import 'quote_detail_screen.dart';
 

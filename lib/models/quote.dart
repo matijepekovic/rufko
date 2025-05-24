@@ -57,6 +57,8 @@ class QuoteItem extends HiveObject {
   }
 }
 
+
+
 @HiveType(typeId: 4)
 class Quote extends HiveObject {
   @HiveField(0)
