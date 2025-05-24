@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/quote.dart';
@@ -8,12 +8,10 @@ import '../models/multi_level_quote.dart';
 import '../models/app_settings.dart';
 import '../services/database_service.dart';
 import '../services/pdf_service.dart';
-import '../services/excel_service.dart';
 
 class AppStateProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
   final PdfService _pdfService = PdfService();
-  final ExcelService _excelService = ExcelService();
 
   // State variables
   List<Customer> _customers = [];
@@ -64,7 +62,9 @@ class AppStateProvider extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      print('Error loading app settings: $e');
+      if (kDebugMode) {
+        print('Error loading app settings: $e');
+      }
     }
   }
 
@@ -75,7 +75,9 @@ class AppStateProvider extends ChangeNotifier {
       _appSettings = settings;
       notifyListeners();
     } catch (e) {
-      print('Error updating app settings: $e');
+      if (kDebugMode) {
+        print('Error updating app settings: $e');
+      }
     }
   }
 
@@ -92,7 +94,9 @@ class AppStateProvider extends ChangeNotifier {
 
       setLoading(false);
     } catch (e) {
-      print('Error loading data: $e');
+      if (kDebugMode) {
+        print('Error loading data: $e');
+      }
       setLoading(false);
     }
   }
@@ -190,7 +194,9 @@ class AppStateProvider extends ChangeNotifier {
       setLoading(false);
       notifyListeners();
     } catch (e) {
-      print('Error during Excel processing initiation: $e');
+      if (kDebugMode) {
+        print('Error during Excel processing initiation: $e');
+      }
       setLoading(false);
       rethrow;
     }
@@ -232,7 +238,9 @@ class AppStateProvider extends ChangeNotifier {
       setLoading(false);
       notifyListeners();
     } catch (e) {
-      print('Error importing mapped products: $e');
+      if (kDebugMode) {
+        print('Error importing mapped products: $e');
+      }
       setLoading(false);
       rethrow;
     }
@@ -307,7 +315,6 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   // Enhanced multi-level quote creation method
-  // Enhanced multi-level quote creation method
   Future<MultiLevelQuote> createMultiLevelQuoteFromScope(
       String customerId,
       RoofScopeData scopeData,
@@ -319,12 +326,16 @@ class AppStateProvider extends ChangeNotifier {
 
     if (manualTaxRate != null) {
       taxRate = manualTaxRate;
-      print('Using manual tax rate: ${taxRate}%');
+      if (kDebugMode) {
+        print('Using manual tax rate: $taxRate%');
+      }
     } else {
       // TODO: Implement GPS-based tax rate lookup
       // For now, we'll use a default and let user override in the UI
       taxRate = 8.5; // Temporary default
-      print('Using default tax rate: ${taxRate}% (GPS lookup not implemented yet)');
+      if (kDebugMode) {
+        print('Using default tax rate: $taxRate% (GPS lookup not implemented yet)');
+      }
     }
 
     final quote = MultiLevelQuote(
@@ -340,7 +351,9 @@ class AppStateProvider extends ChangeNotifier {
         selectedLevels.any((level) => level.toLowerCase() == p.levelName!.toLowerCase())
     ).toList();
 
-    print('Found ${levelDefiningProducts.length} level-defining products');
+    if (kDebugMode) {
+      print('Found ${levelDefiningProducts.length} level-defining products');
+    }
 
     // 2. Get common supporting materials that apply to all levels
     final supportingProducts = _products.where((p) =>
@@ -351,7 +364,9 @@ class AppStateProvider extends ChangeNotifier {
         ['underlayment', 'ice and water', 'ridge', 'valley', 'flashing'].contains(p.category.toLowerCase())
     ).toList();
 
-    print('Found ${supportingProducts.length} supporting products');
+    if (kDebugMode) {
+      print('Found ${supportingProducts.length} supporting products');
+    }
 
     // 3. Create each level
     for (final levelProduct in levelDefiningProducts) {
@@ -360,7 +375,9 @@ class AppStateProvider extends ChangeNotifier {
       final levelNumber = levelProduct.levelNumber ??
           (selectedLevels.indexOf(levelId) + 1);
 
-      print('Creating level: $levelName (ID: $levelId)');
+      if (kDebugMode) {
+        print('Creating level: $levelName (ID: $levelId)');
+      }
 
       final level = quote.addLevel(
         levelId: levelId,
@@ -390,7 +407,9 @@ class AppStateProvider extends ChangeNotifier {
             unit: supportingProduct.unit,
             description: supportingProduct.description,
           ));
-          print('Added ${supportingProduct.name} to $levelName: $quantity ${supportingProduct.unit}');
+          if (kDebugMode) {
+            print('Added ${supportingProduct.name} to $levelName: $quantity ${supportingProduct.unit}');
+          }
         }
       }
 
@@ -413,7 +432,9 @@ class AppStateProvider extends ChangeNotifier {
             unit: laborProduct.unit,
             description: laborProduct.description,
           ));
-          print('Added ${laborProduct.name} to $levelName: $quantity ${laborProduct.unit}');
+          if (kDebugMode) {
+            print('Added ${laborProduct.name} to $levelName: $quantity ${laborProduct.unit}');
+          }
         }
       }
     }
@@ -435,7 +456,9 @@ class AppStateProvider extends ChangeNotifier {
         unit: commonItem.unit,
         description: commonItem.description,
       ));
-      print('Added common item: ${commonItem.name}');
+      if (kDebugMode) {
+        print('Added common item: ${commonItem.name}');
+      }
     }
 
     // 5. Calculate all totals
@@ -457,10 +480,14 @@ class AppStateProvider extends ChangeNotifier {
       // 2. Look up tax rate from database or API
       // 3. Return the rate
 
-      print('GPS tax rate lookup not implemented yet for lat: $latitude, lng: $longitude');
+      if (kDebugMode) {
+        print('GPS tax rate lookup not implemented yet for lat: $latitude, lng: $longitude');
+      }
       return 8.5; // Temporary default
     } catch (e) {
-      print('Error getting tax rate by location: $e');
+      if (kDebugMode) {
+        print('Error getting tax rate by location: $e');
+      }
       return 8.5; // Fallback default
     }
   }
@@ -471,10 +498,14 @@ class AppStateProvider extends ChangeNotifier {
       // TODO: Implement address-based tax rate lookup
       // This would geocode the address first, then get tax rate
 
-      print('Address-based tax rate lookup not implemented yet for: $address');
+      if (kDebugMode) {
+        print('Address-based tax rate lookup not implemented yet for: $address');
+      }
       return 8.5; // Temporary default
     } catch (e) {
-      print('Error getting tax rate by address: $e');
+      if (kDebugMode) {
+        print('Error getting tax rate by address: $e');
+      }
       return 8.5; // Fallback default
     }
   }
@@ -517,7 +548,9 @@ class AppStateProvider extends ChangeNotifier {
       }
       return data;
     } catch (e) {
-      print('Error extracting RoofScope data: $e');
+      if (kDebugMode) {
+        print('Error extracting RoofScope data: $e');
+      }
       rethrow;
     }
   }
