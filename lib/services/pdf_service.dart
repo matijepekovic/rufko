@@ -1,10 +1,10 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as syncfusion;
 import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
 import '../models/customer.dart';
 import '../models/quote.dart';
 import '../models/roof_scope_data.dart';
@@ -54,7 +54,7 @@ class PdfService {
 
       return file.path;
     } catch (e) {
-      print('Error generating PDF quote: $e');
+      debugPrint('Error generating PDF quote: $e');
       rethrow;
     }
   }
@@ -108,7 +108,7 @@ class PdfService {
 
       return file.path;
     } catch (e) {
-      print('Error generating multi-level quote PDF: $e');
+      debugPrint('Error generating multi-level quote PDF: $e');
       rethrow;
     }
   }
@@ -333,12 +333,11 @@ class PdfService {
                       ],
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
             // Product rows
             ...allProducts.entries.map((entry) {
-              final productId = entry.key;
               final levelItems = entry.value;
               final firstLevelWithProduct = levelItems.values.first;
 
@@ -362,10 +361,10 @@ class PdfService {
                         child: pw.Text('—'),
                       );
                     }
-                  }).toList(),
+                  }),
                 ],
               );
-            }).toList(),
+            }),
             // Total row
             pw.TableRow(
               decoration: const pw.BoxDecoration(color: PdfColors.grey200),
@@ -385,7 +384,7 @@ class PdfService {
                       style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ],
@@ -458,7 +457,7 @@ class PdfService {
                   child: pw.Text(_currencyFormat.format(item.totalPrice)),
                 ),
               ],
-            )).toList(),
+            )),
             // Total row
             pw.TableRow(
               decoration: const pw.BoxDecoration(color: PdfColors.grey100),
@@ -548,7 +547,7 @@ class PdfService {
                   child: pw.Text(_currencyFormat.format(item.totalPrice)),
                 ),
               ],
-            )).toList(),
+            )),
           ],
         ),
       ],
@@ -587,7 +586,7 @@ class PdfService {
             _buildTableCell(_currencyFormat.format(item.unitPrice), alignment: pw.Alignment.centerRight),
             _buildTableCell(_currencyFormat.format(item.totalPrice), alignment: pw.Alignment.centerRight),
           ],
-        )).toList(),
+        )),
       ],
     );
   }
@@ -707,7 +706,6 @@ class PdfService {
       // Extract text from all pages
       String extractedText = '';
       for (int i = 0; i < document.pages.count; i++) {
-        final page = document.pages[i];
         extractedText += syncfusion.PdfTextExtractor(document).extractText(startPageIndex: i, endPageIndex: i);
       }
 
@@ -718,7 +716,7 @@ class PdfService {
 
       return roofScopeData;
     } catch (e) {
-      print('Error extracting RoofScope data: $e');
+      debugPrint('Error extracting RoofScope data: $e');
       return null;
     }
   }
@@ -779,7 +777,7 @@ class PdfService {
 
     measurements.forEach((key, keywords) {
       for (final keyword in keywords) {
-        final pattern = RegExp('$keyword[s]?[:\s]*([0-9,]+\.?[0-9]*)\s*(?:lin\.?\s*)?ft');
+        final pattern = RegExp('${keyword}s?[:\\s]*([0-9,]+\\.?[0-9]*)\\s*(?:lin\\.?\\s*)?ft');
         final match = pattern.firstMatch(lowerText);
         if (match != null) {
           final valueStr = match.group(1)?.replaceAll(',', '') ?? '0';
@@ -814,13 +812,13 @@ class PdfService {
     });
 
     // Extract counts
-    final chimneyPattern = RegExp(r'chimney[s]?[:\s]*([0-9]+)');
+    final chimneyPattern = RegExp(r'chimneys?[:\s]*([0-9]+)');
     final chimneyMatch = chimneyPattern.firstMatch(lowerText);
     if (chimneyMatch != null) {
       data.chimneyCount = int.tryParse(chimneyMatch.group(1) ?? '0') ?? 0;
     }
 
-    final skylightPattern = RegExp(r'skylight[s]?[:\s]*([0-9]+)');
+    final skylightPattern = RegExp(r'skylights?[:\s]*([0-9]+)');
     final skylightMatch = skylightPattern.firstMatch(lowerText);
     if (skylightMatch != null) {
       data.skylightCount = int.tryParse(skylightMatch.group(1) ?? '0') ?? 0;
@@ -862,7 +860,7 @@ class PdfService {
 
       return roofScopeIndicators.any((indicator) => lowerText.contains(indicator));
     } catch (e) {
-      print('Error validating RoofScope PDF: $e');
+      debugPrint('Error validating RoofScope PDF: $e');
       return false;
     }
   }
@@ -885,7 +883,7 @@ class PdfService {
         'isRoofScope': await isRoofScopePdf(filePath),
       };
     } catch (e) {
-      print('Error getting PDF info: $e');
+      debugPrint('Error getting PDF info: $e');
       rethrow;
     }
   }
