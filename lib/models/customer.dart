@@ -1,9 +1,11 @@
+// lib/models/customer.dart
+
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part 'customer.g.dart';
+part 'customer.g.dart'; // Will be generated
 
-@HiveType(typeId: 0)
+@HiveType(typeId: 0) // Unique Type ID
 class Customer extends HiveObject {
   @HiveField(0)
   late String id;
@@ -42,21 +44,18 @@ class Customer extends HiveObject {
     List<String>? communicationHistory,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) :
-        communicationHistory = communicationHistory ?? [],
+  })  : communicationHistory = communicationHistory ?? [],
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now() {
     this.id = id ?? const Uuid().v4();
   }
 
-  // Add communication entry
   void addCommunication(String entry) {
     communicationHistory.add('${DateTime.now().toIso8601String()}: $entry');
     updatedAt = DateTime.now();
-    save();
+    if (isInBox) { save(); }
   }
 
-  // Update customer info
   void updateInfo({
     String? name,
     String? phone,
@@ -70,10 +69,9 @@ class Customer extends HiveObject {
     if (address != null) this.address = address;
     if (notes != null) this.notes = notes;
     updatedAt = DateTime.now();
-    save();
+    if (isInBox) { save(); }
   }
 
-  // Convert to Map for JSON serialization
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -88,23 +86,22 @@ class Customer extends HiveObject {
     };
   }
 
-  // Create from Map
   factory Customer.fromMap(Map<String, dynamic> map) {
     return Customer(
       id: map['id'],
-      name: map['name'],
+      name: map['name'] ?? 'Unknown Customer',
       phone: map['phone'],
       email: map['email'],
       address: map['address'],
       notes: map['notes'],
       communicationHistory: List<String>.from(map['communicationHistory'] ?? []),
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
+      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
     );
   }
 
   @override
   String toString() {
-    return 'Customer(id: $id, name: $name, phone: $phone, email: $email)';
+    return 'Customer(id: $id, name: $name)';
   }
 }

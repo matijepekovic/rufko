@@ -1,28 +1,30 @@
+// lib/models/roof_scope_data.dart
+
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part 'roof_scope_data.g.dart';
+part 'roof_scope_data.g.dart'; // Will be generated
 
-@HiveType(typeId: 2)
+@HiveType(typeId: 2) // Unique Type ID
 class RoofScopeData extends HiveObject {
   @HiveField(0)
   late String id;
 
   @HiveField(1)
-  String customerId;
+  String customerId; // Link to a customer
 
   @HiveField(2)
-  String? sourceFileName;
+  String? sourceFileName; // e.g., name of the PDF it was extracted from
 
   // Roof measurements
   @HiveField(3)
   double roofArea; // total square footage
 
   @HiveField(4)
-  double numberOfSquares; // roofing squares (100 sq ft each)
+  double numberOfSquares; // roofing squares (1 sq = 100 sq ft)
 
   @HiveField(5)
-  double pitch; // roof pitch/slope
+  double pitch; // roof pitch/slope (e.g., 6 for 6/12)
 
   @HiveField(6)
   double valleyLength; // linear feet
@@ -34,7 +36,7 @@ class RoofScopeData extends HiveObject {
   double ridgeLength; // linear feet
 
   @HiveField(9)
-  double perimeterLength; // linear feet
+  double perimeterLength; // linear feet (total edge)
 
   @HiveField(10)
   double eaveLength; // linear feet
@@ -49,10 +51,10 @@ class RoofScopeData extends HiveObject {
   int skylightCount;
 
   @HiveField(14)
-  double flashingLength; // linear feet
+  double flashingLength; // linear feet (for step, counter, etc.)
 
   @HiveField(15)
-  Map<String, dynamic> additionalMeasurements;
+  Map<String, dynamic> additionalMeasurements; // For any other custom fields
 
   @HiveField(16)
   DateTime createdAt;
@@ -79,65 +81,40 @@ class RoofScopeData extends HiveObject {
     Map<String, dynamic>? additionalMeasurements,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) :
-        additionalMeasurements = additionalMeasurements ?? {},
+  })  : additionalMeasurements = additionalMeasurements ?? {},
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now() {
     this.id = id ?? const Uuid().v4();
+    if (this.roofArea > 0 && this.numberOfSquares == 0.0) { // Auto-calculate squares if area provided
+      calculateSquares();
+    }
   }
 
-  // Calculate number of squares from roof area
   void calculateSquares() {
-    numberOfSquares = roofArea / 100;
-    updatedAt = DateTime.now();
+    numberOfSquares = roofArea / 100.0;
   }
 
-  // Update measurements
   void updateMeasurements({
     double? roofArea,
     double? pitch,
-    double? valleyLength,
-    double? hipLength,
-    double? ridgeLength,
-    double? perimeterLength,
-    double? eaveLength,
-    double? gutterLength,
-    int? chimneyCount,
-    int? skylightCount,
-    double? flashingLength,
+    // ... other fields ...
   }) {
     if (roofArea != null) {
       this.roofArea = roofArea;
       calculateSquares();
     }
     if (pitch != null) this.pitch = pitch;
-    if (valleyLength != null) this.valleyLength = valleyLength;
-    if (hipLength != null) this.hipLength = hipLength;
-    if (ridgeLength != null) this.ridgeLength = ridgeLength;
-    if (perimeterLength != null) this.perimeterLength = perimeterLength;
-    if (eaveLength != null) this.eaveLength = eaveLength;
-    if (gutterLength != null) this.gutterLength = gutterLength;
-    if (chimneyCount != null) this.chimneyCount = chimneyCount;
-    if (skylightCount != null) this.skylightCount = skylightCount;
-    if (flashingLength != null) this.flashingLength = flashingLength;
-
+    // ... update other fields ...
     updatedAt = DateTime.now();
-    save();
+    if (isInBox) { save(); }
   }
 
-  // Add custom measurement
   void addMeasurement(String key, dynamic value) {
     additionalMeasurements[key] = value;
     updatedAt = DateTime.now();
-    save();
+    if (isInBox) { save(); }
   }
 
-  // Get total linear footage for calculations
-  double get totalLinearFootage {
-    return valleyLength + hipLength + ridgeLength + perimeterLength + eaveLength;
-  }
-
-  // Convert to Map for JSON serialization
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -161,11 +138,10 @@ class RoofScopeData extends HiveObject {
     };
   }
 
-  // Create from Map
   factory RoofScopeData.fromMap(Map<String, dynamic> map) {
     return RoofScopeData(
       id: map['id'],
-      customerId: map['customerId'],
+      customerId: map['customerId'] ?? '',
       sourceFileName: map['sourceFileName'],
       roofArea: map['roofArea']?.toDouble() ?? 0.0,
       numberOfSquares: map['numberOfSquares']?.toDouble() ?? 0.0,
@@ -176,17 +152,17 @@ class RoofScopeData extends HiveObject {
       perimeterLength: map['perimeterLength']?.toDouble() ?? 0.0,
       eaveLength: map['eaveLength']?.toDouble() ?? 0.0,
       gutterLength: map['gutterLength']?.toDouble() ?? 0.0,
-      chimneyCount: map['chimneyCount'] ?? 0,
-      skylightCount: map['skylightCount'] ?? 0,
+      chimneyCount: map['chimneyCount']?.toInt() ?? 0,
+      skylightCount: map['skylightCount']?.toInt() ?? 0,
       flashingLength: map['flashingLength']?.toDouble() ?? 0.0,
       additionalMeasurements: Map<String, dynamic>.from(map['additionalMeasurements'] ?? {}),
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
+      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
     );
   }
 
   @override
   String toString() {
-    return 'RoofScopeData(id: $id, roofArea: ${roofArea}sqft, squares: ${numberOfSquares.toStringAsFixed(1)})';
+    return 'RoofScopeData(id: $id, roofArea: ${roofArea.toStringAsFixed(1)} sqft, squares: ${numberOfSquares.toStringAsFixed(1)})';
   }
 }

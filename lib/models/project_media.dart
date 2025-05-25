@@ -1,39 +1,41 @@
+// lib/models/project_media.dart
+
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part 'project_media.g.dart';
+part 'project_media.g.dart'; // Will be generated
 
-@HiveType(typeId: 5)
+@HiveType(typeId: 5) // Unique Type ID
 class ProjectMedia extends HiveObject {
   @HiveField(0)
   late String id;
 
   @HiveField(1)
-  String customerId;
+  String customerId; // Link to a customer
 
   @HiveField(2)
-  String? quoteId;
+  String? quoteId; // Optional: link to a specific quote (SimplifiedMultiLevelQuote ID)
 
   @HiveField(3)
-  String filePath;
+  String filePath; // Path to the media file on the device
 
   @HiveField(4)
   String fileName;
 
   @HiveField(5)
-  String fileType; // image, pdf, document
+  String fileType; // e.g., "image", "pdf", "document" or MIME type
 
   @HiveField(6)
   String? description;
 
   @HiveField(7)
-  List<String> tags;
+  List<String> tags; // For categorizing or searching
 
   @HiveField(8)
-  String category; // before, after, damage, materials, etc.
+  String category; // e.g., "before_photos", "after_photos", "damage_report", "contract"
 
   @HiveField(9)
-  int fileSizeBytes;
+  int? fileSizeBytes; // Optional: size of the file
 
   @HiveField(10)
   DateTime createdAt;
@@ -51,70 +53,66 @@ class ProjectMedia extends HiveObject {
     this.description,
     List<String>? tags,
     this.category = 'general',
-    this.fileSizeBytes = 0,
+    this.fileSizeBytes,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) :
-        tags = tags ?? [],
+  })  : tags = tags ?? [],
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now() {
     this.id = id ?? const Uuid().v4();
   }
 
-  // Add tag
   void addTag(String tag) {
     if (!tags.contains(tag)) {
       tags.add(tag);
       updatedAt = DateTime.now();
-      save();
+      if (isInBox) { save(); }
     }
   }
 
-  // Remove tag
   void removeTag(String tag) {
-    tags.remove(tag);
-    updatedAt = DateTime.now();
-    save();
+    if (tags.remove(tag)) {
+      updatedAt = DateTime.now();
+      if (isInBox) { save(); }
+    }
   }
 
-  // Update description
-  void updateDescription(String newDescription) {
-    description = newDescription;
+  void updateDetails({
+    String? description,
+    String? category,
+    List<String>? tags,
+  }) {
+    if (description != null) this.description = description;
+    if (category != null) this.category = category;
+    if (tags != null) this.tags = tags;
     updatedAt = DateTime.now();
-    save();
+    if (isInBox) { save(); }
   }
 
-  // Update category
-  void updateCategory(String newCategory) {
-    category = newCategory;
-    updatedAt = DateTime.now();
-    save();
-  }
-
-  // Check if file is image
   bool get isImage {
-    return fileType.toLowerCase() == 'image' ||
-        fileName.toLowerCase().endsWith('.jpg') ||
-        fileName.toLowerCase().endsWith('.jpeg') ||
-        fileName.toLowerCase().endsWith('.png') ||
-        fileName.toLowerCase().endsWith('.gif');
+    final lowerFileType = fileType.toLowerCase();
+    final lowerFileName = fileName.toLowerCase();
+    return lowerFileType == 'image' ||
+        lowerFileName.endsWith('.jpg') ||
+        lowerFileName.endsWith('.jpeg') ||
+        lowerFileName.endsWith('.png') ||
+        lowerFileName.endsWith('.gif') ||
+        lowerFileName.endsWith('.webp') ||
+        lowerFileName.endsWith('.bmp');
   }
 
-  // Check if file is PDF
   bool get isPdf {
-    return fileType.toLowerCase() == 'pdf' ||
-        fileName.toLowerCase().endsWith('.pdf');
+    return fileType.toLowerCase() == 'pdf' || fileName.toLowerCase().endsWith('.pdf');
   }
 
-  // Get file size in human readable format
   String get formattedFileSize {
-    if (fileSizeBytes < 1024) return '$fileSizeBytes B';
-    if (fileSizeBytes < 1024 * 1024) return '${(fileSizeBytes / 1024).toStringAsFixed(1)} KB';
-    if (fileSizeBytes < 1024 * 1024 * 1024) return '${(fileSizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return '${(fileSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+    if (fileSizeBytes == null || fileSizeBytes! < 0) return 'N/A';
+    if (fileSizeBytes! < 1024) return '$fileSizeBytes B';
+    if (fileSizeBytes! < 1024 * 1024) return '${(fileSizeBytes! / 1024).toStringAsFixed(1)} KB';
+    if (fileSizeBytes! < 1024 * 1024 * 1024) return '${(fileSizeBytes! / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(fileSizeBytes! / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
-  // Convert to Map for JSON serialization
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -132,26 +130,25 @@ class ProjectMedia extends HiveObject {
     };
   }
 
-  // Create from Map
   factory ProjectMedia.fromMap(Map<String, dynamic> map) {
     return ProjectMedia(
       id: map['id'],
-      customerId: map['customerId'],
+      customerId: map['customerId'] ?? '',
       quoteId: map['quoteId'],
-      filePath: map['filePath'],
-      fileName: map['fileName'],
-      fileType: map['fileType'],
+      filePath: map['filePath'] ?? '',
+      fileName: map['fileName'] ?? 'unknown_file',
+      fileType: map['fileType'] ?? 'unknown',
       description: map['description'],
       tags: List<String>.from(map['tags'] ?? []),
       category: map['category'] ?? 'general',
-      fileSizeBytes: map['fileSizeBytes'] ?? 0,
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      fileSizeBytes: map['fileSizeBytes']?.toInt(),
+      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
+      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
     );
   }
 
   @override
   String toString() {
-    return 'ProjectMedia(id: $id, fileName: $fileName, type: $fileType, category: $category)';
+    return 'ProjectMedia(id: $id, fileName: $fileName, category: $category)';
   }
 }

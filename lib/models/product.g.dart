@@ -24,13 +24,9 @@ class ProductAdapter extends TypeAdapter<Product> {
       unit: fields[4] as String,
       category: fields[5] as String,
       sku: fields[6] as String?,
-      isActive: fields[7] != null ? fields[7] as bool : true,
-      definesLevel: fields[10] != null ? fields[10] as bool : false,
-      levelName: fields[11] as String?,
-      levelNumber: fields[12] as int?,
-      levelPrices: (fields[13] as Map?)?.cast<String, double>(),
-      isUpgrade: fields[14] != null ? fields[14] as bool : false,
-      isAddon: fields[15] != null ? fields[15] as bool : false,
+      isActive: fields[7] as bool,
+      levelPrices: (fields[10] as Map?)?.cast<String, double>(),
+      isAddon: fields[11] as bool,
       createdAt: fields[8] as DateTime?,
       updatedAt: fields[9] as DateTime?,
     );
@@ -39,7 +35,7 @@ class ProductAdapter extends TypeAdapter<Product> {
   @override
   void write(BinaryWriter writer, Product obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -61,16 +57,8 @@ class ProductAdapter extends TypeAdapter<Product> {
       ..writeByte(9)
       ..write(obj.updatedAt)
       ..writeByte(10)
-      ..write(obj.definesLevel)
-      ..writeByte(11)
-      ..write(obj.levelName)
-      ..writeByte(12)
-      ..write(obj.levelNumber)
-      ..writeByte(13)
       ..write(obj.levelPrices)
-      ..writeByte(14)
-      ..write(obj.isUpgrade)
-      ..writeByte(15)
+      ..writeByte(11)
       ..write(obj.isAddon);
   }
 

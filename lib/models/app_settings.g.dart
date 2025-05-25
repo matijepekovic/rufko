@@ -21,7 +21,13 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       productCategories: (fields[1] as List?)?.cast<String>(),
       productUnits: (fields[2] as List?)?.cast<String>(),
       defaultUnit: fields[3] as String?,
-      defaultQuoteLevels: (fields[5] as List?)?.cast<String>(),
+      defaultQuoteLevelNames: (fields[5] as List?)?.cast<String>(),
+      taxRate: fields[6] as double,
+      companyName: fields[7] as String?,
+      companyAddress: fields[8] as String?,
+      companyPhone: fields[9] as String?,
+      companyEmail: fields[10] as String?,
+      companyLogoPath: fields[11] as String?,
       updatedAt: fields[4] as DateTime?,
     );
   }
@@ -29,7 +35,7 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -41,7 +47,19 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       ..writeByte(4)
       ..write(obj.updatedAt)
       ..writeByte(5)
-      ..write(obj.defaultQuoteLevels);
+      ..write(obj.defaultQuoteLevelNames)
+      ..writeByte(6)
+      ..write(obj.taxRate)
+      ..writeByte(7)
+      ..write(obj.companyName)
+      ..writeByte(8)
+      ..write(obj.companyAddress)
+      ..writeByte(9)
+      ..write(obj.companyPhone)
+      ..writeByte(10)
+      ..write(obj.companyEmail)
+      ..writeByte(11)
+      ..write(obj.companyLogoPath);
   }
 
   @override

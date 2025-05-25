@@ -26,7 +26,7 @@ class ProjectMediaAdapter extends TypeAdapter<ProjectMedia> {
       description: fields[6] as String?,
       tags: (fields[7] as List?)?.cast<String>(),
       category: fields[8] as String,
-      fileSizeBytes: fields[9] as int,
+      fileSizeBytes: fields[9] as int?,
       createdAt: fields[10] as DateTime?,
       updatedAt: fields[11] as DateTime?,
     );

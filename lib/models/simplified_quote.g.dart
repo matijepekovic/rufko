@@ -1,50 +1,47 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'multi_level_quote.dart';
+part of 'simplified_quote.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class LevelQuoteAdapter extends TypeAdapter<LevelQuote> {
+class QuoteLevelAdapter extends TypeAdapter<QuoteLevel> {
   @override
-  final int typeId = 7;
+  final int typeId = 9;
 
   @override
-  LevelQuote read(BinaryReader reader) {
+  QuoteLevel read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return LevelQuote(
-      levelId: fields[0] as String,
-      levelName: fields[1] as String,
+    return QuoteLevel(
+      id: fields[0] as String,
+      name: fields[1] as String,
       levelNumber: fields[2] as int,
-      items: (fields[3] as List?)?.cast<QuoteItem>(),
-      subtotal: fields[4] as double,
-      taxAmount: fields[5] as double,
-      total: fields[6] as double,
+      basePrice: fields[3] as double,
+      includedItems: (fields[4] as List?)?.cast<QuoteItem>(),
+      subtotal: fields[5] as double,
     );
   }
 
   @override
-  void write(BinaryWriter writer, LevelQuote obj) {
+  void write(BinaryWriter writer, QuoteLevel obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(6)
       ..writeByte(0)
-      ..write(obj.levelId)
+      ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.levelName)
+      ..write(obj.name)
       ..writeByte(2)
       ..write(obj.levelNumber)
       ..writeByte(3)
-      ..write(obj.items)
+      ..write(obj.basePrice)
       ..writeByte(4)
-      ..write(obj.subtotal)
+      ..write(obj.includedItems)
       ..writeByte(5)
-      ..write(obj.taxAmount)
-      ..writeByte(6)
-      ..write(obj.total);
+      ..write(obj.subtotal);
   }
 
   @override
@@ -53,44 +50,43 @@ class LevelQuoteAdapter extends TypeAdapter<LevelQuote> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is LevelQuoteAdapter &&
+      other is QuoteLevelAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
 
-class MultiLevelQuoteAdapter extends TypeAdapter<MultiLevelQuote> {
+class SimplifiedMultiLevelQuoteAdapter
+    extends TypeAdapter<SimplifiedMultiLevelQuote> {
   @override
-  final int typeId = 8;
+  final int typeId = 10;
 
   @override
-  MultiLevelQuote read(BinaryReader reader) {
+  SimplifiedMultiLevelQuote read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return MultiLevelQuote(
+    return SimplifiedMultiLevelQuote(
       id: fields[0] as String?,
       customerId: fields[1] as String,
       roofScopeDataId: fields[2] as String?,
       quoteNumber: fields[3] as String?,
-      levels: (fields[4] as Map?)?.cast<String, LevelQuote>(),
-      commonItems: (fields[5] as List?)?.cast<QuoteItem>(),
-      addons: (fields[6] as List?)?.cast<QuoteItem>(),
-      taxRate: fields[7] as double,
-      commonSubtotal: fields[8] as double,
-      discount: fields[9] as double,
-      status: fields[10] as String,
-      notes: fields[11] as String?,
-      validUntil: fields[12] as DateTime?,
-      createdAt: fields[13] as DateTime?,
-      updatedAt: fields[14] as DateTime?,
+      levels: (fields[4] as List?)?.cast<QuoteLevel>(),
+      addons: (fields[5] as List?)?.cast<QuoteItem>(),
+      taxRate: fields[6] as double,
+      discount: fields[7] as double,
+      status: fields[8] as String,
+      notes: fields[9] as String?,
+      validUntil: fields[10] as DateTime?,
+      createdAt: fields[11] as DateTime?,
+      updatedAt: fields[12] as DateTime?,
     );
   }
 
   @override
-  void write(BinaryWriter writer, MultiLevelQuote obj) {
+  void write(BinaryWriter writer, SimplifiedMultiLevelQuote obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -102,24 +98,20 @@ class MultiLevelQuoteAdapter extends TypeAdapter<MultiLevelQuote> {
       ..writeByte(4)
       ..write(obj.levels)
       ..writeByte(5)
-      ..write(obj.commonItems)
-      ..writeByte(6)
       ..write(obj.addons)
-      ..writeByte(7)
+      ..writeByte(6)
       ..write(obj.taxRate)
-      ..writeByte(8)
-      ..write(obj.commonSubtotal)
-      ..writeByte(9)
+      ..writeByte(7)
       ..write(obj.discount)
-      ..writeByte(10)
+      ..writeByte(8)
       ..write(obj.status)
-      ..writeByte(11)
+      ..writeByte(9)
       ..write(obj.notes)
-      ..writeByte(12)
+      ..writeByte(10)
       ..write(obj.validUntil)
-      ..writeByte(13)
+      ..writeByte(11)
       ..write(obj.createdAt)
-      ..writeByte(14)
+      ..writeByte(12)
       ..write(obj.updatedAt);
   }
 
@@ -129,7 +121,7 @@ class MultiLevelQuoteAdapter extends TypeAdapter<MultiLevelQuote> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is MultiLevelQuoteAdapter &&
+      other is SimplifiedMultiLevelQuoteAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
