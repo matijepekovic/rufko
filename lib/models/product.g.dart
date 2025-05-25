@@ -6,6 +6,52 @@ part of 'product.dart';
 // TypeAdapterGenerator
 // **************************************************************************
 
+class ProductLevelPriceAdapter extends TypeAdapter<ProductLevelPrice> {
+  @override
+  final int typeId = 7;
+
+  @override
+  ProductLevelPrice read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return ProductLevelPrice(
+      levelId: fields[0] as String,
+      levelName: fields[1] as String,
+      price: fields[2] as double,
+      description: fields[3] as String?,
+      isActive: fields[4] as bool,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, ProductLevelPrice obj) {
+    writer
+      ..writeByte(5)
+      ..writeByte(0)
+      ..write(obj.levelId)
+      ..writeByte(1)
+      ..write(obj.levelName)
+      ..writeByte(2)
+      ..write(obj.price)
+      ..writeByte(3)
+      ..write(obj.description)
+      ..writeByte(4)
+      ..write(obj.isActive);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ProductLevelPriceAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
 class ProductAdapter extends TypeAdapter<Product> {
   @override
   final int typeId = 1;
@@ -27,6 +73,10 @@ class ProductAdapter extends TypeAdapter<Product> {
       isActive: fields[7] as bool,
       levelPrices: (fields[10] as Map?)?.cast<String, double>(),
       isAddon: fields[11] as bool,
+      isDiscountable: fields[12] as bool,
+      enhancedLevelPrices: (fields[13] as List?)?.cast<ProductLevelPrice>(),
+      maxLevels: fields[14] as int,
+      notes: fields[15] as String?,
       createdAt: fields[8] as DateTime?,
       updatedAt: fields[9] as DateTime?,
     );
@@ -35,7 +85,7 @@ class ProductAdapter extends TypeAdapter<Product> {
   @override
   void write(BinaryWriter writer, Product obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +109,15 @@ class ProductAdapter extends TypeAdapter<Product> {
       ..writeByte(10)
       ..write(obj.levelPrices)
       ..writeByte(11)
-      ..write(obj.isAddon);
+      ..write(obj.isAddon)
+      ..writeByte(12)
+      ..write(obj.isDiscountable)
+      ..writeByte(13)
+      ..write(obj.enhancedLevelPrices)
+      ..writeByte(14)
+      ..write(obj.maxLevels)
+      ..writeByte(15)
+      ..write(obj.notes);
   }
 
   @override

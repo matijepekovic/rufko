@@ -6,6 +6,64 @@ part of 'simplified_quote.dart';
 // TypeAdapterGenerator
 // **************************************************************************
 
+class QuoteDiscountAdapter extends TypeAdapter<QuoteDiscount> {
+  @override
+  final int typeId = 8;
+
+  @override
+  QuoteDiscount read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return QuoteDiscount(
+      id: fields[0] as String?,
+      type: fields[1] as String,
+      value: fields[2] as double,
+      code: fields[3] as String?,
+      description: fields[4] as String?,
+      applyToAddons: fields[5] as bool,
+      excludedProductIds: (fields[6] as List?)?.cast<String>(),
+      expiryDate: fields[7] as DateTime?,
+      isActive: fields[8] as bool,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, QuoteDiscount obj) {
+    writer
+      ..writeByte(9)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.type)
+      ..writeByte(2)
+      ..write(obj.value)
+      ..writeByte(3)
+      ..write(obj.code)
+      ..writeByte(4)
+      ..write(obj.description)
+      ..writeByte(5)
+      ..write(obj.applyToAddons)
+      ..writeByte(6)
+      ..write(obj.excludedProductIds)
+      ..writeByte(7)
+      ..write(obj.expiryDate)
+      ..writeByte(8)
+      ..write(obj.isActive);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QuoteDiscountAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
 class QuoteLevelAdapter extends TypeAdapter<QuoteLevel> {
   @override
   final int typeId = 9;
@@ -21,6 +79,7 @@ class QuoteLevelAdapter extends TypeAdapter<QuoteLevel> {
       name: fields[1] as String,
       levelNumber: fields[2] as int,
       basePrice: fields[3] as double,
+      baseQuantity: fields[6] as double,
       includedItems: (fields[4] as List?)?.cast<QuoteItem>(),
       subtotal: fields[5] as double,
     );
@@ -29,7 +88,7 @@ class QuoteLevelAdapter extends TypeAdapter<QuoteLevel> {
   @override
   void write(BinaryWriter writer, QuoteLevel obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -41,7 +100,9 @@ class QuoteLevelAdapter extends TypeAdapter<QuoteLevel> {
       ..writeByte(4)
       ..write(obj.includedItems)
       ..writeByte(5)
-      ..write(obj.subtotal);
+      ..write(obj.subtotal)
+      ..writeByte(6)
+      ..write(obj.baseQuantity);
   }
 
   @override
@@ -80,13 +141,18 @@ class SimplifiedMultiLevelQuoteAdapter
       validUntil: fields[10] as DateTime?,
       createdAt: fields[11] as DateTime?,
       updatedAt: fields[12] as DateTime?,
+      baseProductId: fields[13] as String?,
+      baseProductName: fields[14] as String?,
+      baseProductUnit: fields[15] as String?,
+      discounts: (fields[16] as List?)?.cast<QuoteDiscount>(),
+      nonDiscountableProductIds: (fields[17] as List?)?.cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, SimplifiedMultiLevelQuote obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -112,7 +178,17 @@ class SimplifiedMultiLevelQuoteAdapter
       ..writeByte(11)
       ..write(obj.createdAt)
       ..writeByte(12)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(13)
+      ..write(obj.baseProductId)
+      ..writeByte(14)
+      ..write(obj.baseProductName)
+      ..writeByte(15)
+      ..write(obj.baseProductUnit)
+      ..writeByte(16)
+      ..write(obj.discounts)
+      ..writeByte(17)
+      ..write(obj.nonDiscountableProductIds);
   }
 
   @override

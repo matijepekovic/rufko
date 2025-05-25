@@ -28,6 +28,9 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       companyPhone: fields[9] as String?,
       companyEmail: fields[10] as String?,
       companyLogoPath: fields[11] as String?,
+      discountTypes: (fields[12] as List?)?.cast<String>(),
+      allowProductDiscountToggle: fields[13] as bool,
+      defaultDiscountLimit: fields[14] as double,
       updatedAt: fields[4] as DateTime?,
     );
   }
@@ -35,7 +38,7 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +62,13 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       ..writeByte(10)
       ..write(obj.companyEmail)
       ..writeByte(11)
-      ..write(obj.companyLogoPath);
+      ..write(obj.companyLogoPath)
+      ..writeByte(12)
+      ..write(obj.discountTypes)
+      ..writeByte(13)
+      ..write(obj.allowProductDiscountToggle)
+      ..writeByte(14)
+      ..write(obj.defaultDiscountLimit);
   }
 
   @override
