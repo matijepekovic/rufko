@@ -1,4 +1,4 @@
-// lib/models/product.dart - ENHANCED WITH 3-TIER SYSTEM
+// lib/models/product.dart - ENHANCED WITH 3-TIER SYSTEM + MISSING METHODS
 
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
@@ -171,6 +171,28 @@ class Product extends HiveObject {
     }
   }
 
+  // MISSING METHOD 1: Generic getPriceForLevel - backwards compatibility
+  double getPriceForLevel(String levelId) {
+    // First try enhanced level prices
+    if (enhancedLevelPrices.isNotEmpty) {
+      final level = enhancedLevelPrices.where((l) => l.levelId == levelId && l.isActive).firstOrNull;
+      if (level != null) return level.price;
+    }
+
+    // Fallback to legacy levelPrices map
+    if (levelPrices.containsKey(levelId)) {
+      return levelPrices[levelId]!;
+    }
+
+    // Final fallback to base unit price
+    return unitPrice;
+  }
+
+  // MISSING GETTER: activeLevels - backwards compatibility
+  List<ProductLevelPrice> get activeLevels {
+    return enhancedLevelPrices.where((level) => level.isActive).toList();
+  }
+
   // Get price for main differentiator level (Builder/Homeowner/Platinum)
   double getPriceForMainLevel(String mainLevelId) {
     if (!isMainDifferentiator) return unitPrice;
@@ -293,7 +315,7 @@ class Product extends HiveObject {
       isDiscountable: map['isDiscountable'] ?? true,
       enhancedLevelPrices: (map['enhancedLevelPrices'] as List<dynamic>?)
           ?.map((levelData) => ProductLevelPrice.fromMap(levelData as Map<String, dynamic>))
-          .toList(),
+          .toList() ?? [],
       maxLevels: map['maxLevels'] ?? 3,
       notes: map['notes'],
       isMainDifferentiator: map['isMainDifferentiator'] ?? false, // NEW
@@ -314,8 +336,14 @@ class Product extends HiveObject {
 }
 
 // NEW: Product pricing type enum
+@HiveType(typeId: 19)
 enum ProductPricingType {
+  @HiveField(0)
   MAIN_DIFFERENTIATOR, // Sets quote columns (Shingles: Builder/Homeowner/Platinum)
+
+  @HiveField(1)
   SUB_LEVELED,        // Independent options (Gutters: mesh/no-mesh)
+
+  @HiveField(2)
   SIMPLE              // Same price everywhere (Labor, Nails)
 }

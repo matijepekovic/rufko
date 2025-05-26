@@ -77,6 +77,9 @@ class ProductAdapter extends TypeAdapter<Product> {
       enhancedLevelPrices: (fields[13] as List?)?.cast<ProductLevelPrice>(),
       maxLevels: fields[14] as int,
       notes: fields[15] as String?,
+      isMainDifferentiator: fields[16] as bool,
+      enableLevelPricing: fields[17] as bool,
+      pricingType: fields[18] as ProductPricingType?,
       createdAt: fields[8] as DateTime?,
       updatedAt: fields[9] as DateTime?,
     );
@@ -85,7 +88,7 @@ class ProductAdapter extends TypeAdapter<Product> {
   @override
   void write(BinaryWriter writer, Product obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -117,7 +120,13 @@ class ProductAdapter extends TypeAdapter<Product> {
       ..writeByte(14)
       ..write(obj.maxLevels)
       ..writeByte(15)
-      ..write(obj.notes);
+      ..write(obj.notes)
+      ..writeByte(16)
+      ..write(obj.isMainDifferentiator)
+      ..writeByte(17)
+      ..write(obj.enableLevelPricing)
+      ..writeByte(18)
+      ..write(obj.pricingType);
   }
 
   @override
@@ -127,6 +136,50 @@ class ProductAdapter extends TypeAdapter<Product> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ProductAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class ProductPricingTypeAdapter extends TypeAdapter<ProductPricingType> {
+  @override
+  final int typeId = 19;
+
+  @override
+  ProductPricingType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return ProductPricingType.MAIN_DIFFERENTIATOR;
+      case 1:
+        return ProductPricingType.SUB_LEVELED;
+      case 2:
+        return ProductPricingType.SIMPLE;
+      default:
+        return ProductPricingType.MAIN_DIFFERENTIATOR;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, ProductPricingType obj) {
+    switch (obj) {
+      case ProductPricingType.MAIN_DIFFERENTIATOR:
+        writer.writeByte(0);
+        break;
+      case ProductPricingType.SUB_LEVELED:
+        writer.writeByte(1);
+        break;
+      case ProductPricingType.SIMPLE:
+        writer.writeByte(2);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ProductPricingTypeAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

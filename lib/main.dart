@@ -1,4 +1,4 @@
-// lib/main.dart - UPDATED WITH NEW ADAPTERS
+// lib/main.dart - UPDATED WITH NEW ADAPTERS + ENUM ADAPTER
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -31,6 +31,7 @@ void main() async {
   Hive.registerAdapter(CustomerAdapter());
   Hive.registerAdapter(ProductAdapter());
   Hive.registerAdapter(ProductLevelPriceAdapter()); // NEW - Enhanced level pricing
+  Hive.registerAdapter(ProductPricingTypeAdapter()); // NEW - Enum adapter
   Hive.registerAdapter(QuoteItemAdapter());
   Hive.registerAdapter(RoofScopeDataAdapter());
   Hive.registerAdapter(ProjectMediaAdapter());
@@ -99,5 +100,22 @@ class RufkoApp extends StatelessWidget {
       ),
       home: const HomeScreen(),
     );
+  }
+}
+
+// Manual Hive Adapter for ProductPricingType enum (since build_runner might not generate it automatically)
+class ProductPricingTypeAdapter extends TypeAdapter<ProductPricingType> {
+  @override
+  final int typeId = 19; // Make sure this is unique
+
+  @override
+  ProductPricingType read(BinaryReader reader) {
+    final index = reader.readByte();
+    return ProductPricingType.values[index];
+  }
+
+  @override
+  void write(BinaryWriter writer, ProductPricingType obj) {
+    writer.writeByte(obj.index);
   }
 }
