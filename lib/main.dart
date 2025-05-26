@@ -1,11 +1,10 @@
-// lib/main.dart
+// lib/main.dart - UPDATED WITH NEW ADAPTERS
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-// path_provider is not directly used here but Hive might need it implicitly.
-// import 'package:path_provider/path_provider.dart'; // Keep if Hive complains later
 import 'package:path_provider/path_provider.dart';
+
 // Your Core Models
 import 'models/customer.dart';
 import 'models/product.dart';
@@ -13,48 +12,45 @@ import 'models/quote.dart'; // Contains QuoteItem
 import 'models/roof_scope_data.dart';
 import 'models/project_media.dart';
 import 'models/app_settings.dart';
-import 'models/simplified_quote.dart'; // NEW primary quote model
+import 'models/simplified_quote.dart'; // NEW primary quote model with discounts
 
 // Your Services and Providers
 import 'providers/app_state_provider.dart';
 import 'services/database_service.dart';
 
 // Your Screens
-import 'screens/home_screen.dart'; // Or your initial screen
+import 'screens/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Hive
   await Hive.initFlutter();
-  // Register Hive adapters
+
+  // Register Hive adapters - UPDATED WITH NEW ADAPTERS
   Hive.registerAdapter(CustomerAdapter());
   Hive.registerAdapter(ProductAdapter());
+  Hive.registerAdapter(ProductLevelPriceAdapter()); // NEW - Enhanced level pricing
   Hive.registerAdapter(QuoteItemAdapter());
-  // Hive.registerAdapter(QuoteAdapter()); // Keep ONLY if you kept the old Quote class in quote.dart, otherwise REMOVE
   Hive.registerAdapter(RoofScopeDataAdapter());
   Hive.registerAdapter(ProjectMediaAdapter());
   Hive.registerAdapter(AppSettingsAdapter());
 
-  // NEW Adapters for the Simplified Quote System
+  // NEW Adapters for the Enhanced Quote System with Discounts
+  Hive.registerAdapter(QuoteDiscountAdapter()); // NEW - Discount/Voucher support
   Hive.registerAdapter(QuoteLevelAdapter());
   Hive.registerAdapter(SimplifiedMultiLevelQuoteAdapter());
-
-  // REMOVED Adapters for the old multi_level_quote.dart
-  // Hive.registerAdapter(LevelQuoteAdapter()); // This was for the old system's LevelQuote
-  // Hive.registerAdapter(MultiLevelQuoteAdapter()); // This was for the old system's MultiLevelQuote
 
   // Initialize database service (this will open the boxes)
   await DatabaseService.instance.init();
 
-  // It's generally good practice to initialize AppStateProvider *after*
-  // critical services like DatabaseService are ready.
+  // Initialize AppStateProvider with data loading
   final appStateProvider = AppStateProvider();
-  await appStateProvider.initializeApp(); // Load initial data
+  await appStateProvider.initializeApp();
 
   runApp(
     ChangeNotifierProvider.value(
-      value: appStateProvider, // Use .value constructor when instance is already created
+      value: appStateProvider,
       child: const RufkoApp(),
     ),
   );
@@ -65,24 +61,22 @@ class RufkoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // No need for MultiProvider here if AppStateProvider is the only root provider
     return MaterialApp(
-      title: 'Rufko - Roofing Estimator',
+      title: 'Rufko - Professional Roofing Estimator',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue, // You can use colorScheme.fromSeed for modern themes
-        // colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
-        useMaterial3: true, // Recommended for new apps
-        primaryColor: const Color(0xFF1565C0), // Still useful for some direct styling
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
+        useMaterial3: true,
+        primaryColor: const Color(0xFF1565C0),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1565C0), // Consider using theme.colorScheme.primary
-          foregroundColor: Colors.white,      // Consider using theme.colorScheme.onPrimary
+          backgroundColor: Color(0xFF1565C0),
+          foregroundColor: Colors.white,
           elevation: 2,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1565C0), // theme.colorScheme.primary
-            foregroundColor: Colors.white,            // theme.colorScheme.onPrimary
+            backgroundColor: const Color(0xFF1565C0),
+            foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -90,8 +84,8 @@ class RufkoApp extends StatelessWidget {
           ),
         ),
         cardTheme: CardTheme(
-          elevation: 2, // Slightly reduced elevation for a cleaner look
-          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4), // Adjusted margin
+          elevation: 2,
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -99,15 +93,11 @@ class RufkoApp extends StatelessWidget {
         inputDecorationTheme: InputDecorationTheme(
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            // borderSide: BorderSide.none, // For a flatter look if desired
           ),
-          // filled: true, // If you want filled text fields
-          // fillColor: Colors.grey[100],
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), // Adjusted padding
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        // Add other theme properties as needed
       ),
-      home: const HomeScreen(), // Make sure HomeScreen exists and is your intended entry point
+      home: const HomeScreen(),
     );
   }
 }

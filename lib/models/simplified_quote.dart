@@ -1,4 +1,4 @@
-// lib/models/simplified_quote.dart - ENHANCED WITH DISCOUNTS
+// lib/models/simplified_quote.dart - FIXED ID INITIALIZATION
 
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
@@ -10,7 +10,7 @@ part 'simplified_quote.g.dart';
 @HiveType(typeId: 8) // New type ID for discounts
 class QuoteDiscount extends HiveObject {
   @HiveField(0)
-  String id;
+  late String id; // FIXED: Added 'late' keyword
 
   @HiveField(1)
   String type; // 'percentage', 'fixed_amount', 'voucher'

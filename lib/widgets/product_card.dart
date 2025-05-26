@@ -1,3 +1,5 @@
+// lib/widgets/product_card.dart - ENHANCED WITH DISCOUNT INFO
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/product.dart';
@@ -68,22 +70,18 @@ class ProductCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            if (!product.isActive)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'INACTIVE',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ),
+                            // Status badges
+                            Wrap(
+                              spacing: 4,
+                              children: [
+                                if (!product.isActive)
+                                  _buildStatusBadge('INACTIVE', Colors.grey),
+                                if (product.isAddon)
+                                  _buildStatusBadge('ADDON', Colors.orange),
+                                if (!product.isDiscountable)
+                                  _buildStatusBadge('NO DISCOUNT', Colors.red),
+                              ],
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -209,7 +207,7 @@ class ProductCard extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              // Price Section
+              // Base Price Section
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -220,54 +218,58 @@ class ProductCard extends StatelessWidget {
                     width: 1,
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Unit Price',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          currencyFormat.format(product.unitPrice),
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Per Unit',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: Colors.grey[300]!,
-                              width: 1,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Base Price',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[600],
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            product.unit,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.w600,
+                            const SizedBox(height: 2),
+                            Text(
+                              currencyFormat.format(product.unitPrice),
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
                             ),
-                          ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Per Unit',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: Colors.grey[300]!,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Text(
+                                product.unit,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -275,17 +277,110 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
 
+              // NEW - Level Pricing Section (if available)
+              if (product.activeLevels.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Colors.orange.shade200,
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.layers_outlined, size: 16, color: Colors.orange.shade700),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Level Pricing Available',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: product.activeLevels.take(3).map((level) =>
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade100,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${level.levelName}: ${currencyFormat.format(level.price)}',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.orange.shade800,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                        ).toList(),
+                      ),
+                      if (product.activeLevels.length > 3)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '+${product.activeLevels.length - 3} more levels',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.orange.shade600,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 12),
 
-              // Footer Row
+              // Footer Row with enhanced info
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Updated ${DateFormat('MMM dd, yyyy').format(product.updatedAt)}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[500],
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Updated ${DateFormat('MMM dd, yyyy').format(product.updatedAt)}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      // NEW - Additional product info
+                      Row(
+                        children: [
+                          if (product.isDiscountable) ...[
+                            Icon(Icons.local_offer, size: 12, color: Colors.green[600]),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Discountable',
+                              style: TextStyle(fontSize: 10, color: Colors.green[600]),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          if (product.maxLevels > 3)
+                            Text(
+                              'Max ${product.maxLevels} levels',
+                              style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
                   Row(
                     children: [
@@ -317,6 +412,25 @@ class ProductCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          color: color,
         ),
       ),
     );
