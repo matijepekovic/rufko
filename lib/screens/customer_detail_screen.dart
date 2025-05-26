@@ -1,8 +1,15 @@
-// lib/screens/customer_detail_screen.dart - UPDATED WITH EDIT FUNCTIONALITY
+// lib/screens/customer_detail_screen.dart - COMPLETE WITH MEDIA FUNCTIONALITY
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:path/path.dart' as path;
+import 'package:flutter/services.dart';
+import 'dart:math' as math;
 
 import '../models/customer.dart';
 import '../models/roof_scope_data.dart';
@@ -28,6 +35,8 @@ class CustomerDetailScreen extends StatefulWidget {
 class _CustomerDetailScreenState extends State<CustomerDetailScreen> with TickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _communicationController = TextEditingController();
+  final ImagePicker _imagePicker = ImagePicker();
+  bool _isProcessingMedia = false;
 
   @override
   void initState() {
@@ -137,14 +146,46 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
           _buildMediaTab(),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _navigateToCreateQuoteScreen,
-        icon: const Icon(Icons.add),
-        label: const Text('New Quote'),
-        backgroundColor: Theme.of(context).primaryColor,
-      ),
+      floatingActionButton: _buildFloatingActionButton(),
     );
   }
+
+  Widget _buildFloatingActionButton() {
+    final currentTab = _tabController.index;
+
+    switch (currentTab) {
+      case 1: // Quotes tab
+        return FloatingActionButton.extended(
+          onPressed: _navigateToCreateQuoteScreen,
+          icon: const Icon(Icons.add),
+          label: const Text('New Quote'),
+          backgroundColor: Theme.of(context).primaryColor,
+        );
+      case 2: // RoofScope tab
+        return FloatingActionButton.extended(
+          onPressed: _importRoofScope,
+          icon: const Icon(Icons.file_upload),
+          label: const Text('Import PDF'),
+          backgroundColor: Colors.orange,
+        );
+      case 3: // Media tab
+        return FloatingActionButton.extended(
+          onPressed: _showMediaOptions,
+          icon: const Icon(Icons.add_a_photo),
+          label: const Text('Add Media'),
+          backgroundColor: Colors.teal,
+        );
+      default:
+        return FloatingActionButton.extended(
+          onPressed: _navigateToCreateQuoteScreen,
+          icon: const Icon(Icons.add),
+          label: const Text('New Quote'),
+          backgroundColor: Theme.of(context).primaryColor,
+        );
+    }
+  }
+
+  // [Previous tab building methods remain the same until _buildMediaTab()]
 
   Widget _buildInfoTab() {
     return SingleChildScrollView(
@@ -194,8 +235,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                           ],
                         ),
                       ),
-                      // Quick Edit Button
-
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -412,11 +451,25 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
     );
   }
 
+  // COMPLETE MEDIA TAB IMPLEMENTATION
   Widget _buildMediaTab() {
     return Consumer<AppStateProvider>(
       builder: (context, appState, child) {
         final mediaItems = appState.getProjectMediaForCustomer(widget.customer.id);
         mediaItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+        if (_isProcessingMedia) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Processing media...'),
+              ],
+            ),
+          );
+        }
 
         if (mediaItems.isEmpty) {
           return Center(
@@ -436,31 +489,645 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                   ),
                 ),
                 const SizedBox(height: 8),
-                ElevatedButton.icon(
-                  onPressed: _addMedia,
-                  icon: const Icon(Icons.add_a_photo_outlined),
-                  label: const Text('Add Media'),
+                Column(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: _pickImageFromCamera,
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('Take Photo'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _pickImageFromGallery,
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('Choose from Gallery'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _pickDocument,
+                      icon: const Icon(Icons.file_upload),
+                      label: const Text('Upload Document'),
+                    ),
+                  ],
                 )
               ],
             ),
           );
         }
 
-        return GridView.builder(
+        // Group media by category
+        final groupedMedia = <String, List<ProjectMedia>>{};
+        for (final media in mediaItems) {
+          groupedMedia.putIfAbsent(media.category, () => []).add(media);
+        }
+
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 0.9,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Quick stats
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildMediaStat('Total Files', '${mediaItems.length}', Icons.folder),
+                      _buildMediaStat('Images', '${mediaItems.where((m) => m.isImage).length}', Icons.image),
+                      _buildMediaStat('Documents', '${mediaItems.where((m) => !m.isImage).length}', Icons.description),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Media by category
+              ...groupedMedia.entries.map((entry) {
+                final category = entry.key;
+                final items = entry.value;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _getCategoryColor(category).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: _getCategoryColor(category).withOpacity(0.3)),
+                          ),
+                          child: Text(
+                            _formatCategoryName(category),
+                            style: TextStyle(
+                              color: _getCategoryColor(category),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '(${items.length})',
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        ),
+                        const Spacer(),
+                        TextButton.icon(
+                          onPressed: () => _showCategoryMedia(category, items),
+                          icon: const Icon(Icons.fullscreen, size: 16),
+                          label: const Text('View All'),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 120,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: math.min(items.length, 10), // Show max 10 items
+                        itemBuilder: (context, index) {
+                          return Container(
+                            width: 100,
+                            margin: const EdgeInsets.only(right: 8),
+                            child: _buildCompactMediaCard(items[index]),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              }).toList(),
+            ],
           ),
-          itemCount: mediaItems.length,
-          itemBuilder: (context, index) => _buildMediaCard(mediaItems[index]),
         );
       },
     );
   }
 
+  Widget _buildMediaStat(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: Theme.of(context).primaryColor),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        Text(
+          label,
+          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactMediaCard(ProjectMedia mediaItem) {
+    return Card(
+      elevation: 1,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _viewMedia(mediaItem),
+        onLongPress: () => _showMediaContextMenu(mediaItem),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Container(
+                color: Colors.grey[200],
+                child: mediaItem.isImage
+                    ? Stack(
+                  children: [
+                    Icon(
+                      Icons.image_outlined,
+                      size: 32,
+                      color: Colors.grey[400],
+                    ),
+                    if (File(mediaItem.filePath).existsSync())
+                      Positioned.fill(
+                        child: Image.file(
+                          File(mediaItem.filePath),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.broken_image,
+                              size: 32,
+                              color: Colors.grey[400],
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                )
+                    : Icon(
+                  mediaItem.isPdf
+                      ? Icons.picture_as_pdf_outlined
+                      : Icons.insert_drive_file_outlined,
+                  size: 32,
+                  color: Colors.grey[400],
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(4),
+              color: Colors.white,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    mediaItem.fileName,
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    mediaItem.formattedFileSize,
+                    style: TextStyle(fontSize: 8, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // MEDIA FUNCTIONALITY METHODS
+
+  void _showMediaOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Add Media',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.camera_alt, color: Colors.blue.shade700),
+              ),
+              title: const Text('Take Photo'),
+              subtitle: const Text('Capture with camera'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImageFromCamera();
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.photo_library, color: Colors.green.shade700),
+              ),
+              title: const Text('Choose from Gallery'),
+              subtitle: const Text('Select existing photos'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImageFromGallery();
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.file_upload, color: Colors.orange.shade700),
+              ),
+              title: const Text('Upload Document'),
+              subtitle: const Text('PDF, Word, Excel files'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickDocument();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImageFromCamera() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        await _processSelectedMedia(File(image.path), 'image');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error taking photo: $e');
+    }
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        await _processSelectedMedia(File(image.path), 'image');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error selecting image: $e');
+    }
+  }
+
+  Future<void> _pickDocument() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'xlsx', 'xls'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+        await _processSelectedMedia(file, 'document');
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error selecting document: $e');
+    }
+  }
+
+  Future<void> _processSelectedMedia(File file, String fileType) async {
+    setState(() => _isProcessingMedia = true);
+
+    try {
+      // Calculate file size
+      final fileSize = await file.length();
+
+      // Get file info
+      final fileName = path.basename(file.path);
+      final fileExtension = path.extension(fileName).toLowerCase();
+
+      // Determine file type
+      String detectedType = fileType;
+      if (fileExtension == '.pdf') {
+        detectedType = 'pdf';
+      } else if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].contains(fileExtension)) {
+        detectedType = 'image';
+      }
+
+      // Show media details dialog
+      final ProjectMedia? mediaItem = await showDialog<ProjectMedia>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => _MediaDetailsDialog(
+          file: file,
+          fileName: fileName,
+          fileType: detectedType,
+          fileSize: fileSize,
+          customerId: widget.customer.id,
+        ),
+      );
+
+      if (mediaItem != null) {
+        // Add to app state
+        await context.read<AppStateProvider>().addProjectMedia(mediaItem);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added ${mediaItem.fileName}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error processing media: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessingMedia = false);
+      }
+    }
+  }
+
+  Future<void> _viewMedia(ProjectMedia mediaItem) async {
+    try {
+      if (mediaItem.isImage) {
+        // Show full-screen image viewer
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => _FullScreenImageViewer(mediaItem: mediaItem),
+          ),
+        );
+      } else {
+        // Open with system default app
+        final result = await OpenFilex.open(mediaItem.filePath);
+        if (result.type != ResultType.done) {
+          _showErrorSnackBar('Cannot open file: ${result.message}');
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error opening media: $e');
+    }
+  }
+
+  void _showMediaContextMenu(ProjectMedia mediaItem) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.visibility),
+              title: const Text('View'),
+              onTap: () {
+                Navigator.pop(context);
+                _viewMedia(mediaItem);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Edit Details'),
+              onTap: () {
+                Navigator.pop(context);
+                _editMediaDetails(mediaItem);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.share),
+              title: const Text('Share'),
+              onTap: () {
+                Navigator.pop(context);
+                // TODO: Implement sharing
+                _showErrorSnackBar('Sharing functionality coming soon');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteMedia(mediaItem);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editMediaDetails(ProjectMedia mediaItem) {
+    showDialog(
+      context: context,
+      builder: (context) => _MediaDetailsDialog.edit(
+        mediaItem: mediaItem,
+        onSave: (updatedMedia) async {
+          await context.read<AppStateProvider>().updateProjectMedia(updatedMedia);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Media details updated'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _deleteMedia(ProjectMedia mediaItem) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Media'),
+        content: Text('Are you sure you want to delete "${mediaItem.fileName}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                // Delete file from device
+                final file = File(mediaItem.filePath);
+                if (await file.exists()) {
+                  await file.delete();
+                }
+
+                // Remove from app state
+                await context.read<AppStateProvider>().deleteProjectMedia(mediaItem.id);
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Deleted ${mediaItem.fileName}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } catch (e) {
+                Navigator.pop(context);
+                _showErrorSnackBar('Error deleting media: $e');
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCategoryMedia(String category, List<ProjectMedia> items) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _CategoryMediaScreen(
+          category: category,
+          mediaItems: items,
+          customerName: widget.customer.name,
+        ),
+      ),
+    );
+  }
+
+  // ROOFSCOPE IMPORT IMPLEMENTATION
+  Future<void> _importRoofScope() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final filePath = result.files.single.path!;
+
+        setState(() => _isProcessingMedia = true);
+
+        try {
+          final appState = context.read<AppStateProvider>();
+          final roofScopeData = await appState.extractRoofScopeFromPdf(
+            filePath,
+            widget.customer.id,
+          );
+
+          if (roofScopeData != null && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('RoofScope data extracted successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+
+            // Also add the PDF as project media
+            final fileName = path.basename(filePath);
+            final fileSize = await File(filePath).length();
+
+            final mediaItem = ProjectMedia(
+              customerId: widget.customer.id,
+              filePath: filePath,
+              fileName: fileName,
+              fileType: 'pdf',
+              category: 'roofscope_reports',
+              description: 'RoofScope report with extracted measurements',
+              fileSizeBytes: fileSize,
+            );
+
+            await appState.addProjectMedia(mediaItem);
+          } else if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Could not extract RoofScope data from this PDF'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            _showErrorSnackBar('Error processing RoofScope PDF: $e');
+          }
+        } finally {
+          if (mounted) {
+            setState(() => _isProcessingMedia = false);
+          }
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error selecting PDF: $e');
+    }
+  }
+
+  // HELPER METHODS
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'before_photos':
+        return Colors.blue;
+      case 'after_photos':
+        return Colors.green;
+      case 'damage_report':
+        return Colors.red;
+      case 'progress_photos':
+        return Colors.orange;
+      case 'roofscope_reports':
+        return Colors.purple;
+      case 'contracts':
+        return Colors.indigo;
+      case 'invoices':
+        return Colors.teal;
+      case 'permits':
+        return Colors.brown;
+      case 'insurance_docs':
+        return Colors.amber;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatCategoryName(String category) {
+    return category
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  // [Previous helper methods remain the same]
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -582,65 +1249,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
     );
   }
 
-  Widget _buildMediaCard(ProjectMedia mediaItem) {
-    return Card(
-      elevation: 1.5,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Tapped ${mediaItem.fileName}')),
-          );
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Container(
-                color: Colors.grey[200],
-                child: mediaItem.isImage
-                    ? Icon(
-                  Icons.image_outlined,
-                  size: 48,
-                  color: Colors.grey[400],
-                )
-                    : Icon(
-                  mediaItem.isPdf
-                      ? Icons.picture_as_pdf_outlined
-                      : Icons.insert_drive_file_outlined,
-                  size: 48,
-                  color: Colors.grey[400],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    mediaItem.fileName,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    mediaItem.category,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   String _formatCommunicationDate(String timestamp) {
     try {
       final date = DateTime.parse(timestamp);
@@ -657,7 +1265,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
       builder: (context) => _CustomerEditDialog(
         customer: widget.customer,
         onCustomerUpdated: () {
-          // Callback to refresh the parent screen
           setState(() {});
         },
       ),
@@ -704,8 +1311,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
           TextButton(
             onPressed: () {
               context.read<AppStateProvider>().deleteCustomer(widget.customer.id);
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Close detail screen
+              Navigator.pop(context);
+              Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('${widget.customer.name} deleted successfully'),
@@ -779,18 +1386,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
     );
   }
 
-  void _importRoofScope() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('RoofScope import functionality coming soon')),
-    );
-  }
-
-  void _addMedia() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Add media functionality coming soon')),
-    );
-  }
-
   void _showQuickActions() {
     showModalBottomSheet(
       context: context,
@@ -836,7 +1431,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
               title: const Text('Add Media'),
               onTap: () {
                 Navigator.pop(context);
-                _addMedia();
+                _showMediaOptions();
               },
             ),
           ],
@@ -846,14 +1441,576 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
   }
 }
 
-// Customer Edit Dialog - Similar to the one in customers_screen.dart but optimized for detail screen
+// MEDIA DETAILS DIALOG
+class _MediaDetailsDialog extends StatefulWidget {
+  final File? file;
+  final String? fileName;
+  final String? fileType;
+  final int? fileSize;
+  final String customerId;
+  final ProjectMedia? mediaItem;
+  final Function(ProjectMedia)? onSave;
+
+  const _MediaDetailsDialog({
+    Key? key,
+    this.file,
+    this.fileName,
+    this.fileType,
+    this.fileSize,
+    required this.customerId,
+    this.mediaItem,
+    this.onSave,
+  }) : super(key: key);
+
+  const _MediaDetailsDialog.edit({
+    Key? key,
+    required ProjectMedia this.mediaItem,
+    required Function(ProjectMedia) this.onSave,
+  }) : file = null,
+        fileName = null,
+        fileType = null,
+        fileSize = null,
+        customerId = '';
+
+  @override
+  State<_MediaDetailsDialog> createState() => _MediaDetailsDialogState();
+}
+
+class _MediaDetailsDialogState extends State<_MediaDetailsDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _descriptionController = TextEditingController();
+  final _tagController = TextEditingController();
+
+  String _selectedCategory = 'general';
+  List<String> _tags = [];
+
+  final List<String> _categories = [
+    'general',
+    'before_photos',
+    'after_photos',
+    'damage_report',
+    'progress_photos',
+    'roofscope_reports',
+    'contracts',
+    'invoices',
+    'permits',
+    'insurance_docs',
+  ];
+
+  bool get _isEditing => widget.mediaItem != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      final media = widget.mediaItem!;
+      _descriptionController.text = media.description ?? '';
+      _selectedCategory = media.category;
+      _tags = List.from(media.tags);
+    }
+  }
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    _tagController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  topRight: Radius.circular(12),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _isEditing ? Icons.edit : Icons.add_photo_alternate,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _isEditing ? 'Edit Media Details' : 'Add Media Details',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // File preview/info
+                      if (!_isEditing && widget.file != null) ...[
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: widget.fileType == 'image'
+                                      ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(
+                                      widget.file!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return Icon(Icons.broken_image, color: Colors.grey[400]);
+                                      },
+                                    ),
+                                  )
+                                      : Icon(
+                                    widget.fileType == 'pdf'
+                                        ? Icons.picture_as_pdf
+                                        : Icons.insert_drive_file,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.fileName ?? 'Unknown file',
+                                        style: const TextStyle(fontWeight: FontWeight.w500),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        widget.fileSize != null
+                                            ? _formatFileSize(widget.fileSize!)
+                                            : 'Unknown size',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Category selection
+                      Text(
+                        'Category',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: _selectedCategory,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.category),
+                        ),
+                        items: _categories.map((category) {
+                          return DropdownMenuItem(
+                            value: category,
+                            child: Text(_formatCategoryName(category)),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedCategory = value ?? 'general';
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Description
+                      Text(
+                        'Description (Optional)',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.description),
+                          hintText: 'Add a description...',
+                        ),
+                        maxLines: 3,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Tags
+                      Text(
+                        'Tags',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _tagController,
+                              decoration: const InputDecoration(
+                                border: OutlineInputBorder(),
+                                prefixIcon: Icon(Icons.tag),
+                                hintText: 'Add a tag and press Enter',
+                              ),
+                              onFieldSubmitted: _addTag,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            onPressed: () => _addTag(_tagController.text),
+                            icon: const Icon(Icons.add),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Theme.of(context).primaryColor,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (_tags.isNotEmpty)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: _tags.map((tag) {
+                            return Chip(
+                              label: Text(tag),
+                              deleteIcon: const Icon(Icons.close, size: 16),
+                              onDeleted: () => _removeTag(tag),
+                            );
+                          }).toList(),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Footer
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: _saveMedia,
+                    child: Text(_isEditing ? 'Update' : 'Add Media'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addTag(String tag) {
+    final trimmedTag = tag.trim().toLowerCase();
+    if (trimmedTag.isNotEmpty && !_tags.contains(trimmedTag)) {
+      setState(() {
+        _tags.add(trimmedTag);
+        _tagController.clear();
+      });
+    }
+  }
+
+  void _removeTag(String tag) {
+    setState(() {
+      _tags.remove(tag);
+    });
+  }
+
+  void _saveMedia() {
+    if (_isEditing) {
+      // Update existing media
+      final updatedMedia = widget.mediaItem!;
+      updatedMedia.updateDetails(
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        category: _selectedCategory,
+        tags: _tags,
+      );
+
+      widget.onSave?.call(updatedMedia);
+      Navigator.pop(context);
+    } else {
+      // Create new media
+      final mediaItem = ProjectMedia(
+        customerId: widget.customerId,
+        filePath: widget.file!.path,
+        fileName: widget.fileName!,
+        fileType: widget.fileType!,
+        description: _descriptionController.text.trim().isEmpty
+            ? null
+            : _descriptionController.text.trim(),
+        category: _selectedCategory,
+        tags: _tags,
+        fileSizeBytes: widget.fileSize,
+      );
+
+      Navigator.pop(context, mediaItem);
+    }
+  }
+
+  String _formatCategoryName(String category) {
+    return category
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+}
+
+// FULL SCREEN IMAGE VIEWER
+class _FullScreenImageViewer extends StatelessWidget {
+  final ProjectMedia mediaItem;
+
+  const _FullScreenImageViewer({
+    Key? key,
+    required this.mediaItem,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black.withOpacity(0.5),
+        foregroundColor: Colors.white,
+        title: Text(
+          mediaItem.fileName,
+          style: const TextStyle(color: Colors.white),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 3.0,
+          child: Image.file(
+            File(mediaItem.filePath),
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.broken_image, size: 64, color: Colors.white54),
+                    SizedBox(height: 16),
+                    Text(
+                      'Cannot load image',
+                      style: TextStyle(color: Colors.white54),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// CATEGORY MEDIA SCREEN
+class _CategoryMediaScreen extends StatelessWidget {
+  final String category;
+  final List<ProjectMedia> mediaItems;
+  final String customerName;
+
+  const _CategoryMediaScreen({
+    Key? key,
+    required this.category,
+    required this.mediaItems,
+    required this.customerName,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_formatCategoryName(category)),
+            Text(
+              '$customerName • ${mediaItems.length} items',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+            ),
+          ],
+        ),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 0.8,
+        ),
+        itemCount: mediaItems.length,
+        itemBuilder: (context, index) {
+          final mediaItem = mediaItems[index];
+          return Card(
+            elevation: 2,
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () {
+                // Navigate back to detail screen and view media
+                Navigator.pop(context);
+                // TODO: Trigger view media
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: Container(
+                      color: Colors.grey[200],
+                      child: mediaItem.isImage
+                          ? Image.file(
+                        File(mediaItem.filePath),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Icon(
+                            Icons.broken_image,
+                            size: 48,
+                            color: Colors.grey[400],
+                          );
+                        },
+                      )
+                          : Icon(
+                        mediaItem.isPdf
+                            ? Icons.picture_as_pdf_outlined
+                            : Icons.insert_drive_file_outlined,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          mediaItem.fileName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          DateFormat('MMM dd, yyyy').format(mediaItem.createdAt),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 10,
+                          ),
+                        ),
+                        Text(
+                          mediaItem.formattedFileSize,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _formatCategoryName(String category) {
+    return category
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
+  }
+}
+
+// CUSTOMER EDIT DIALOG (kept from original)
 class _CustomerEditDialog extends StatefulWidget {
   final Customer customer;
   final VoidCallback? onCustomerUpdated;
   const _CustomerEditDialog({
     Key? key,
     required this.customer,
-    this.onCustomerUpdated, // ADD THIS
+    this.onCustomerUpdated,
   }) : super(key: key);
 
   @override
@@ -871,7 +2028,6 @@ class _CustomerEditDialogState extends State<_CustomerEditDialog> {
   @override
   void initState() {
     super.initState();
-    // Pre-populate with existing customer data
     _nameController.text = widget.customer.name;
     _phoneController.text = widget.customer.phone ?? '';
     _emailController.text = widget.customer.email ?? '';
@@ -899,7 +2055,6 @@ class _CustomerEditDialogState extends State<_CustomerEditDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -916,7 +2071,6 @@ class _CustomerEditDialogState extends State<_CustomerEditDialog> {
                 ],
               ),
             ),
-            // Form Content
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
@@ -971,7 +2125,6 @@ class _CustomerEditDialogState extends State<_CustomerEditDialog> {
                 ),
               ),
             ),
-            // Actions Footer
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: BoxDecoration(
@@ -1028,7 +2181,6 @@ class _CustomerEditDialogState extends State<_CustomerEditDialog> {
 
     final appState = context.read<AppStateProvider>();
 
-    // Update the customer object
     widget.customer.updateInfo(
       name: _nameController.text.trim(),
       phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
@@ -1037,12 +2189,9 @@ class _CustomerEditDialogState extends State<_CustomerEditDialog> {
       notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
     );
 
-    // Update in the app state
     appState.updateCustomer(widget.customer);
 
     Navigator.pop(context);
-
-    // FIXED: Call the callback to refresh parent
     widget.onCustomerUpdated?.call();
 
     ScaffoldMessenger.of(context).showSnackBar(
