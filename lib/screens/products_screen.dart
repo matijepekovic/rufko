@@ -330,7 +330,11 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
   }
 }
 
-// --- _ModernProductFormDialog - FIXED VERSION ---
+// Replace the existing _ModernProductFormDialog class in products_screen.dart with this enhanced version
+
+// Enhanced Product Form Dialog with 3-Tier System
+// Replace the _ModernProductFormDialog in products_screen.dart
+
 class _ModernProductFormDialog extends StatefulWidget {
   final Product? product;
   const _ModernProductFormDialog({Key? key, this.product}) : super(key: key);
@@ -343,72 +347,125 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
   late TabController _tabController;
   final _formKey = GlobalKey<FormState>();
 
+  // Basic info controllers
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _basePriceController = TextEditingController();
   final _skuController = TextEditingController();
 
-  String _selectedCategory = 'Materials'; // FIXED: Use capitalized default
+  // Basic info state
+  String _selectedCategory = 'Materials';
   String _selectedUnit = 'each';
   bool _isActive = true;
   bool _isAddon = false;
+  bool _isDiscountable = true;
 
-  Map<String, double> _currentLevelPrices = {};
+  // NEW: 3-Tier System State
+  ProductPricingType _pricingType = ProductPricingType.SIMPLE;
+  bool _isMainDifferentiator = false;
+
+  // Level pricing controllers (dynamic)
   Map<String, TextEditingController> _levelPriceControllers = {};
-  final List<String> _formLevelKeys = ['basic', 'standard', 'premium'];
+  Map<String, TextEditingController> _levelNameControllers = {};
+  Map<String, TextEditingController> _levelDescriptionControllers = {};
+
+  List<String> _currentLevelKeys = [];
+  bool _isInitialized = false;
 
   bool get _isEditing => widget.product != null;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // 3 tabs now
+    _initializeFormData();
+  }
 
-    // Initialize level price controllers
-    for (final key in _formLevelKeys) {
-      _levelPriceControllers[key] = TextEditingController();
-    }
+  void _initializeFormData() {
+    if (_isInitialized) return;
+    _isInitialized = true;
 
-    // FIXED: Initialize category from AppSettings or use safe default
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
-      final categories = appState.appSettings?.productCategories ?? ['Materials', 'Roofing', 'Gutters', 'Labor', 'Other'];
+    final appState = Provider.of<AppStateProvider>(context, listen: false);
+    final categories = appState.appSettings?.productCategories ?? ['Materials', 'Roofing', 'Gutters', 'Labor', 'Other'];
+    final settingsLevels = appState.appSettings?.defaultQuoteLevelNames ?? ['Basic', 'Standard', 'Premium'];
 
-      if (_isEditing && widget.product != null) {
-        final p = widget.product!;
-        _nameController.text = p.name;
-        _descriptionController.text = p.description ?? '';
-        _basePriceController.text = p.unitPrice.toStringAsFixed(2);
-        _skuController.text = p.sku ?? '';
+    if (_isEditing && widget.product != null) {
+      // EDITING MODE: Load existing product data
+      final p = widget.product!;
 
-        // FIXED: Ensure the category exists in the current categories list
-        if (categories.contains(p.category)) {
-          _selectedCategory = p.category;
+      // Load basic info
+      _nameController.text = p.name;
+      _descriptionController.text = p.description ?? '';
+      _basePriceController.text = p.unitPrice.toStringAsFixed(2);
+      _skuController.text = p.sku ?? '';
+      _selectedCategory = categories.contains(p.category) ? p.category : categories.first;
+      _selectedUnit = p.unit;
+      _isActive = p.isActive;
+      _isAddon = p.isAddon;
+      _isDiscountable = p.isDiscountable;
+
+      // NEW: Load 3-tier system data
+      _pricingType = p.pricingType;
+      _isMainDifferentiator = p.isMainDifferentiator;
+
+      // Build level keys from existing product
+      _currentLevelKeys = p.enhancedLevelPrices.map((level) => level.levelId).toList();
+
+      // If no levels exist, set defaults based on pricing type
+      if (_currentLevelKeys.isEmpty && _pricingType != ProductPricingType.SIMPLE) {
+        if (_pricingType == ProductPricingType.MAIN_DIFFERENTIATOR) {
+          _currentLevelKeys = settingsLevels.map((name) => name.toLowerCase().replaceAll(' ', '_')).toList();
         } else {
-          _selectedCategory = categories.first;
+          _currentLevelKeys = ['option_1', 'option_2']; // Default sub-levels
         }
-
-        _selectedUnit = p.unit;
-        _isActive = p.isActive;
-        _isAddon = p.isAddon;
-        _currentLevelPrices = Map.from(p.levelPrices);
-
-        _currentLevelPrices.forEach((levelId, price) {
-          if (_levelPriceControllers.containsKey(levelId)) {
-            _levelPriceControllers[levelId]!.text = price.toStringAsFixed(2);
-          } else {
-            _levelPriceControllers[levelId] = TextEditingController(text: price.toStringAsFixed(2));
-          }
-        });
-      } else {
-        // FIXED: For new products, ensure we use the first available category
-        _selectedCategory = categories.first;
       }
 
-      if (mounted) {
-        setState(() {}); // Refresh the UI with correct categories
+      // Initialize controllers for all levels
+      _initializeLevelControllers();
+
+      // Load existing level data
+      for (final levelPrice in p.enhancedLevelPrices) {
+        final key = levelPrice.levelId;
+        if (_levelPriceControllers.containsKey(key)) {
+          _levelPriceControllers[key]!.text = levelPrice.price.toStringAsFixed(2);
+          _levelNameControllers[key]!.text = levelPrice.levelName;
+          _levelDescriptionControllers[key]!.text = levelPrice.description ?? '';
+        }
       }
-    });
+    } else {
+      // NEW PRODUCT MODE
+      _selectedCategory = categories.first;
+      _pricingType = ProductPricingType.SIMPLE; // Default to simple
+    }
+  }
+
+  void _initializeLevelControllers() {
+    // Clear existing controllers
+    _levelPriceControllers.forEach((_, controller) => controller.dispose());
+    _levelNameControllers.forEach((_, controller) => controller.dispose());
+    _levelDescriptionControllers.forEach((_, controller) => controller.dispose());
+    _levelPriceControllers.clear();
+    _levelNameControllers.clear();
+    _levelDescriptionControllers.clear();
+
+    // Initialize controllers for current level keys
+    for (int i = 0; i < _currentLevelKeys.length; i++) {
+      final key = _currentLevelKeys[i];
+      _levelPriceControllers[key] = TextEditingController();
+      _levelNameControllers[key] = TextEditingController();
+      _levelDescriptionControllers[key] = TextEditingController();
+
+      // Set default names based on pricing type
+      if (_pricingType == ProductPricingType.MAIN_DIFFERENTIATOR) {
+        final appState = Provider.of<AppStateProvider>(context, listen: false);
+        final settingsLevels = appState.appSettings?.defaultQuoteLevelNames ?? ['Basic', 'Standard', 'Premium'];
+        if (i < settingsLevels.length) {
+          _levelNameControllers[key]!.text = settingsLevels[i];
+        }
+      } else if (_pricingType == ProductPricingType.SUB_LEVELED) {
+        _levelNameControllers[key]!.text = 'Option ${i + 1}';
+      }
+    }
   }
 
   @override
@@ -419,6 +476,8 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
     _basePriceController.dispose();
     _skuController.dispose();
     _levelPriceControllers.forEach((_, controller) => controller.dispose());
+    _levelNameControllers.forEach((_, controller) => controller.dispose());
+    _levelDescriptionControllers.forEach((_, controller) => controller.dispose());
     super.dispose();
   }
 
@@ -427,52 +486,91 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
     return Dialog(
       insetPadding: const EdgeInsets.all(20),
       child: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.9,
+        width: MediaQuery.of(context).size.width * 0.95,
+        height: MediaQuery.of(context).size.height * 0.90,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(_isEditing ? 'Edit Product' : 'Create Product', style: Theme.of(context).textTheme.headlineSmall),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+            // Header
+            _buildHeader(),
+
+            // Tab Bar
+            Container(
+              color: Colors.white,
+              child: TabBar(
+                controller: _tabController,
+                labelColor: Theme.of(context).primaryColor,
+                unselectedLabelColor: Colors.grey[600],
+                indicatorColor: Theme.of(context).primaryColor,
+                tabs: const [
+                  Tab(icon: Icon(Icons.info_outline), text: 'Basic Info'),
+                  Tab(icon: Icon(Icons.tune), text: 'Product Type'),
+                  Tab(icon: Icon(Icons.layers_outlined), text: 'Pricing Levels'),
                 ],
               ),
             ),
-            TabBar(
-              controller: _tabController,
-              tabs: const [
-                Tab(text: 'Basic Info'),
-                Tab(text: 'Level Pricing'),
-              ],
-            ),
-            Flexible(
+
+            // Tab Content
+            Expanded(
               child: Form(
                 key: _formKey,
                 child: TabBarView(
                   controller: _tabController,
                   children: [
                     _buildBasicInfoTab(),
-                    _buildLevelPricingTab(),
+                    _buildProductTypeTab(), // NEW
+                    _buildPricingLevelsTab(),
                   ],
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                  const SizedBox(width: 8),
-                  ElevatedButton(onPressed: _saveProduct, child: Text(_isEditing ? 'Update' : 'Create')),
-                ],
-              ),
-            ),
+
+            // Footer
+            _buildFooter(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withOpacity(0.05),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(12),
+          topRight: Radius.circular(12),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(_isEditing ? Icons.edit_note : Icons.add_box,
+              color: Theme.of(context).primaryColor, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isEditing ? 'Edit Product' : 'Create New Product',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  _getPricingTypeDescription(),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
       ),
     );
   }
@@ -480,11 +578,9 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
   Widget _buildBasicInfoTab() {
     return Consumer<AppStateProvider>(
       builder: (context, appState, child) {
-        // FIXED: Get categories safely from AppSettings
         final categories = appState.appSettings?.productCategories ?? ['Materials', 'Roofing', 'Gutters', 'Labor', 'Other'];
         final units = appState.appSettings?.productUnits ?? ['each', 'sq ft', 'lin ft', 'hour', 'day'];
 
-        // FIXED: Ensure selected category exists in available categories
         if (!categories.contains(_selectedCategory)) {
           _selectedCategory = categories.first;
         }
@@ -498,69 +594,89 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildModernTextField(
-                  controller: _nameController,
-                  label: 'Product Name',
-                  icon: Icons.label,
-                  validator: (v) => v == null || v.isEmpty ? 'Required' : null
+                controller: _nameController,
+                label: 'Product Name',
+                icon: Icons.label_outline,
+                validator: (v) => v == null || v.isEmpty ? 'Product name is required' : null,
               ),
               const SizedBox(height: 16),
               _buildModernTextField(
-                  controller: _descriptionController,
-                  label: 'Description',
-                  icon: Icons.notes,
-                  maxLines: 3
+                controller: _descriptionController,
+                label: 'Description',
+                icon: Icons.notes,
+                maxLines: 3,
+                hint: 'Describe what this product is and its key features...',
               ),
               const SizedBox(height: 16),
               _buildModernTextField(
-                  controller: _basePriceController,
-                  label: 'Base Unit Price',
-                  icon: Icons.attach_money,
-                  keyboardType: TextInputType.number,
-                  validator: (v) => v == null || (double.tryParse(v) == null || double.parse(v) < 0) ? 'Invalid price' : null
+                controller: _basePriceController,
+                label: 'Base Unit Price',
+                icon: Icons.attach_money,
+                keyboardType: TextInputType.number,
+                validator: (v) => v == null || (double.tryParse(v) == null || double.parse(v) < 0) ? 'Enter a valid price' : null,
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                      child: _buildModernDropdown<String>(
-                          value: _selectedCategory,
-                          label: 'Category',
-                          icon: Icons.category,
-                          items: categories, // FIXED: Use categories from state
-                          onChanged: (v) => setState(() => _selectedCategory = v!)
-                      )
+                    child: _buildModernDropdown<String>(
+                      value: _selectedCategory,
+                      label: 'Category',
+                      icon: Icons.category,
+                      items: categories,
+                      onChanged: (v) => setState(() => _selectedCategory = v!),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                      child: _buildModernDropdown<String>(
-                          value: _selectedUnit,
-                          label: 'Unit',
-                          icon: Icons.square_foot,
-                          items: units, // FIXED: Use units from state
-                          onChanged: (v) => setState(() => _selectedUnit = v!)
-                      )
+                    child: _buildModernDropdown<String>(
+                      value: _selectedUnit,
+                      label: 'Unit',
+                      icon: Icons.straighten,
+                      items: units,
+                      onChanged: (v) => setState(() => _selectedUnit = v!),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               _buildModernTextField(
-                  controller: _skuController,
-                  label: 'SKU (Optional)',
-                  icon: Icons.qr_code
+                controller: _skuController,
+                label: 'SKU (Optional)',
+                icon: Icons.qr_code_outlined,
+                hint: 'Product identifier for inventory tracking',
               ),
-              const SizedBox(height: 20),
-              _buildModernSwitch(
-                  title: 'Active Product',
-                  subtitle: 'Product is available for use',
-                  value: _isActive,
-                  onChanged: (v) => setState(() => _isActive = v)
+              const SizedBox(height: 24),
+              Text(
+                'Product Settings',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
               ),
               const SizedBox(height: 12),
               _buildModernSwitch(
-                  title: 'Is Optional Add-on',
-                  subtitle: 'Typically offered separately',
-                  value: _isAddon,
-                  onChanged: (v) => setState(() => _isAddon = v)
+                title: 'Active Product',
+                subtitle: 'Available for use in quotes and estimates',
+                value: _isActive,
+                onChanged: (v) => setState(() => _isActive = v),
+                icon: Icons.visibility,
+              ),
+              const SizedBox(height: 8),
+              _buildModernSwitch(
+                title: 'Optional Add-on',
+                subtitle: 'Typically offered as separate upgrade option',
+                value: _isAddon,
+                onChanged: (v) => setState(() => _isAddon = v),
+                icon: Icons.add_circle_outline,
+              ),
+              const SizedBox(height: 8),
+              _buildModernSwitch(
+                title: 'Discountable Product',
+                subtitle: 'Can be affected by quote discounts and promotions',
+                value: _isDiscountable,
+                onChanged: (v) => setState(() => _isDiscountable = v),
+                icon: Icons.local_offer_outlined,
               ),
             ],
           ),
@@ -569,47 +685,539 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
     );
   }
 
-  Widget _buildLevelPricingTab() {
+  // NEW: Product Type Selection Tab
+  Widget _buildProductTypeTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Product Level Pricing', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            '🎯 Choose Product Type',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
-            'Define specific prices for this product if its cost varies when included in different quote levels (e.g., "basic", "standard"). If a level price isn\'t set, the "Base Unit Price" will be used by default when this product is part of that quote level.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade700),
+            'Select how this product behaves in quotes:',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[600],
+            ),
           ),
-          const SizedBox(height: 16),
-          ..._formLevelKeys.map((levelKey) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: TextFormField(
-                controller: _levelPriceControllers[levelKey],
-                decoration: InputDecoration(
-                  labelText: 'Price for "$levelKey" Level (Optional)',
-                  prefixText: '\$ ',
-                  border: const OutlineInputBorder(),
-                  hintText: _basePriceController.text.isNotEmpty ? 'Defaults to \$${_basePriceController.text}' : 'e.g. 150.00',
-                ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                onChanged: (value) {
-                  final price = double.tryParse(value);
-                  if (price != null && price >= 0) {
-                    _currentLevelPrices[levelKey] = price;
-                  } else {
-                    _currentLevelPrices.remove(levelKey);
-                  }
-                },
-              ),
-            );
-          }).toList(),
+          const SizedBox(height: 24),
+
+          // Product Type Cards
+          _buildProductTypeCard(
+            type: ProductPricingType.MAIN_DIFFERENTIATOR,
+            title: '🏠 Main Differentiator',
+            subtitle: 'Sets quote column headers',
+            description: 'Creates Builder/Homeowner/Platinum columns.\nExample: Roofing Shingles with different quality levels.',
+            color: Colors.blue,
+            example: 'Builder (\$120) | Homeowner (\$180) | Platinum (\$240)',
+          ),
+
+          _buildProductTypeCard(
+            type: ProductPricingType.SUB_LEVELED,
+            title: '🌧️ Sub-Leveled Options',
+            subtitle: 'Independent internal choices',
+            description: 'Customer picks ONE option regardless of main product level.\nExample: Gutters with/without mesh.',
+            color: Colors.orange,
+            example: 'Basic Gutters (\$8) OR Mesh Gutters (\$18)',
+          ),
+
+          _buildProductTypeCard(
+            type: ProductPricingType.SIMPLE,
+            title: '👷 Simple Product',
+            subtitle: 'Same price everywhere',
+            description: 'One price used across all quote levels.\nExample: Labor, nails, installation.',
+            color: Colors.green,
+            example: 'Labor: \$85/hour (same for all roof types)',
+          ),
         ],
       ),
     );
   }
 
+  Widget _buildProductTypeCard({
+    required ProductPricingType type,
+    required String title,
+    required String subtitle,
+    required String description,
+    required Color color,
+    required String example,
+  }) {
+    final isSelected = _pricingType == type;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: () => _setPricingType(type),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: isSelected ? color : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
+            ),
+            borderRadius: BorderRadius.circular(12),
+            color: isSelected ? color.withOpacity(0.05) : Colors.white,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? color : Colors.black87,
+                          ),
+                        ),
+                        Text(
+                          subtitle,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                description,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'Example: $example',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontFamily: 'monospace',
+                    color: color,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPricingLevelsTab() {
+    if (_pricingType == ProductPricingType.SIMPLE) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle, size: 64, color: Colors.green.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Simple Product Selected',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This product uses the base price across all quote levels.\nNo additional configuration needed.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _getPricingTypeColor().withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.layers, color: _getPricingTypeColor(), size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _pricingType == ProductPricingType.MAIN_DIFFERENTIATOR
+                          ? 'Main Differentiator Levels'
+                          : 'Sub-Level Options',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      _pricingType == ProductPricingType.MAIN_DIFFERENTIATOR
+                          ? 'These create the quote column headers'
+                          : 'Customer picks ONE of these options',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue.shade600, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _pricingType == ProductPricingType.MAIN_DIFFERENTIATOR
+                        ? 'These levels appear as separate columns in quotes for side-by-side comparison.'
+                        : 'Customer chooses one option independent of the main product level.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue.shade700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Level configuration cards
+          ...List.generate(_currentLevelKeys.length, (index) {
+            final levelKey = _currentLevelKeys[index];
+            final cardColor = _getLevelCardColor(index);
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                border: Border.all(color: cardColor.withOpacity(0.3)),
+                borderRadius: BorderRadius.circular(12),
+                color: cardColor.withOpacity(0.05),
+              ),
+              child: Column(
+                children: [
+                  // Card header
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: cardColor.withOpacity(0.1),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: cardColor.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${index + 1}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: cardColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _pricingType == ProductPricingType.MAIN_DIFFERENTIATOR
+                                ? 'Level ${index + 1} Configuration'
+                                : 'Option ${index + 1} Configuration',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: cardColor,
+                            ),
+                          ),
+                        ),
+                        if (_currentLevelKeys.length > 1)
+                          IconButton(
+                            icon: Icon(Icons.remove_circle_outline, color: Colors.red.shade400),
+                            onPressed: () => _removeLevel(index),
+                            tooltip: 'Remove this level',
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // Card content
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        // Level name
+                        TextFormField(
+                          controller: _levelNameControllers[levelKey],
+                          decoration: InputDecoration(
+                            labelText: _pricingType == ProductPricingType.MAIN_DIFFERENTIATOR ? 'Level Name' : 'Option Name',
+                            hintText: _pricingType == ProductPricingType.MAIN_DIFFERENTIATOR ? 'Builder Grade' : 'Basic Version',
+                            border: const OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.label_outline, color: cardColor),
+                            helperText: _pricingType == ProductPricingType.MAIN_DIFFERENTIATOR
+                                ? 'This name appears as column header'
+                                : 'Customer sees this option name',
+                          ),
+                          validator: (v) => v == null || v.isEmpty ? 'Name is required' : null,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Level description
+                        TextFormField(
+                          controller: _levelDescriptionControllers[levelKey],
+                          decoration: InputDecoration(
+                            labelText: 'Description (Optional)',
+                            hintText: 'Describe what makes this different...',
+                            border: const OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.description_outlined, color: cardColor),
+                            helperText: 'Explains value differences to customers',
+                          ),
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Level price
+                        TextFormField(
+                          controller: _levelPriceControllers[levelKey],
+                          decoration: InputDecoration(
+                            labelText: 'Price',
+                            prefixText: '\$ ',
+                            border: const OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.attach_money, color: cardColor),
+                            hintText: _basePriceController.text.isNotEmpty
+                                ? 'Defaults to \$${_basePriceController.text}'
+                                : 'e.g. 150.00',
+                            helperText: 'Leave empty to use base price',
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          validator: (v) {
+                            if (v != null && v.isNotEmpty) {
+                              final price = double.tryParse(v);
+                              if (price == null || price < 0) {
+                                return 'Enter a valid price';
+                              }
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          // Add/Remove level controls
+          const SizedBox(height: 16),
+          _buildLevelControls(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLevelControls() {
+    final maxLevels = _pricingType == ProductPricingType.MAIN_DIFFERENTIATOR ? 6 : 4;
+    final minLevels = _pricingType == ProductPricingType.MAIN_DIFFERENTIATOR ? 2 : 2;
+
+    return Row(
+      children: [
+        if (_currentLevelKeys.length > minLevels)
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () => _removeLevel(_currentLevelKeys.length - 1),
+              icon: const Icon(Icons.remove),
+              label: Text('Remove (${_currentLevelKeys.length} total)'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red.shade600,
+              ),
+            ),
+          ),
+        if (_currentLevelKeys.length > minLevels) const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            onPressed: _currentLevelKeys.length < maxLevels ? _addLevel : null,
+            icon: const Icon(Icons.add),
+            label: Text('Add ${_pricingType == ProductPricingType.MAIN_DIFFERENTIATOR ? 'Level' : 'Option'} (${_currentLevelKeys.length}/$maxLevels)'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade600,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFooter() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(12),
+          bottomRight: Radius.circular(12),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          const SizedBox(width: 12),
+          ElevatedButton.icon(
+            onPressed: _saveProduct,
+            icon: Icon(_isEditing ? Icons.update : Icons.add),
+            label: Text(_isEditing ? 'Update Product' : 'Create Product'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper Methods
+  String _getPricingTypeDescription() {
+    switch (_pricingType) {
+      case ProductPricingType.MAIN_DIFFERENTIATOR:
+        return 'Main differentiator - sets quote column headers';
+      case ProductPricingType.SUB_LEVELED:
+        return 'Sub-leveled - independent customer choices';
+      case ProductPricingType.SIMPLE:
+        return 'Simple product - same price everywhere';
+    }
+  }
+
+  Color _getPricingTypeColor() {
+    switch (_pricingType) {
+      case ProductPricingType.MAIN_DIFFERENTIATOR:
+        return Colors.blue.shade600;
+      case ProductPricingType.SUB_LEVELED:
+        return Colors.orange.shade600;
+      case ProductPricingType.SIMPLE:
+        return Colors.green.shade600;
+    }
+  }
+
+  Color _getLevelCardColor(int index) {
+    final colors = [
+      Colors.blue.shade600,
+      Colors.orange.shade600,
+      Colors.green.shade600,
+      Colors.purple.shade600,
+      Colors.teal.shade600,
+      Colors.indigo.shade600,
+    ];
+    return colors[index % colors.length];
+  }
+
+  void _setPricingType(ProductPricingType type) {
+    setState(() {
+      _pricingType = type;
+      _isMainDifferentiator = (type == ProductPricingType.MAIN_DIFFERENTIATOR);
+
+      if (type == ProductPricingType.SIMPLE) {
+        _currentLevelKeys.clear();
+      } else {
+        // Set default level keys based on type
+        if (type == ProductPricingType.MAIN_DIFFERENTIATOR) {
+          final appState = Provider.of<AppStateProvider>(context, listen: false);
+          final settingsLevels = appState.appSettings?.defaultQuoteLevelNames ?? ['Basic', 'Standard', 'Premium'];
+          _currentLevelKeys = settingsLevels.map((name) => name.toLowerCase().replaceAll(' ', '_')).toList();
+        } else {
+          _currentLevelKeys = ['option_1', 'option_2'];
+        }
+        _initializeLevelControllers();
+      }
+    });
+  }
+
+  void _addLevel() {
+    final maxLevels = _pricingType == ProductPricingType.MAIN_DIFFERENTIATOR ? 6 : 4;
+    if (_currentLevelKeys.length < maxLevels) {
+      setState(() {
+        final newKey = '${_pricingType == ProductPricingType.MAIN_DIFFERENTIATOR ? 'level' : 'option'}_${DateTime.now().millisecondsSinceEpoch}';
+        _currentLevelKeys.add(newKey);
+        _levelPriceControllers[newKey] = TextEditingController();
+        _levelNameControllers[newKey] = TextEditingController(
+            text: '${_pricingType == ProductPricingType.MAIN_DIFFERENTIATOR ? 'Level' : 'Option'} ${_currentLevelKeys.length}'
+        );
+        _levelDescriptionControllers[newKey] = TextEditingController();
+      });
+    }
+  }
+
+  void _removeLevel(int index) {
+    final minLevels = _pricingType == ProductPricingType.MAIN_DIFFERENTIATOR ? 2 : 2;
+    if (_currentLevelKeys.length > minLevels && index < _currentLevelKeys.length) {
+      setState(() {
+        final keyToRemove = _currentLevelKeys[index];
+        _currentLevelKeys.removeAt(index);
+        _levelPriceControllers[keyToRemove]?.dispose();
+        _levelNameControllers[keyToRemove]?.dispose();
+        _levelDescriptionControllers[keyToRemove]?.dispose();
+        _levelPriceControllers.remove(keyToRemove);
+        _levelNameControllers.remove(keyToRemove);
+        _levelDescriptionControllers.remove(keyToRemove);
+      });
+    }
+  }
+
+  // Form Field Builders (same as before)
   Widget _buildModernTextField({
     required TextEditingController controller,
     required String label,
@@ -626,6 +1234,10 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
         hintText: hint,
         prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withOpacity(0.7)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8.0),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+        ),
         filled: true,
         fillColor: Colors.white,
       ),
@@ -648,6 +1260,10 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
         labelText: label,
         prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withOpacity(0.7)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8.0),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+        ),
         filled: true,
         fillColor: Colors.white,
       ),
@@ -664,22 +1280,53 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
+    required IconData icon,
   }) {
-    return SwitchListTile(
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-      subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-      value: value,
-      onChanged: onChanged,
-      activeColor: Theme.of(context).primaryColor,
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      controlAffinity: ListTileControlAffinity.trailing,
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: Theme.of(context).primaryColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+                Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600])),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: Theme.of(context).primaryColor,
+          ),
+        ],
+      ),
     );
   }
 
   void _saveProduct() {
     if (!_formKey.currentState!.validate()) {
-      _tabController.animateTo(0);
+      // Switch to appropriate tab if validation fails
+      if (_nameController.text.isEmpty || _basePriceController.text.isEmpty) {
+        _tabController.animateTo(0);
+      } else if (_pricingType != ProductPricingType.SIMPLE && _currentLevelKeys.any((key) => _levelNameControllers[key]?.text.isEmpty ?? true)) {
+        _tabController.animateTo(2);
+      }
       return;
     }
 
@@ -687,17 +1334,29 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
     final basePriceText = _basePriceController.text.trim();
     final basePrice = double.tryParse(basePriceText) ?? 0.0;
 
-    Map<String, double> finalLevelPrices = {};
-    _levelPriceControllers.forEach((key, controller) {
-      if (controller.text.isNotEmpty) {
-        final price = double.tryParse(controller.text.trim());
-        if (price != null && price >= 0) {
-          finalLevelPrices[key] = price;
+    // Build enhanced level prices from the form
+    List<ProductLevelPrice> enhancedLevelPrices = [];
+    if (_pricingType != ProductPricingType.SIMPLE) {
+      for (final key in _currentLevelKeys) {
+        final name = _levelNameControllers[key]?.text.trim() ?? 'Level';
+        final description = _levelDescriptionControllers[key]?.text.trim();
+        final priceText = _levelPriceControllers[key]?.text.trim() ?? '';
+        final price = double.tryParse(priceText) ?? basePrice;
+
+        if (name.isNotEmpty) {
+          enhancedLevelPrices.add(ProductLevelPrice(
+            levelId: key,
+            levelName: name,
+            price: price,
+            description: description?.isEmpty ?? true ? null : description,
+            isActive: true,
+          ));
         }
       }
-    });
+    }
 
     if (_isEditing && widget.product != null) {
+      // Update existing product
       widget.product!.updateInfo(
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
@@ -707,10 +1366,23 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
         sku: _skuController.text.trim().isEmpty ? null : _skuController.text.trim(),
         isActive: _isActive,
         isAddon: _isAddon,
-        levelPrices: finalLevelPrices,
+        isDiscountable: _isDiscountable,
+        isMainDifferentiator: _isMainDifferentiator,
+        enableLevelPricing: _pricingType != ProductPricingType.SIMPLE,
       );
+
+      // Update enhanced level prices and pricing type
+      widget.product!.enhancedLevelPrices.clear();
+      widget.product!.enhancedLevelPrices.addAll(enhancedLevelPrices);
+      widget.product!.pricingType = _pricingType;
+
       appState.updateProduct(widget.product!);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Product updated successfully!'), backgroundColor: Colors.green),
+      );
     } else {
+      // Create new product
       final newProduct = Product(
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(),
@@ -720,14 +1392,20 @@ class _ModernProductFormDialogState extends State<_ModernProductFormDialog> with
         sku: _skuController.text.trim().isEmpty ? null : _skuController.text.trim(),
         isActive: _isActive,
         isAddon: _isAddon,
-        levelPrices: finalLevelPrices,
+        isDiscountable: _isDiscountable,
+        isMainDifferentiator: _isMainDifferentiator,
+        enableLevelPricing: _pricingType != ProductPricingType.SIMPLE,
+        pricingType: _pricingType,
+        enhancedLevelPrices: enhancedLevelPrices,
       );
+
       appState.addProduct(newProduct);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Product created successfully!'), backgroundColor: Colors.green),
+      );
     }
 
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(_isEditing ? 'Product updated!' : 'Product created!'), backgroundColor: Colors.green),
-    );
   }
 }

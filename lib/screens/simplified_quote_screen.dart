@@ -1,4 +1,4 @@
-// lib/screens/simplified_quote_screen.dart - UPDATED WITH BASE QUANTITY SUPPORT
+// lib/screens/simplified_quote_screen.dart - FIXED TO USE SETTINGS LEVELS
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -30,18 +30,11 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   final List<QuoteItem> _overallAddons = [];
   bool _isLoading = false;
 
-  // NEW: Base product quantity controller
   final _baseQuantityController = TextEditingController(text: '1.0');
   double _currentBaseQuantity = 1.0;
-
   final _screenFormKey = GlobalKey<FormState>();
 
-  // Level configurations
-  final List<Map<String, dynamic>> _predefinedLevels = [
-    {'id': 'basic', 'name': 'Basic', 'multiplier': 1.0, 'color': Colors.blue.shade600},
-    {'id': 'standard', 'name': 'Standard', 'multiplier': 1.25, 'color': Colors.orange.shade700},
-    {'id': 'premium', 'name': 'Premium', 'multiplier': 1.5, 'color': Colors.green.shade700},
-  ];
+  // REMOVED: Hardcoded level configurations - now using settings
 
   @override
   void dispose() {
@@ -49,7 +42,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     super.dispose();
   }
 
-  // UPDATED: Update base quantity across all levels
   void _updateBaseQuantity(double newQuantity) {
     setState(() {
       _currentBaseQuantity = newQuantity;
@@ -60,7 +52,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     });
   }
 
-  // Add items to ALL levels at once
   void _showAddItemToAllLevelsDialog() {
     Product? dialogSelectedProduct;
     final quantityController = TextEditingController(text: '1.0');
@@ -173,12 +164,9 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                               spacing: 8,
                               children: _levels.map((level) => Chip(
                                 label: Text(level.name),
-                                backgroundColor: _predefinedLevels
-                                    .firstWhere((pl) => pl['id'] == level.id, orElse: () => {'color': Colors.grey})['color']
-                                    .withOpacity(0.2),
+                                backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
                                 labelStyle: TextStyle(
-                                  color: _predefinedLevels
-                                      .firstWhere((pl) => pl['id'] == level.id, orElse: () => {'color': Colors.grey})['color'],
+                                  color: Theme.of(context).primaryColor,
                                   fontSize: 12,
                                 ),
                               )).toList(),
@@ -238,7 +226,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     );
   }
 
-  // Add items to a specific level
   void _showAddItemToSpecificLevelDialog(QuoteLevel level) {
     Product? dialogSelectedProduct;
     final quantityController = TextEditingController(text: '1.0');
@@ -353,7 +340,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     );
   }
 
-  // Enhanced optional add-ons dialog
   void _showAddOptionalAddonDialog() {
     Product? dialogSelectedProduct;
     final quantityController = TextEditingController(text: '1.0');
@@ -531,7 +517,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
       taxRate: appState.appSettings?.taxRate ?? 0.0,
       discount: 0.0,
       status: 'draft',
-      // NEW: Store base product information
       baseProductId: _baseProduct!.id,
       baseProductName: _baseProduct!.name,
       baseProductUnit: _baseProduct!.unit,
@@ -637,18 +622,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                           _baseProduct = product;
                           _levels.clear();
                           if (product != null) {
-                            for (var i = 0; i < _predefinedLevels.length; i++) {
-                              final levelConfig = _predefinedLevels[i];
-                              final levelSpecificBasePrice = product.getPriceForLevel(levelConfig['id']);
-                              _levels.add(QuoteLevel(
-                                id: levelConfig['id'],
-                                name: levelConfig['name'],
-                                levelNumber: i + 1,
-                                basePrice: levelSpecificBasePrice,
-                                baseQuantity: _currentBaseQuantity, // NEW: Set base quantity
-                                includedItems: [],
-                              )..calculateSubtotal());
-                            }
+                            _initializeLevelsFromSettings(appState, product);
                           }
                         });
                       },
@@ -656,7 +630,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                     ),
                     if (_baseProduct != null) ...[
                       const SizedBox(height: 16),
-                      // NEW: Base quantity input
                       TextFormField(
                         controller: _baseQuantityController,
                         decoration: InputDecoration(
@@ -724,6 +697,28 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     );
   }
 
+  // NEW: Initialize levels from settings instead of hardcoded
+  void _initializeLevelsFromSettings(AppStateProvider appState, Product product) {
+    final settingsLevelNames = appState.appSettings?.defaultQuoteLevelNames ?? ['Basic', 'Standard', 'Premium'];
+
+    for (var i = 0; i < settingsLevelNames.length; i++) {
+      final levelName = settingsLevelNames[i];
+      final levelId = levelName.toLowerCase().replaceAll(' ', '_');
+
+      // Try to get level-specific price from product, fallback to base price
+      final levelSpecificBasePrice = product.getPriceForLevel(levelId);
+
+      _levels.add(QuoteLevel(
+        id: levelId,
+        name: levelName, // Use the name from settings
+        levelNumber: i + 1,
+        basePrice: levelSpecificBasePrice,
+        baseQuantity: _currentBaseQuantity,
+        includedItems: [],
+      )..calculateSubtotal());
+    }
+  }
+
   Widget _buildLevelConfiguration() {
     if (_levels.isEmpty) return const SizedBox.shrink();
     return Card(
@@ -761,10 +756,8 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
               itemCount: _levels.length,
               itemBuilder: (context, index) {
                 final level = _levels[index];
-                final levelConfig = _predefinedLevels.firstWhere(
-                        (pl) => pl['id'] == level.id,
-                    orElse: () => {'color': Colors.grey.shade700, 'name': level.name});
-                final color = levelConfig['color'] as Color;
+                // Use dynamic colors based on level name/index
+                final color = _getLevelColor(index);
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 16),
@@ -826,7 +819,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                         },
                       ),
 
-                      // NEW: Show base product calculation
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(8),
@@ -897,21 +889,28 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
             ),
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                icon: const Icon(Icons.add_circle_outline),
-                label: const Text('Add Custom Level'),
-                onPressed: () {
-                  setState(() {
-                    int nextLevelNum = _levels.length + 1;
-                    String newLevelId = 'custom_${DateTime.now().millisecondsSinceEpoch}';
-                    _levels.add(QuoteLevel(
-                      id: newLevelId,
-                      name: 'Custom Level $nextLevelNum',
-                      levelNumber: nextLevelNum,
-                      basePrice: _baseProduct?.unitPrice ?? 0.0,
-                      baseQuantity: _currentBaseQuantity, // NEW: Set base quantity
-                    )..calculateSubtotal());
-                  });
+              child: Consumer<AppStateProvider>(
+                builder: (context, appState, child) {
+                  final maxLevels = appState.appSettings?.defaultQuoteLevelNames.length ?? 3;
+                  if (_levels.length >= maxLevels + 2) return const SizedBox.shrink(); // Allow a few extra levels
+
+                  return TextButton.icon(
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: const Text('Add Custom Level'),
+                    onPressed: () {
+                      setState(() {
+                        int nextLevelNum = _levels.length + 1;
+                        String newLevelId = 'custom_${DateTime.now().millisecondsSinceEpoch}';
+                        _levels.add(QuoteLevel(
+                          id: newLevelId,
+                          name: 'Custom Level $nextLevelNum',
+                          levelNumber: nextLevelNum,
+                          basePrice: _baseProduct?.unitPrice ?? 0.0,
+                          baseQuantity: _currentBaseQuantity,
+                        )..calculateSubtotal());
+                      });
+                    },
+                  );
                 },
               ),
             ),
@@ -919,6 +918,19 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
         ),
       ),
     );
+  }
+
+  // Helper method to get level colors
+  Color _getLevelColor(int index) {
+    final colors = [
+      Colors.blue.shade700,
+      Colors.orange.shade700,
+      Colors.green.shade700,
+      Colors.purple.shade700,
+      Colors.teal.shade700,
+      Colors.indigo.shade700,
+    ];
+    return colors[index % colors.length];
   }
 
   Widget _buildOverallAddonSelection() {
