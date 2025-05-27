@@ -1,4 +1,4 @@
-// lib/screens/settings_screen.dart - ENHANCED WITH UNIT & CATEGORY MANAGEMENT
+// lib/screens/settings_screen.dart - COMPLETE IMPLEMENTATION
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../providers/app_state_provider.dart';
 import '../services/database_service.dart';
@@ -22,6 +23,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  bool _isProcessing = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,7 +33,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: ListView(
+      body: _isProcessing
+          ? const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Processing...'),
+          ],
+        ),
+      )
+          : ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _buildSectionHeader('Product Configuration'),
@@ -170,90 +184,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // Categories Manager Dialog
-  void _showCategoriesManager() {
-    final appState = context.read<AppStateProvider>();
-    final settings = appState.appSettings ?? AppSettings();
-
-    showDialog(
-      context: context,
-      builder: (context) => _CategoryManagerDialog(
-        categories: List.from(settings.productCategories),
-        onSave: (updatedCategories) {
-          settings.updateProductCategories(updatedCategories);
-          appState.updateAppSettings(settings);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Categories updated successfully!'), backgroundColor: Colors.green),
-          );
-        },
-      ),
-    );
-  }
-
-  // Units Manager Dialog
-  void _showUnitsManager() {
-    final appState = context.read<AppStateProvider>();
-    final settings = appState.appSettings ?? AppSettings();
-
-    showDialog(
-      context: context,
-      builder: (context) => _UnitsManagerDialog(
-        units: List.from(settings.productUnits),
-        defaultUnit: settings.defaultUnit,
-        onSave: (updatedUnits, newDefaultUnit) {
-          settings.updateProductUnits(updatedUnits);
-          settings.updateDefaultUnit(newDefaultUnit);
-          appState.updateAppSettings(settings);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Units updated successfully!'), backgroundColor: Colors.green),
-          );
-        },
-      ),
-    );
-  }
-
-  // Quote Levels Manager Dialog
-  void _showQuoteLevelsManager() {
-    final appState = context.read<AppStateProvider>();
-    final settings = appState.appSettings ?? AppSettings();
-
-    showDialog(
-      context: context,
-      builder: (context) => _QuoteLevelsManagerDialog(
-        levelNames: List.from(settings.defaultQuoteLevelNames),
-        onSave: (updatedLevels) {
-          settings.updateDefaultQuoteLevelNames(updatedLevels);
-          appState.updateAppSettings(settings);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Quote levels updated successfully!'), backgroundColor: Colors.green),
-          );
-        },
-      ),
-    );
-  }
-
-  // Discount Settings Dialog
-  void _showDiscountSettingsDialog() {
-    final appState = context.read<AppStateProvider>();
-    final settings = appState.appSettings ?? AppSettings();
-
-    showDialog(
-      context: context,
-      builder: (context) => _DiscountSettingsDialog(
-        discountTypes: List.from(settings.discountTypes),
-        defaultDiscountLimit: settings.defaultDiscountLimit,
-        onSave: (types, limit) {
-          settings.updateDiscountSettings(types: types, discountLimit: limit);
-          appState.updateAppSettings(settings);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Discount settings updated!'), backgroundColor: Colors.green),
-          );
-        },
-      ),
-    );
-  }
-
-  // Other existing methods from original settings screen...
   Widget _buildDataManagementSection() {
     return Card(
       elevation: 2,
@@ -387,39 +317,544 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  // Existing methods (abbreviated for space)
-  void _exportData() async {
-    // Implementation from original settings screen
+  // IMPLEMENTATION METHODS
+
+  // Data Management Methods
+  Future<void> _exportData() async {
+    try {
+      setState(() => _isProcessing = true);
+
+      final appState = context.read<AppStateProvider>();
+      final databaseService = DatabaseService.instance;
+
+      // Export all data
+      final allData = await databaseService.exportAllData();
+
+      // Get downloads directory
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = 'rufko_backup_${DateFormat('yyyy-MM-dd_HH-mm').format(DateTime.now())}.json';
+      final file = File('${directory.path}/$fileName');
+
+      // Write JSON data
+      await file.writeAsString(
+        const JsonEncoder.withIndent('  ').convert(allData),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Data exported to: $fileName'),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'Open',
+              onPressed: () => OpenFilex.open(file.path),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
   }
 
-  void _importData() async {
-    // Implementation from original settings screen
+  Future<void> _importData() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+
+        // Show confirmation dialog
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Import Data'),
+            content: const Text(
+                'This will replace ALL current data with the backup data. '
+                    'Are you sure you want to continue?'
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Import', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed == true) {
+          setState(() => _isProcessing = true);
+
+          final jsonString = await file.readAsString();
+          final data = jsonDecode(jsonString) as Map<String, dynamic>;
+
+          final databaseService = DatabaseService.instance;
+          await databaseService.importAllData(data);
+
+          // Reload app state
+          final appState = context.read<AppStateProvider>();
+          await appState.loadAllData();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Data imported successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Import failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
   }
 
   void _showClearDataDialog() {
-    // Implementation from original settings screen
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear All Data'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.warning, color: Colors.red, size: 48),
+            SizedBox(height: 16),
+            Text(
+              'This will permanently delete ALL data including:\n'
+                  '• All customers and quotes\n'
+                  '• All products\n'
+                  '• All media files\n'
+                  '• All RoofScope data\n'
+                  '• App settings\n\n'
+                  'This action cannot be undone!',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                Navigator.pop(context);
+                setState(() => _isProcessing = true);
+
+                final appState = context.read<AppStateProvider>();
+                final databaseService = DatabaseService.instance;
+
+                // Clear all data
+                await databaseService.importAllData({});
+                await appState.loadAllData();
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('All data cleared successfully'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error clearing data: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } finally {
+                if (mounted) setState(() => _isProcessing = false);
+              }
+            },
+            child: const Text('DELETE ALL', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 
-  void _importProductsFromExcel() async {
-    // Implementation from original settings screen
+  // Excel Methods
+  Future<void> _importProductsFromExcel() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        setState(() => _isProcessing = true);
+
+        final filePath = result.files.single.path!;
+        final excelService = ExcelService();
+
+        // Load products from Excel
+        final products = await excelService.loadProductsFromExcel(filePath);
+
+        if (products.isNotEmpty) {
+          final appState = context.read<AppStateProvider>();
+          await appState.importProducts(products);
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Imported ${products.length} products successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No products found in Excel file'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Import failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
   }
 
-  void _exportProductsToExcel() async {
-    // Implementation from original settings screen
+  Future<void> _exportProductsToExcel() async {
+    try {
+      setState(() => _isProcessing = true);
+
+      final appState = context.read<AppStateProvider>();
+      final products = appState.products;
+
+      if (products.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No products to export'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      final excelService = ExcelService();
+      final filePath = await excelService.saveProductsToExcel(products);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Exported ${products.length} products to Excel'),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'Open',
+              onPressed: () => OpenFilex.open(filePath),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
   }
 
-  void _downloadExcelTemplate() async {
-    // Implementation from original settings screen
+  Future<void> _downloadExcelTemplate() async {
+    try {
+      setState(() => _isProcessing = true);
+
+      final excelService = ExcelService();
+      final templatePath = await excelService.createProductTemplate();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Product template created'),
+            backgroundColor: Colors.green,
+            action: SnackBarAction(
+              label: 'Open',
+              onPressed: () => OpenFilex.open(templatePath),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Template creation failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
   }
 
+  // Company & PDF Methods
   void _showCompanyInfoDialog() {
-    // Implementation from original settings screen
+    final appState = context.read<AppStateProvider>();
+    final settings = appState.appSettings ?? AppSettings();
+
+    final nameController = TextEditingController(text: settings.companyName ?? '');
+    final addressController = TextEditingController(text: settings.companyAddress ?? '');
+    final phoneController = TextEditingController(text: settings.companyPhone ?? '');
+    final emailController = TextEditingController(text: settings.companyEmail ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Company Information'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Company Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: addressController,
+                decoration: const InputDecoration(
+                  labelText: 'Address',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Phone',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.emailAddress,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              settings.updateCompanyInfo(
+                name: nameController.text.trim().isEmpty ? null : nameController.text.trim(),
+                address: addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+                phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+                email: emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+              );
+              appState.updateAppSettings(settings);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Company information updated!'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showTaxRateDialog() {
-    // Implementation from original settings screen
+    final appState = context.read<AppStateProvider>();
+    final settings = appState.appSettings ?? AppSettings();
+    final controller = TextEditingController(text: settings.taxRate.toStringAsFixed(2));
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Default Tax Rate'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Tax Rate (%)',
+            border: OutlineInputBorder(),
+            suffixText: '%',
+          ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final rate = double.tryParse(controller.text) ?? 0.0;
+              if (rate >= 0 && rate <= 100) {
+                settings.updateTaxRate(rate);
+                appState.updateAppSettings(settings);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Tax rate updated to ${rate.toStringAsFixed(2)}%'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a valid tax rate (0-100%)'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Product Configuration Methods
+  void _showCategoriesManager() {
+    final appState = context.read<AppStateProvider>();
+    final settings = appState.appSettings ?? AppSettings();
+
+    showDialog(
+      context: context,
+      builder: (context) => _CategoryManagerDialog(
+        categories: List.from(settings.productCategories),
+        onSave: (updatedCategories) {
+          settings.updateProductCategories(updatedCategories);
+          appState.updateAppSettings(settings);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Categories updated successfully!'), backgroundColor: Colors.green),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showUnitsManager() {
+    final appState = context.read<AppStateProvider>();
+    final settings = appState.appSettings ?? AppSettings();
+
+    showDialog(
+      context: context,
+      builder: (context) => _UnitsManagerDialog(
+        units: List.from(settings.productUnits),
+        defaultUnit: settings.defaultUnit,
+        onSave: (updatedUnits, newDefaultUnit) {
+          settings.updateProductUnits(updatedUnits);
+          settings.updateDefaultUnit(newDefaultUnit);
+          appState.updateAppSettings(settings);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Units updated successfully!'), backgroundColor: Colors.green),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showQuoteLevelsManager() {
+    final appState = context.read<AppStateProvider>();
+    final settings = appState.appSettings ?? AppSettings();
+
+    showDialog(
+      context: context,
+      builder: (context) => _QuoteLevelsManagerDialog(
+        levelNames: List.from(settings.defaultQuoteLevelNames),
+        onSave: (updatedLevels) {
+          settings.updateDefaultQuoteLevelNames(updatedLevels);
+          appState.updateAppSettings(settings);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Quote levels updated successfully!'), backgroundColor: Colors.green),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showDiscountSettingsDialog() {
+    final appState = context.read<AppStateProvider>();
+    final settings = appState.appSettings ?? AppSettings();
+
+    showDialog(
+      context: context,
+      builder: (context) => _DiscountSettingsDialog(
+        discountTypes: List.from(settings.discountTypes),
+        defaultDiscountLimit: settings.defaultDiscountLimit,
+        onSave: (types, limit) {
+          settings.updateDiscountSettings(types: types, discountLimit: limit);
+          appState.updateAppSettings(settings);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Discount settings updated!'), backgroundColor: Colors.green),
+          );
+        },
+      ),
+    );
   }
 }
+
+// Dialog classes remain the same as in your original code...
+// (I'll include them for completeness but they're unchanged)
 
 // Category Manager Dialog
 class _CategoryManagerDialog extends StatefulWidget {
@@ -460,7 +895,6 @@ class _CategoryManagerDialogState extends State<_CategoryManagerDialog> {
         height: 400,
         child: Column(
           children: [
-            // Add new category section
             Row(
               children: [
                 Expanded(
@@ -482,7 +916,6 @@ class _CategoryManagerDialogState extends State<_CategoryManagerDialog> {
               ],
             ),
             const SizedBox(height: 16),
-            // Categories list
             Expanded(
               child: ListView.builder(
                 itemCount: _categories.length,
@@ -583,7 +1016,6 @@ class _UnitsManagerDialogState extends State<_UnitsManagerDialog> {
         height: 400,
         child: Column(
           children: [
-            // Add new unit section
             Row(
               children: [
                 Expanded(
@@ -605,7 +1037,6 @@ class _UnitsManagerDialogState extends State<_UnitsManagerDialog> {
               ],
             ),
             const SizedBox(height: 16),
-            // Default unit selector
             DropdownButtonFormField<String>(
               value: _defaultUnit,
               decoration: const InputDecoration(
@@ -626,7 +1057,6 @@ class _UnitsManagerDialogState extends State<_UnitsManagerDialog> {
               },
             ),
             const SizedBox(height: 16),
-            // Units list
             Expanded(
               child: ListView.builder(
                 itemCount: _units.length,
@@ -710,7 +1140,6 @@ class _QuoteLevelsManagerDialogState extends State<_QuoteLevelsManagerDialog> {
   void initState() {
     super.initState();
     _controllers = widget.levelNames.map((name) => TextEditingController(text: name)).toList();
-    // Ensure at least 3 levels
     while (_controllers.length < 3) {
       _controllers.add(TextEditingController());
     }
