@@ -38,6 +38,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
   final ImagePicker _imagePicker = ImagePicker();
   bool _isProcessingMedia = false;
 
+  bool _isRoofScopeSelectionMode = false;
+  Set<String> _selectedRoofScopeIds = <String>{};
   // Multi-select state for media
   bool _isSelectionMode = false;
   Set<String> _selectedMediaIds = <String>{};
@@ -54,7 +56,372 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
       }
     });
   }
+  void _enterRoofScopeSelectionMode() {
+    setState(() {
+      _isRoofScopeSelectionMode = true;
+      _selectedRoofScopeIds.clear();
+    });
+  }
 
+  void _exitRoofScopeSelectionMode() {
+    setState(() {
+      _isRoofScopeSelectionMode = false;
+      _selectedRoofScopeIds.clear();
+    });
+  }
+
+  void _toggleRoofScopeSelection(String roofScopeId) {
+    setState(() {
+      if (_selectedRoofScopeIds.contains(roofScopeId)) {
+        _selectedRoofScopeIds.remove(roofScopeId);
+      } else {
+        _selectedRoofScopeIds.add(roofScopeId);
+      }
+    });
+  }
+
+  void _selectAllRoofScope() {
+    final appState = context.read<AppStateProvider>();
+    final roofScopes = appState.getRoofScopeDataForCustomer(widget.customer.id);
+
+    setState(() {
+      if (_selectedRoofScopeIds.length == roofScopes.length) {
+        _selectedRoofScopeIds.clear();
+      } else {
+        _selectedRoofScopeIds = roofScopes.map((rs) => rs.id).toSet();
+      }
+    });
+  }
+
+  void _deleteSelectedRoofScope() {
+    if (_selectedRoofScopeIds.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete ${_selectedRoofScopeIds.length} RoofScope report${_selectedRoofScopeIds.length == 1 ? '' : 's'}'),
+        content: Text(
+            _selectedRoofScopeIds.length == 1
+                ? 'Are you sure you want to delete this RoofScope report?'
+                : 'Are you sure you want to delete these ${_selectedRoofScopeIds.length} RoofScope reports?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                final appState = context.read<AppStateProvider>();
+                final roofScopes = appState.getRoofScopeDataForCustomer(widget.customer.id);
+                final itemsToDelete = roofScopes.where((rs) => _selectedRoofScopeIds.contains(rs.id)).toList();
+
+                for (final roofScope in itemsToDelete) {
+                  await appState.deleteRoofScopeData(roofScope.id);
+                }
+
+                _exitRoofScopeSelectionMode();
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Deleted ${itemsToDelete.length} RoofScope report${itemsToDelete.length == 1 ? '' : 's'}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } catch (e) {
+                Navigator.pop(context);
+                _showErrorSnackBar('Error deleting RoofScope reports: $e');
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectableRoofScopeCard(RoofScopeData data) {
+    final isSelected = _selectedRoofScopeIds.contains(data.id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Stack(
+        children: [
+          Card(
+            elevation: isSelected ? 3 : 1.5,
+            color: isSelected ? Colors.purple.shade50 : null,
+            child: InkWell(
+              onTap: _isRoofScopeSelectionMode
+                  ? () => _toggleRoofScopeSelection(data.id)
+                  : () => _showRoofScopeDetails(data),
+              onLongPress: !_isRoofScopeSelectionMode
+                  ? () => _showRoofScopeContextMenu(data)
+                  : null,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                decoration: isSelected
+                    ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.purple, width: 2),
+                )
+                    : null,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              data.sourceFileName ?? 'RoofScope Report',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: isSelected ? Colors.purple.shade800 : null,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                DateFormat('MMM dd, yyyy').format(data.createdAt),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: isSelected ? Colors.purple.shade600 : Colors.grey[600],
+                                ),
+                              ),
+                              if (data.roofArea > 0)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 4),
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? Colors.purple.shade100 : Colors.blue.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${data.roofArea.toStringAsFixed(0)} sq ft',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected ? Colors.purple.shade700 : Colors.blue.shade700,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMeasurementItem(
+                              'Roof Area',
+                              '${data.roofArea.toStringAsFixed(1)} sq ft',
+                              isSelected,
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildMeasurementItem(
+                              'Squares',
+                              data.numberOfSquares.toStringAsFixed(1),
+                              isSelected,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildMeasurementItem(
+                              'Pitch',
+                              data.pitch.toStringAsFixed(1) + "/12",
+                              isSelected,
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildMeasurementItem(
+                              'Ridge',
+                              '${data.ridgeLength.toStringAsFixed(1)} ft',
+                              isSelected,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          if (_isRoofScopeSelectionMode)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Checkbox(
+                  value: isSelected,
+                  onChanged: (bool? value) => _toggleRoofScopeSelection(data.id),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  activeColor: Colors.purple,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showRoofScopeDetails(RoofScopeData data) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(data.sourceFileName ?? 'RoofScope Report'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailRow('Roof Area', '${data.roofArea.toStringAsFixed(1)} sq ft'),
+              _buildDetailRow('Squares', data.numberOfSquares.toStringAsFixed(1)),
+              _buildDetailRow('Pitch', '${data.pitch.toStringAsFixed(1)}/12'),
+              _buildDetailRow('Ridge Length', '${data.ridgeLength.toStringAsFixed(1)} ft'),
+              _buildDetailRow('Valley Length', '${data.valleyLength.toStringAsFixed(1)} ft'),
+              _buildDetailRow('Hip Length', '${data.hipLength.toStringAsFixed(1)} ft'),
+              _buildDetailRow('Perimeter', '${data.perimeterLength.toStringAsFixed(1)} ft'),
+              _buildDetailRow('Eave Length', '${data.eaveLength.toStringAsFixed(1)} ft'),
+              _buildDetailRow('Gutter Length', '${data.gutterLength.toStringAsFixed(1)} ft'),
+              _buildDetailRow('Chimneys', data.chimneyCount.toString()),
+              _buildDetailRow('Skylights', data.skylightCount.toString()),
+              _buildDetailRow('Flashing Length', '${data.flashingLength.toStringAsFixed(1)} ft'),
+              const SizedBox(height: 8),
+              Text(
+                'Created: ${DateFormat('MMM dd, yyyy \'at\' h:mm a').format(data.createdAt)}',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToCreateQuoteScreen(roofScopeData: data);
+            },
+            icon: const Icon(Icons.add_box),
+            label: const Text('Create Quote'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+          Text(value),
+        ],
+      ),
+    );
+  }
+
+  void _showRoofScopeContextMenu(RoofScopeData data) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.visibility),
+              title: const Text('View Details'),
+              onTap: () {
+                Navigator.pop(context);
+                _showRoofScopeDetails(data);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_box),
+              title: const Text('Create Quote'),
+              onTap: () {
+                Navigator.pop(context);
+                _navigateToCreateQuoteScreen(roofScopeData: data);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete, color: Colors.red),
+              title: const Text('Delete', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(context);
+                _deleteRoofScope(data);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _deleteRoofScope(RoofScopeData data) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete RoofScope Report'),
+        content: Text('Are you sure you want to delete "${data.sourceFileName ?? 'this report'}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                await context.read<AppStateProvider>().deleteRoofScopeData(data.id);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('RoofScope report deleted'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } catch (e) {
+                Navigator.pop(context);
+                _showErrorSnackBar('Error deleting RoofScope report: $e');
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
   @override
   void dispose() {
     _tabController.dispose();
@@ -619,6 +986,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
   }
 
   // COMPLETE MEDIA TAB IMPLEMENTATION
+  // Enhanced _buildMediaTab method with visible select button
+
   Widget _buildMediaTab() {
     return Consumer<AppStateProvider>(
       builder: (context, appState, child) {
@@ -693,6 +1062,55 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // HEADER WITH SELECT BUTTON
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Media Files (${mediaItems.length})',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (!_isSelectionMode)
+                    ElevatedButton.icon(
+                      onPressed: _enterSelectionMode,
+                      icon: const Icon(Icons.checklist, size: 18),
+                      label: const Text('Select'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    )
+                  else
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: _selectAllMedia,
+                          icon: const Icon(Icons.select_all, size: 18),
+                          label: Text(
+                            _selectedMediaIds.length == mediaItems.length
+                                ? 'Deselect All'
+                                : 'Select All',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: _exitSelectionMode,
+                          icon: const Icon(Icons.close, size: 18),
+                          label: const Text('Cancel'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
               // Quick stats
               Card(
                 child: Padding(
@@ -708,7 +1126,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                 ),
               ),
 
-              // Selection mode controls
+              // Selection mode info
               if (_isSelectionMode) ...[
                 const SizedBox(height: 8),
                 Card(
@@ -730,13 +1148,17 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                             ),
                           ),
                         ),
-                        TextButton(
-                          onPressed: _selectAllMedia,
-                          child: Text(
-                            _selectedMediaIds.length == mediaItems.length ? 'Deselect All' : 'Select All',
-                            style: TextStyle(color: Colors.blue.shade700),
+                        if (_selectedMediaIds.isNotEmpty)
+                          ElevatedButton.icon(
+                            onPressed: _deleteSelectedMedia,
+                            icon: const Icon(Icons.delete, size: 16),
+                            label: const Text('Delete'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -745,7 +1167,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
 
               const SizedBox(height: 16),
 
-              // Media by category
+              // Media by category (rest of your existing code)
               ...groupedMedia.entries.map((entry) {
                 final category = entry.key;
                 final items = entry.value;
