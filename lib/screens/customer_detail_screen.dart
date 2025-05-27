@@ -54,6 +54,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
       if (_isSelectionMode && _tabController.index != 3) {
         _exitSelectionMode();
       }
+      if (_isRoofScopeSelectionMode && _tabController.index != 2) {
+        _exitRoofScopeSelectionMode();
+      }
     });
   }
   void _enterRoofScopeSelectionMode() {
@@ -530,16 +533,22 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_isSelectionMode,
+      canPop: !_isSelectionMode && !_isRoofScopeSelectionMode,
       onPopInvoked: (didPop) {
-        if (!didPop && _isSelectionMode) {
-          _exitSelectionMode();
+        if (!didPop) {
+          if (_isSelectionMode) {
+            _exitSelectionMode();
+          } else if (_isRoofScopeSelectionMode) {
+            _exitRoofScopeSelectionMode();
+          }
         }
       },
       child: Scaffold(
         appBar: AppBar(
           title: _isSelectionMode && _tabController.index == 3
               ? Text('${_selectedMediaIds.length} selected')
+              : _isRoofScopeSelectionMode && _tabController.index == 2
+              ? Text('${_selectedRoofScopeIds.length} selected')
               : Text(widget.customer.name),
           backgroundColor: Theme.of(context).primaryColor,
           foregroundColor: Colors.white,
@@ -550,12 +559,18 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                 onPressed: _enterSelectionMode,
                 tooltip: 'Select files',
               ),
-            if (!_isSelectionMode) // Regular actions when not selecting
+            if (_tabController.index == 2 && !_isRoofScopeSelectionMode) // RoofScope tab, not in selection mode
+              IconButton(
+                icon: const Icon(Icons.select_all),
+                onPressed: _enterRoofScopeSelectionMode,
+                tooltip: 'Select reports',
+              ),
+            if (!_isSelectionMode && !_isRoofScopeSelectionMode) // Regular actions when not selecting
               IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: _editCustomer,
               ),
-            if (!_isSelectionMode) // Regular menu when not selecting
+            if (!_isSelectionMode && !_isRoofScopeSelectionMode) // Regular menu when not selecting
               PopupMenuButton<String>(
                 onSelected: (value) {
                   switch (value) {
@@ -657,14 +672,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
             children: [
               if (_selectedMediaIds.isNotEmpty)
                 FloatingActionButton(
-                  heroTag: "delete_selected_fab",
+                  heroTag: "delete_selected_media_fab",
                   onPressed: _deleteSelectedMedia,
                   backgroundColor: Colors.red,
                   child: const Icon(Icons.delete),
                 ),
               const SizedBox(width: 16),
               FloatingActionButton(
-                heroTag: "cancel_selection_fab",
+                heroTag: "cancel_media_selection_fab",
                 onPressed: _exitSelectionMode,
                 backgroundColor: Colors.grey,
                 child: const Icon(Icons.close),
@@ -673,8 +688,30 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
           );
         }
 
-        // HELPER METHODS
+        // RoofScope tab with selection mode
+        if (currentTab == 2 && _isRoofScopeSelectionMode) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (_selectedRoofScopeIds.isNotEmpty)
+                FloatingActionButton(
+                  heroTag: "delete_selected_roofscope_fab",
+                  onPressed: _deleteSelectedRoofScope,
+                  backgroundColor: Colors.red,
+                  child: const Icon(Icons.delete),
+                ),
+              const SizedBox(width: 16),
+              FloatingActionButton(
+                heroTag: "cancel_roofscope_selection_fab",
+                onPressed: _exitRoofScopeSelectionMode,
+                backgroundColor: Colors.grey,
+                child: const Icon(Icons.close),
+              ),
+            ],
+          );
+        }
 
+        // Regular FABs for each tab
         switch (currentTab) {
           case 0: // Info tab
             return FloatingActionButton.extended(
@@ -976,10 +1013,107 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
           );
         }
 
-        return ListView.builder(
+        return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          itemCount: roofScopes.length,
-          itemBuilder: (context, index) => _buildRoofScopeCard(roofScopes[index]),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // HEADER WITH SELECT BUTTON
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'RoofScope Reports (${roofScopes.length})',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (!_isRoofScopeSelectionMode)
+                    ElevatedButton.icon(
+                      onPressed: _enterRoofScopeSelectionMode,
+                      icon: const Icon(Icons.checklist, size: 18),
+                      label: const Text('Select'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    )
+                  else
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: _selectAllRoofScope,
+                          icon: const Icon(Icons.select_all, size: 18),
+                          label: Text(
+                            _selectedRoofScopeIds.length == roofScopes.length
+                                ? 'Deselect All'
+                                : 'Select All',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: _exitRoofScopeSelectionMode,
+                          icon: const Icon(Icons.close, size: 18),
+                          label: const Text('Cancel'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.grey,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Selection mode info
+              if (_isRoofScopeSelectionMode) ...[
+                Card(
+                  color: Colors.purple.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.purple.shade700, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _selectedRoofScopeIds.isEmpty
+                                ? 'Tap RoofScope reports to select them'
+                                : '${_selectedRoofScopeIds.length} of ${roofScopes.length} reports selected',
+                            style: TextStyle(
+                              color: Colors.purple.shade800,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        if (_selectedRoofScopeIds.isNotEmpty)
+                          ElevatedButton.icon(
+                            onPressed: _deleteSelectedRoofScope,
+                            icon: const Icon(Icons.delete, size: 16),
+                            label: const Text('Delete'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // RoofScope Reports List
+              ...roofScopes.map((roofScope) {
+                return _isRoofScopeSelectionMode
+                    ? _buildSelectableRoofScopeCard(roofScope)
+                    : _buildRoofScopeCard(roofScope);
+              }).toList(),
+            ],
+          ),
         );
       },
     );
@@ -1909,20 +2043,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
     );
   }
 
-  Widget _buildMeasurementItem(String label, String value) {
+  Widget _buildMeasurementItem(String label, String value, [bool isSelected = false]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey[600],
+            color: isSelected ? Colors.purple.shade600 : Colors.grey[600],
           ),
         ),
         Text(
           value,
           style: Theme.of(context).textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w500,
+            color: isSelected ? Colors.purple.shade800 : null,
           ),
         ),
       ],
