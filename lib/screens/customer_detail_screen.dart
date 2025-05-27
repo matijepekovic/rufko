@@ -1,4 +1,4 @@
-// lib/screens/customer_detail_screen.dart - COMPLETE WITH MEDIA FUNCTIONALITY
+// lib/screens/customer_detail_screen.dart - COMPLETE WITH MEDIA FUNCTIONALITY + MULTI-SELECT
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -38,10 +38,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
   final ImagePicker _imagePicker = ImagePicker();
   bool _isProcessingMedia = false;
 
+  // Multi-select state for media
+  bool _isSelectionMode = false;
+  Set<String> _selectedMediaIds = <String>{};
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+
+    // Listen for tab changes to exit selection mode
+    _tabController.addListener(() {
+      if (_isSelectionMode && _tabController.index != 3) {
+        _exitSelectionMode();
+      }
+    });
   }
 
   @override
@@ -51,141 +62,297 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.customer.name),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
+  // SELECTION MODE METHODS
+  void _enterSelectionMode() {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedMediaIds.clear();
+    });
+  }
+
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedMediaIds.clear();
+    });
+  }
+
+  void _toggleMediaSelection(String mediaId) {
+    setState(() {
+      if (_selectedMediaIds.contains(mediaId)) {
+        _selectedMediaIds.remove(mediaId);
+      } else {
+        _selectedMediaIds.add(mediaId);
+      }
+    });
+  }
+
+  void _selectAllMedia() {
+    final appState = context.read<AppStateProvider>();
+    final mediaItems = appState.getProjectMediaForCustomer(widget.customer.id);
+
+    setState(() {
+      if (_selectedMediaIds.length == mediaItems.length) {
+        // Deselect all if all are selected
+        _selectedMediaIds.clear();
+      } else {
+        // Select all
+        _selectedMediaIds = mediaItems.map((m) => m.id).toSet();
+      }
+    });
+  }
+
+  void _deleteSelectedMedia() {
+    if (_selectedMediaIds.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete ${_selectedMediaIds.length} file${_selectedMediaIds.length == 1 ? '' : 's'}'),
+        content: Text(
+            _selectedMediaIds.length == 1
+                ? 'Are you sure you want to delete this file?'
+                : 'Are you sure you want to delete these ${_selectedMediaIds.length} files?'
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _editCustomer,
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              switch (value) {
-                case 'new_quote':
-                  _navigateToCreateQuoteScreen();
-                  break;
-                case 'edit_customer':
-                  _editCustomer();
-                  break;
-                case 'delete_customer':
-                  _showDeleteCustomerConfirmation();
-                  break;
-                case 'quick_actions':
-                  _showQuickActions();
-                  break;
+          TextButton(
+            onPressed: () async {
+              try {
+                final appState = context.read<AppStateProvider>();
+                final mediaItems = appState.getProjectMediaForCustomer(widget.customer.id);
+                final itemsToDelete = mediaItems.where((m) => _selectedMediaIds.contains(m.id)).toList();
+
+                // Delete files from device and app state
+                for (final mediaItem in itemsToDelete) {
+                  // Delete file from device
+                  final file = File(mediaItem.filePath);
+                  if (await file.exists()) {
+                    await file.delete();
+                  }
+
+                  // Remove from app state
+                  await appState.deleteProjectMedia(mediaItem.id);
+                }
+
+                // Exit selection mode
+                _exitSelectionMode();
+
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Deleted ${itemsToDelete.length} file${itemsToDelete.length == 1 ? '' : 's'}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              } catch (e) {
+                Navigator.pop(context);
+                _showErrorSnackBar('Error deleting files: $e');
               }
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'new_quote',
-                child: Row(
-                  children: [
-                    Icon(Icons.add_box, size: 18),
-                    SizedBox(width: 8),
-                    Text('New Quote'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'edit_customer',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, size: 18),
-                    SizedBox(width: 8),
-                    Text('Edit Customer'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete_customer',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, size: 18, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Delete Customer', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'quick_actions',
-                child: Row(
-                  children: [
-                    Icon(Icons.more_horiz, size: 18),
-                    SizedBox(width: 8),
-                    Text('Quick Actions'),
-                  ],
-                ),
-              ),
-            ],
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
-        bottom: TabBar(
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_isSelectionMode,
+      onPopInvoked: (didPop) {
+        if (!didPop && _isSelectionMode) {
+          _exitSelectionMode();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: _isSelectionMode && _tabController.index == 3
+              ? Text('${_selectedMediaIds.length} selected')
+              : Text(widget.customer.name),
+          backgroundColor: Theme.of(context).primaryColor,
+          foregroundColor: Colors.white,
+          actions: [
+            if (_tabController.index == 3 && !_isSelectionMode) // Media tab, not in selection mode
+              IconButton(
+                icon: const Icon(Icons.select_all),
+                onPressed: _enterSelectionMode,
+                tooltip: 'Select files',
+              ),
+            if (!_isSelectionMode) // Regular actions when not selecting
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: _editCustomer,
+              ),
+            if (!_isSelectionMode) // Regular menu when not selecting
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  switch (value) {
+                    case 'new_quote':
+                      _navigateToCreateQuoteScreen();
+                      break;
+                    case 'edit_customer':
+                      _editCustomer();
+                      break;
+                    case 'delete_customer':
+                      _showDeleteCustomerConfirmation();
+                      break;
+                    case 'quick_actions':
+                      _showQuickActions();
+                      break;
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'new_quote',
+                    child: Row(
+                      children: [
+                        Icon(Icons.add_box, size: 18),
+                        SizedBox(width: 8),
+                        Text('New Quote'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'edit_customer',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 18),
+                        SizedBox(width: 8),
+                        Text('Edit Customer'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete_customer',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 18, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Delete Customer', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'quick_actions',
+                    child: Row(
+                      children: [
+                        Icon(Icons.more_horiz, size: 18),
+                        SizedBox(width: 8),
+                        Text('Quick Actions'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+          ],
+          bottom: TabBar(
+            controller: _tabController,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
+            tabs: const [
+              Tab(icon: Icon(Icons.info_outline), text: 'Info'),
+              Tab(icon: Icon(Icons.description), text: 'Quotes'),
+              Tab(icon: Icon(Icons.roofing), text: 'RoofScope'),
+              Tab(icon: Icon(Icons.photo_library), text: 'Media'),
+            ],
+          ),
+        ),
+        body: TabBarView(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-          tabs: const [
-            Tab(icon: Icon(Icons.info_outline), text: 'Info'),
-            Tab(icon: Icon(Icons.description), text: 'Quotes'),
-            Tab(icon: Icon(Icons.roofing), text: 'RoofScope'),
-            Tab(icon: Icon(Icons.photo_library), text: 'Media'),
+          children: [
+            _buildInfoTab(),
+            _buildSimplifiedQuotesTab(),
+            _buildRoofScopeTab(),
+            _buildMediaTab(),
           ],
         ),
+        floatingActionButton: _buildFloatingActionButton(),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildInfoTab(),
-          _buildSimplifiedQuotesTab(),
-          _buildRoofScopeTab(),
-          _buildMediaTab(),
-        ],
-      ),
-      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
   Widget _buildFloatingActionButton() {
-    final currentTab = _tabController.index;
+    return AnimatedBuilder(
+      animation: _tabController,
+      builder: (context, child) {
+        final currentTab = _tabController.index;
 
-    switch (currentTab) {
-      case 1: // Quotes tab
-        return FloatingActionButton.extended(
-          onPressed: _navigateToCreateQuoteScreen,
-          icon: const Icon(Icons.add),
-          label: const Text('New Quote'),
-          backgroundColor: Theme.of(context).primaryColor,
-        );
-      case 2: // RoofScope tab
-        return FloatingActionButton.extended(
-          onPressed: _importRoofScope,
-          icon: const Icon(Icons.file_upload),
-          label: const Text('Import PDF'),
-          backgroundColor: Colors.orange,
-        );
-      case 3: // Media tab
-        return FloatingActionButton.extended(
-          onPressed: _showMediaOptions,
-          icon: const Icon(Icons.add_a_photo),
-          label: const Text('Add Media'),
-          backgroundColor: Colors.teal,
-        );
-      default:
-        return FloatingActionButton.extended(
-          onPressed: _navigateToCreateQuoteScreen,
-          icon: const Icon(Icons.add),
-          label: const Text('New Quote'),
-          backgroundColor: Theme.of(context).primaryColor,
-        );
-    }
+        // Media tab with selection mode
+        if (currentTab == 3 && _isSelectionMode) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (_selectedMediaIds.isNotEmpty)
+                FloatingActionButton(
+                  heroTag: "delete_selected_fab",
+                  onPressed: _deleteSelectedMedia,
+                  backgroundColor: Colors.red,
+                  child: const Icon(Icons.delete),
+                ),
+              const SizedBox(width: 16),
+              FloatingActionButton(
+                heroTag: "cancel_selection_fab",
+                onPressed: _exitSelectionMode,
+                backgroundColor: Colors.grey,
+                child: const Icon(Icons.close),
+              ),
+            ],
+          );
+        }
+
+        // HELPER METHODS
+
+        switch (currentTab) {
+          case 0: // Info tab
+            return FloatingActionButton.extended(
+              heroTag: "info_fab",
+              onPressed: _navigateToCreateQuoteScreen,
+              icon: const Icon(Icons.add),
+              label: const Text('New Quote'),
+              backgroundColor: Theme.of(context).primaryColor,
+            );
+          case 1: // Quotes tab
+            return FloatingActionButton.extended(
+              heroTag: "quotes_fab",
+              onPressed: _navigateToCreateQuoteScreen,
+              icon: const Icon(Icons.add),
+              label: const Text('New Quote'),
+              backgroundColor: Theme.of(context).primaryColor,
+            );
+          case 2: // RoofScope tab
+            return FloatingActionButton.extended(
+              heroTag: "roofscope_fab",
+              onPressed: _importRoofScope,
+              icon: const Icon(Icons.upload_file),
+              label: const Text('Add RoofScope'),
+              backgroundColor: Colors.orange,
+            );
+          case 3: // Media tab
+            return FloatingActionButton.extended(
+              heroTag: "media_fab",
+              onPressed: _showMediaOptions,
+              icon: const Icon(Icons.add_a_photo),
+              label: const Text('Add Media'),
+              backgroundColor: Colors.teal,
+            );
+          default:
+            return FloatingActionButton.extended(
+              heroTag: "default_fab",
+              onPressed: _navigateToCreateQuoteScreen,
+              icon: const Icon(Icons.add),
+              label: const Text('New Quote'),
+              backgroundColor: Theme.of(context).primaryColor,
+            );
+        }
+      },
+    );
   }
-
-  // [Previous tab building methods remain the same until _buildMediaTab()]
 
   Widget _buildInfoTab() {
     return SingleChildScrollView(
@@ -540,6 +707,42 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                   ),
                 ),
               ),
+
+              // Selection mode controls
+              if (_isSelectionMode) ...[
+                const SizedBox(height: 8),
+                Card(
+                  color: Colors.blue.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _selectedMediaIds.isEmpty
+                                ? 'Tap files to select them'
+                                : '${_selectedMediaIds.length} of ${mediaItems.length} files selected',
+                            style: TextStyle(
+                              color: Colors.blue.shade800,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _selectAllMedia,
+                          child: Text(
+                            _selectedMediaIds.length == mediaItems.length ? 'Deselect All' : 'Select All',
+                            style: TextStyle(color: Colors.blue.shade700),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 16),
 
               // Media by category
@@ -628,78 +831,134 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
   }
 
   Widget _buildCompactMediaCard(ProjectMedia mediaItem) {
+    final isSelected = _selectedMediaIds.contains(mediaItem.id);
+
     return Card(
       elevation: 1,
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _viewMedia(mediaItem),
-        onLongPress: () => _showMediaContextMenu(mediaItem),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Container(
-                color: Colors.grey[200],
-                child: mediaItem.isImage
-                    ? Stack(
-                  children: [
-                    Icon(
-                      Icons.image_outlined,
+      child: Stack(
+        children: [
+          InkWell(
+            onTap: _isSelectionMode
+                ? () => _toggleMediaSelection(mediaItem.id)
+                : () => _viewMedia(mediaItem),
+            onLongPress: !_isSelectionMode
+                ? () => _showMediaContextMenu(mediaItem)
+                : null,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: Container(
+                    color: isSelected ? Colors.blue.withOpacity(0.3) : Colors.grey[200],
+                    child: mediaItem.isImage
+                        ? Stack(
+                      children: [
+                        Icon(
+                          Icons.image_outlined,
+                          size: 32,
+                          color: Colors.grey[400],
+                        ),
+                        if (File(mediaItem.filePath).existsSync())
+                          Positioned.fill(
+                            child: Image.file(
+                              File(mediaItem.filePath),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(
+                                  Icons.broken_image,
+                                  size: 32,
+                                  color: Colors.grey[400],
+                                );
+                              },
+                            ),
+                          ),
+                      ],
+                    )
+                        : Icon(
+                      mediaItem.isPdf
+                          ? Icons.picture_as_pdf_outlined
+                          : Icons.insert_drive_file_outlined,
                       size: 32,
                       color: Colors.grey[400],
                     ),
-                    if (File(mediaItem.filePath).existsSync())
-                      Positioned.fill(
-                        child: Image.file(
-                          File(mediaItem.filePath),
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.broken_image,
-                              size: 32,
-                              color: Colors.grey[400],
-                            );
-                          },
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.white,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        mediaItem.fileName,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: isSelected ? Colors.blue.shade800 : null,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        mediaItem.formattedFileSize,
+                        style: TextStyle(
+                          fontSize: 8,
+                          color: isSelected ? Colors.blue.shade600 : Colors.grey[600],
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Selection checkbox
+          if (_isSelectionMode)
+            Positioned(
+              top: 4,
+              right: 4,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
                   ],
-                )
-                    : Icon(
-                  mediaItem.isPdf
-                      ? Icons.picture_as_pdf_outlined
-                      : Icons.insert_drive_file_outlined,
-                  size: 32,
-                  color: Colors.grey[400],
+                ),
+                child: Checkbox(
+                  value: isSelected,
+                  onChanged: (bool? value) => _toggleMediaSelection(mediaItem.id),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
                 ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.all(4),
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    mediaItem.fileName,
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+
+          // Selection overlay
+          if (_isSelectionMode && isSelected)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.2),
+                  border: Border.all(
+                    color: Colors.blue,
+                    width: 2,
                   ),
-                  Text(
-                    mediaItem.formattedFileSize,
-                    style: TextStyle(fontSize: 8, color: Colors.grey[600]),
-                  ),
-                ],
+                ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
   // MEDIA FUNCTIONALITY METHODS
-
   void _showMediaOptions() {
     showModalBottomSheet(
       context: context,
@@ -1127,7 +1386,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
     }
   }
 
-  // [Previous helper methods remain the same]
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
