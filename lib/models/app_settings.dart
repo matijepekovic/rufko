@@ -1,7 +1,6 @@
 // lib/models/app_settings.dart - ENHANCED VERSION
 
 import 'package:hive/hive.dart';
-import 'package:uuid/uuid.dart';
 
 part 'app_settings.g.dart';
 
@@ -85,6 +84,12 @@ class AppSettings extends HiveObject {
       updatedAt = DateTime.now();
       if (isInBox) save();
     }
+  }
+
+  void updateCompanyLogo(String? logoPath) {
+    companyLogoPath = logoPath;
+    updatedAt = DateTime.now();
+    if (isInBox) save();
   }
 
   void removeProductCategory(String category) {

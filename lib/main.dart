@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:path_provider/path_provider.dart';
 
 // Your Core Models
 import 'models/customer.dart';
@@ -13,7 +12,7 @@ import 'models/roof_scope_data.dart';
 import 'models/project_media.dart';
 import 'models/app_settings.dart';
 import 'models/simplified_quote.dart'; // NEW primary quote model with discounts
-
+import 'models/pdf_template.dart';
 // Your Services and Providers
 import 'providers/app_state_provider.dart';
 import 'services/database_service.dart';
@@ -36,7 +35,8 @@ void main() async {
   Hive.registerAdapter(RoofScopeDataAdapter());
   Hive.registerAdapter(ProjectMediaAdapter());
   Hive.registerAdapter(AppSettingsAdapter());
-
+  Hive.registerAdapter(FieldMappingAdapter()); // NEW - typeId: 20
+  Hive.registerAdapter(PDFTemplateAdapter());  // NEW - typeId: 21
   // NEW Adapters for the Enhanced Quote System with Discounts
   Hive.registerAdapter(QuoteDiscountAdapter()); // NEW - Discount/Voucher support
   Hive.registerAdapter(QuoteLevelAdapter());

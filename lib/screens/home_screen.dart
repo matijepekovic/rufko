@@ -1,4 +1,4 @@
-// lib/screens/home_screen.dart
+// lib/screens/home_screen.dart - CLEAN VERSION WITH BLUE THEME
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,18 +6,15 @@ import 'package:intl/intl.dart';
 
 import '../providers/app_state_provider.dart';
 import '../models/customer.dart';
-import '../models/simplified_quote.dart'; // Use the new quote model
-// import '../models/quote.dart'; // Keep if QuoteItem is needed directly, or if simplified_quote.dart imports it
+import '../models/simplified_quote.dart';
 
-import '../widgets/dashboard_card.dart';
 import 'customers_screen.dart';
-import 'quotes_screen.dart'; // This screen will display SimplifiedMultiLevelQuotes
+import 'quotes_screen.dart';
 import 'products_screen.dart';
 import 'settings_screen.dart';
-
-// Import the detail screens for navigation
-import 'customer_detail_screen.dart'; // Assuming this exists
-import 'simplified_quote_detail_screen.dart'; // Use the new detail screen
+import 'customer_detail_screen.dart';
+import 'simplified_quote_detail_screen.dart';
+import 'templates_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -37,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     const BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Customers'),
     const BottomNavigationBarItem(icon: Icon(Icons.description), label: 'Quotes'),
     const BottomNavigationBarItem(icon: Icon(Icons.inventory), label: 'Products'),
+    const BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: 'Templates'),
     const BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
   ];
 
@@ -44,19 +42,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-
-    // initializeApp is now called in main.dart before AppStateProvider is created/provided
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   context.read<AppStateProvider>().initializeApp(); // REMOVE THIS if called in main
-    //   _animationController.forward();
-    // });
-    _animationController.forward(); // Start animation
+    _animationController.forward();
   }
 
   @override
@@ -80,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       body: PageView(
         controller: _pageController,
         onPageChanged: (index) {
@@ -88,52 +81,65 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           });
         },
         children: [
-          _buildEnhancedDashboard(),
+          _buildModernDashboard(),
           const CustomersScreen(),
-          const QuotesScreen(), // This screen now handles SimplifiedMultiLevelQuotes
+          const QuotesScreen(),
           const ProductsScreen(),
+          const TemplatesScreen(),
           const SettingsScreen(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: _onNavItemTapped,
-        items: _navItems,
-        selectedItemColor: Theme.of(context).primaryColor,
-        // backgroundColor: Colors.white, // Set in theme
-        // elevation: 8,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          currentIndex: _selectedIndex,
+          onTap: _onNavItemTapped,
+          items: _navItems,
+          selectedItemColor: const Color(0xFF2E86AB), // Blue from logo
+          unselectedItemColor: Colors.grey[600],
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
       ),
       floatingActionButton: _selectedIndex == 0 ? _buildFloatingActionButton() : null,
     );
   }
 
-  Widget _buildEnhancedDashboard() {
-    return Scaffold( // Added Scaffold for the dashboard page itself
-      body: Consumer<AppStateProvider>(
-        builder: (context, appState, child) {
-          if (appState.isLoading && appState.simplifiedQuotes.isEmpty) { // Show loading if quotes are empty
-            return _buildLoadingState(appState.loadingMessage);
-          }
+  Widget _buildModernDashboard() {
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, child) {
+        if (appState.isLoading && appState.simplifiedQuotes.isEmpty) {
+          return _buildLoadingState(appState.loadingMessage);
+        }
 
-          return FadeTransition(
-            opacity: _fadeAnimation,
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: RefreshIndicator(
+            onRefresh: () => appState.loadAllData(),
             child: CustomScrollView(
               slivers: [
-                _buildSliverAppBar(appState),
+                _buildModernSliverAppBar(appState),
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildQuickActions(),
-                        const SizedBox(height: 24),
                         _buildStatsOverview(appState),
                         const SizedBox(height: 24),
-                        _buildRecentActivity(appState),
+                        _buildRecentCustomers(appState),
                         const SizedBox(height: 24),
-                        // _buildQuickInsights(appState), // You can re-add this
+                        _buildRecentActivity(appState),
                         const SizedBox(height: 100),
                       ],
                     ),
@@ -141,19 +147,21 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ],
             ),
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSliverAppBar(AppStateProvider appState) {
-    final stats = appState.getDashboardStats(); // This now uses simplifiedQuotes
+  Widget _buildModernSliverAppBar(AppStateProvider appState) {
+    final stats = appState.getDashboardStats();
     return SliverAppBar(
       expandedHeight: 200,
       floating: false,
       pinned: true,
-      backgroundColor: Theme.of(context).primaryColor,
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black87,
+      elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
@@ -161,51 +169,93 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Theme.of(context).primaryColor,
-                Theme.of(context).primaryColor.withOpacity(0.8),
+                const Color(0xFF2E86AB), // Blue from your roof
+                const Color(0xFF1B5E7F), // Darker blue
               ],
             ),
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(16).copyWith(top: kToolbarHeight / 2), // Adjust for appbar
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
+                  Flexible(
+                    child: Row(
+                      children: [
+                        // Large prominent logo
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.asset(
+                              'assets/images/logo/rufko_full_logo.png',
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                print('Logo load error: $error');
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Icon(Icons.roofing, color: Color(0xFF2E86AB), size: 60),
+                                );
+                              },
+                            ),
+                          ),
                         ),
-                        child: const Icon(Icons.roofing, color: Colors.white, size: 28),
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Rufko Professional', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
-                            Text('Roofing Estimation & Management', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                          ],
+                        const SizedBox(width: 24),
+                        // Stats positioned to the right of logo
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Total Revenue',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                NumberFormat.compactCurrency(symbol: r'$').format(stats['totalRevenue'] ?? 0.0),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Active Quotes',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                '${stats['activeQuotes'] ?? 0}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        onPressed: () => appState.loadAllData(),
-                        icon: const Icon(Icons.refresh, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      _buildHeaderStat('Revenue', NumberFormat.compactCurrency(symbol: '\$').format(stats['totalRevenue'] ?? 0.0), Icons.attach_money),
-                      const SizedBox(width: 24),
-                      _buildHeaderStat('Active Quotes', '${stats['activeQuotes'] ?? 0}', Icons.description),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -213,20 +263,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
+      actions: [
+        IconButton(
+          onPressed: () => appState.loadAllData(),
+          icon: const Icon(Icons.refresh),
+          color: Colors.white,
+        ),
+      ],
     );
   }
 
   Widget _buildHeaderStat(String label, String value, IconData icon) {
-    // ... (This method is likely fine)
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, color: Colors.white.withOpacity(0.8), size: 16),
+        Icon(icon, color: Colors.white.withOpacity(0.8), size: 18),
         const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12)),
-            Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ],
@@ -234,54 +305,288 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildLoadingState(String message) {
-    // ... (This method is fine)
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 16),
-          Text(message.isNotEmpty ? message : 'Loading Dashboard...', style: Theme.of(context).textTheme.titleMedium),
+          CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            message.isNotEmpty ? message : 'Loading Dashboard...',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Colors.grey[600],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickActions() {
-    // ... (This method mostly calls navigation or shows snackbars, should be mostly fine)
-    // Update _showMultiLevelQuoteDialog to navigate to SimplifiedQuoteScreen or remove it
+  Widget _buildStatsOverview(AppStateProvider appState) {
+    final stats = appState.getDashboardStats();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Quick Actions', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 130,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _buildActionCard('New Customer', Icons.person_add, Colors.blue, () => _navigateToTab(1)), // Navigate to CustomersScreen
-              _buildActionCard('Create Quote', Icons.note_add, Colors.green, () => _navigateToTab(2)), // Navigate to QuotesScreen (which then opens SimplifiedQuoteScreen)
-              // _buildActionCard('Multi-Level Quote', Icons.layers, Colors.purple, () => _navigateToTab(2)), // Redundant, handled by "Create Quote" now
-              _buildActionCard('Add Product', Icons.inventory_2, Colors.indigo, () => _navigateToTab(3)),
-              // _buildActionCard('Import RoofScope', Icons.file_upload, Colors.orange, _importRoofScope), // Defer this
-              // _buildActionCard('Take Photo', Icons.camera_alt, Colors.teal, _takePhoto), // Defer this
-            ],
+        Text(
+          'Overview',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
           ),
+        ),
+        const SizedBox(height: 16),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 1.5,
+          children: [
+            _buildStatsCard(
+              'Total Customers',
+              '${stats['totalCustomers'] ?? 0}',
+              Icons.people,
+              Colors.blue.shade600,
+                  () => _navigateToTab(1),
+            ),
+            _buildStatsCard(
+              'Total Quotes',
+              '${stats['totalQuotes'] ?? 0}',
+              Icons.description,
+              Colors.green.shade600,
+                  () => _navigateToTab(2),
+            ),
+            _buildStatsCard(
+              'Active Products',
+              '${stats['totalProducts'] ?? 0}',
+              Icons.inventory,
+              Colors.purple.shade600,
+                  () => _navigateToTab(3),
+            ),
+            _buildStatsCard(
+              'Monthly Revenue',
+              NumberFormat.compactCurrency(symbol: r'$').format(stats['monthlyRevenue'] ?? 0.0),
+              Icons.trending_up,
+              Colors.orange.shade600,
+              null,
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
-    // ... (This method is likely fine for styling)
-    return Container( /* ... your existing card code ... */ );
+  Widget _buildStatsCard(String title, String value, IconData icon, Color color, VoidCallback? onTap) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: color, size: 24),
+                  ),
+                  if (onTap != null)
+                    Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
-  Widget _buildStatsOverview(AppStateProvider appState) {
-    // ... (This method uses getDashboardStats, which now uses simplifiedQuotes, so it should be fine)
-    final stats = appState.getDashboardStats();
-    return Column( /* ... your existing stats grid ... */);
+  Widget _buildRecentCustomers(AppStateProvider appState) {
+    final recentCustomers = [...appState.customers]
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Customers',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+            TextButton(
+              onPressed: () => _navigateToTab(1),
+              child: const Text('View All'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        if (recentCustomers.isEmpty)
+          _buildEmptyCustomersState()
+        else
+          Card(
+            elevation: 2,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Column(
+              children: recentCustomers.take(5).map((customer) {
+                final quoteCount = appState.getSimplifiedQuotesForCustomer(customer.id).length;
+                return _buildCustomerListItem(customer, quoteCount);
+              }).toList(),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildCustomerListItem(Customer customer, int quoteCount) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: const Color(0xFF2E86AB).withOpacity(0.1),
+        child: Text(
+          customer.name.isNotEmpty ? customer.name[0].toUpperCase() : 'C',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2E86AB),
+          ),
+        ),
+      ),
+      title: Text(
+        customer.name,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Row(
+        children: [
+          if (customer.phone != null) ...[
+            Icon(Icons.phone, size: 14, color: Colors.grey[500]),
+            const SizedBox(width: 4),
+            Text(customer.phone!, style: TextStyle(color: Colors.grey[600])),
+          ] else if (customer.email != null) ...[
+            Icon(Icons.email, size: 14, color: Colors.grey[500]),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                customer.email!,
+                style: TextStyle(color: Colors.grey[600]),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ] else ...[
+            Text(
+              'Added ${_formatDate(customer.createdAt)}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+          ],
+        ],
+      ),
+      trailing: quoteCount > 0
+          ? Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade100,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          '$quoteCount quote${quoteCount == 1 ? '' : 's'}',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.blue.shade700,
+          ),
+        ),
+      )
+          : null,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CustomerDetailScreen(customer: customer),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyCustomersState() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.people_outline, size: 48, color: Colors.blue.shade600),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No customers yet',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add your first customer to get started',
+              style: TextStyle(color: Colors.grey[500]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => _navigateToTab(1),
+              icon: const Icon(Icons.add),
+              label: const Text('Add Customer'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue.shade600,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildRecentActivity(AppStateProvider appState) {
@@ -291,42 +596,50 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Recent Quotes', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-            TextButton(onPressed: () => _navigateToTab(2), child: const Text('View All')),
+            Text(
+              'Recent Quotes',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[800],
+              ),
+            ),
+            TextButton(
+              onPressed: () => _navigateToTab(2),
+              child: const Text('View All'),
+            ),
           ],
         ),
-        const SizedBox(height: 10),
-        _buildRecentSimplifiedQuotesList(appState), // Changed to new method
+        const SizedBox(height: 12),
+        _buildRecentQuotesList(appState),
       ],
     );
   }
 
-  Widget _buildRecentSimplifiedQuotesList(AppStateProvider appState) {
-    // Now only uses SimplifiedMultiLevelQuote
-    final recentSimplifiedQuotes = [...appState.simplifiedQuotes]
+  Widget _buildRecentQuotesList(AppStateProvider appState) {
+    final recentQuotes = [...appState.simplifiedQuotes]
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-    if (recentSimplifiedQuotes.isEmpty) {
-      return _buildEmptyRecentState(); // New empty state for recent items
+    if (recentQuotes.isEmpty) {
+      return _buildEmptyQuotesState();
     }
 
     return Card(
-      elevation: 1,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
-        children: recentSimplifiedQuotes.take(5).map((quote) { // Take 5 most recent
-          return _buildSimplifiedQuoteListItem(quote, appState);
+        children: recentQuotes.take(5).map((quote) {
+          return _buildQuoteListItem(quote, appState);
         }).toList(),
       ),
     );
   }
 
-  Widget _buildSimplifiedQuoteListItem(SimplifiedMultiLevelQuote quote, AppStateProvider appState) {
+  Widget _buildQuoteListItem(SimplifiedMultiLevelQuote quote, AppStateProvider appState) {
     final customer = appState.customers.firstWhere(
           (c) => c.id == quote.customerId,
       orElse: () => Customer(name: 'Unknown Customer'),
     );
 
-    // Determine a representative total (e.g., first level or average)
     double representativeTotal = 0;
     if (quote.levels.isNotEmpty) {
       representativeTotal = quote.getDisplayTotalForLevel(quote.levels.first.id);
@@ -337,102 +650,282 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: _getStatusColor(quote.status).withOpacity(0.2),
-          borderRadius: BorderRadius.circular(8),
+          color: _getStatusColor(quote.status).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(_getQuoteStatusIcon(quote.status), color: _getStatusColor(quote.status), size: 20),
+        child: Icon(
+          _getQuoteStatusIcon(quote.status),
+          color: _getStatusColor(quote.status),
+          size: 20,
+        ),
       ),
-      title: Text('Quote ${quote.quoteNumber} (${quote.levels.length} level${quote.levels.length == 1 ? "" : "s"})'),
-      subtitle: Text(customer.name),
+      title: Text(
+        'Quote ${quote.quoteNumber}',
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            customer.name,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${quote.levels.length} level${quote.levels.length == 1 ? "" : "s"}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _formatDate(quote.createdAt),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(NumberFormat.currency(symbol: '\$').format(representativeTotal), style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(_formatDate(quote.createdAt), style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          Text(
+            NumberFormat.compactCurrency(symbol: r'$').format(representativeTotal),
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
         ],
       ),
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => SimplifiedQuoteDetailScreen(quote: quote, customer: customer)),
+        MaterialPageRoute(
+          builder: (context) => SimplifiedQuoteDetailScreen(
+            quote: quote,
+            customer: customer,
+          ),
+        ),
       ),
     );
   }
 
-
-  Widget _buildEmptyRecentState() {
-    // ... (Similar to _buildEmptyState but for recent items section)
+  Widget _buildEmptyQuotesState() {
     return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           children: [
-            Icon(Icons.history_toggle_off, size: 48, color: Colors.grey[400]),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.description_outlined, size: 48, color: Colors.green.shade600),
+            ),
             const SizedBox(height: 16),
-            Text('No recent activity', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600])),
+            Text(
+              'No quotes yet',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Create your first quote to get started',
+              style: TextStyle(color: Colors.grey[500]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () => _navigateToTab(2),
+              icon: const Icon(Icons.add),
+              label: const Text('Create Quote'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  // _buildQuickInsights can be re-added if needed, using stats from appState.getDashboardStats()
-
   Widget _buildFloatingActionButton() {
-    // ... (FAB logic is fine)
     return FloatingActionButton.extended(
-      onPressed: _showQuickCreateDialog, // This will need to be adapted
+      onPressed: _showQuickCreateDialog,
+      backgroundColor: const Color(0xFF2E86AB),
+      foregroundColor: Colors.white,
       icon: const Icon(Icons.add),
       label: const Text('Quick Create'),
     );
   }
 
-  // Helper Methods
-  Color _getStatusColor(String status) { /* ... same ... */ return Colors.grey; }
-  IconData _getQuoteStatusIcon(String status) { /* ... same ... */ return Icons.description_outlined;}
-  String _formatDate(DateTime date) { return DateFormat('MMM dd, yyyy').format(date); } // Changed format slightly
-  void _navigateToTab(int index) { /* ... same ... */ }
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'draft':
+        return Colors.grey.shade600;
+      case 'sent':
+        return Colors.blue.shade600;
+      case 'approved':
+        return Colors.green.shade600;
+      case 'rejected':
+        return Colors.red.shade600;
+      default:
+        return Colors.grey.shade600;
+    }
+  }
 
-  // Action Methods
-  // void _showAddCustomerDialog() { /* ... same ... */ }
+  IconData _getQuoteStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'draft':
+        return Icons.edit_outlined;
+      case 'sent':
+        return Icons.send_outlined;
+      case 'approved':
+        return Icons.check_circle_outline;
+      case 'rejected':
+        return Icons.cancel_outlined;
+      default:
+        return Icons.description_outlined;
+    }
+  }
 
-  // This now just navigates to the QuotesScreen where user can create a new quote
-  void _showNewQuoteDialog() => _navigateToTab(2);
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date).inDays;
 
-  // This is now obsolete as SimplifiedQuoteScreen handles multi-level
-  // void _showMultiLevelQuoteDialog() { ... }
+    if (difference == 0) {
+      return 'Today';
+    } else if (difference == 1) {
+      return 'Yesterday';
+    } else if (difference < 7) {
+      return DateFormat('EEEE').format(date);
+    } else {
+      return DateFormat('MMM dd').format(date);
+    }
+  }
 
-  // _importRoofScope, _takePhoto can be re-implemented later.
+  void _navigateToTab(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
 
   void _showQuickCreateDialog() {
-    // Adapt this to navigate to appropriate screens or trigger actions
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Quick Create', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            Container(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.add, color: Colors.blue.shade600),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Quick Create',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _buildQuickActionTile(
+              'New Customer',
+              'Add a new customer to your database',
+              Icons.person_add,
+              Colors.blue.shade600,
+                  () {
+                Navigator.pop(context);
+                _navigateToTab(1);
+              },
+            ),
+            _buildQuickActionTile(
+              'New Quote',
+              'Create a professional roofing estimate',
+              Icons.note_add,
+              Colors.green.shade600,
+                  () {
+                Navigator.pop(context);
+                _navigateToTab(2);
+              },
+            ),
+            _buildQuickActionTile(
+              'New Product',
+              'Add products to your inventory',
+              Icons.add_box,
+              Colors.orange.shade600,
+                  () {
+                Navigator.pop(context);
+                _navigateToTab(3);
+              },
+            ),
             const SizedBox(height: 20),
-            ListTile(
-              leading: const Icon(Icons.person_add, color: Colors.blue),
-              title: const Text('New Customer'),
-              onTap: () { Navigator.pop(context); _navigateToTab(1); },
-            ),
-            ListTile(
-              leading: const Icon(Icons.note_add, color: Colors.green),
-              title: const Text('New Quote'), // This will now use SimplifiedQuoteScreen
-              onTap: () { Navigator.pop(context); _navigateToTab(2); },
-            ),
-            ListTile(
-              leading: const Icon(Icons.add_box, color: Colors.orange),
-              title: const Text('New Product'),
-              onTap: () { Navigator.pop(context); _navigateToTab(3); },
-            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildQuickActionTile(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: color),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(subtitle),
+      onTap: onTap,
     );
   }
 }

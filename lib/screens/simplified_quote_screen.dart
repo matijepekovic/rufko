@@ -31,8 +31,8 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
   Product? _mainProduct;
   double _mainQuantity = 1.0;
-  List<QuoteLevel> _quoteLevels = [];
-  List<QuoteItem> _addedProducts = [];
+  final List<QuoteLevel> _quoteLevels = [];
+  final List<QuoteItem> _addedProducts = [];
 
   bool _isLoading = false;
 
@@ -45,41 +45,66 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('New Quote: ${widget.customer.name}'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        actions: [
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16.0),
-              child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
-              ),
-            )
-        ],
-      ),
+      backgroundColor: Colors.grey[50],
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildMainProductSelection(),
-              const SizedBox(height: 24),
-              if (_mainProduct != null) ...[
-                _buildQuoteLevelsPreview(),
-                const SizedBox(height: 24),
-                _buildAddedProductsList(),
-                const SizedBox(height: 24),
-                _buildGenerateButton(),
+          : NestedScrollView(
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return <Widget>[
+            SliverAppBar(
+              expandedHeight: 100,
+              floating: false,
+              pinned: true,
+              backgroundColor: const Color(0xFF2E86AB),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF2E86AB),
+                        Color(0xFF1B5E7F),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              title: Text('New Quote: ${widget.customer.name}'),
+              actions: [
+                if (_isLoading)
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    ),
+                  ),
               ],
-            ],
+            ),
+          ];
+        },
+        body: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildMainProductSelection(),
+                const SizedBox(height: 24),
+                if (_mainProduct != null) ...[
+                  _buildQuoteLevelsPreview(),
+                  const SizedBox(height: 24),
+                  _buildAddedProductsList(),
+                  const SizedBox(height: 24),
+                  _buildGenerateButton(),
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -810,10 +835,9 @@ class _AddProductDialogState extends State<_AddProductDialog> {
                                       return ListTile(
                                         title: Text(product.name),
                                         subtitle: Text(
-                                          '\$${product.unitPrice.toStringAsFixed(2)}/${product.unit}' +
-                                              (product.enhancedLevelPrices.isNotEmpty
+                                          '\$${product.unitPrice.toStringAsFixed(2)}/${product.unit}${product.enhancedLevelPrices.isNotEmpty
                                                   ? ' (${product.enhancedLevelPrices.length} levels)'
-                                                  : ''),
+                                                  : ''}',
                                         ),
                                         leading: Radio<Product>(
                                           value: product,

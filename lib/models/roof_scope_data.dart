@@ -85,7 +85,7 @@ class RoofScopeData extends HiveObject {
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now() {
     this.id = id ?? const Uuid().v4();
-    if (this.roofArea > 0 && this.numberOfSquares == 0.0) { // Auto-calculate squares if area provided
+    if (roofArea > 0 && numberOfSquares == 0.0) { // Auto-calculate squares if area provided
       calculateSquares();
     }
   }

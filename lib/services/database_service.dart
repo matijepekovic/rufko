@@ -3,12 +3,12 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
-import '../models/quote.dart'; // For QuoteItem
 import '../models/roof_scope_data.dart';
 import '../models/project_media.dart';
 import '../models/app_settings.dart';
 import '../models/simplified_quote.dart'; // Enhanced quote model with discounts
 import 'package:flutter/foundation.dart';
+import '../models/pdf_template.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -23,7 +23,7 @@ class DatabaseService {
   late Box<RoofScopeData> _roofScopeBox;
   late Box<ProjectMedia> _mediaBox;
   late Box<AppSettings> _settingsBox;
-
+  late Box<PDFTemplate> _pdfTemplateBox;
   bool _isInitialized = false;
 
   Future<void> init() async {
@@ -36,7 +36,7 @@ class DatabaseService {
       _roofScopeBox = await Hive.openBox<RoofScopeData>('roofscope_data');
       _mediaBox = await Hive.openBox<ProjectMedia>('project_media');
       _settingsBox = await Hive.openBox<AppSettings>('app_settings');
-
+      _pdfTemplateBox = await Hive.openBox<PDFTemplate>('pdf_templates');
       _isInitialized = true;
       if (kDebugMode) {
         print('Database initialized successfully with enhanced models');
@@ -46,6 +46,7 @@ class DatabaseService {
         print('- RoofScope Data: ${_roofScopeBox.length}');
         print('- Media Files: ${_mediaBox.length}');
         print('- Settings: ${_settingsBox.length}');
+        print('- PDF Templates: ${_pdfTemplateBox.length}');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -108,6 +109,61 @@ class DatabaseService {
     return _productBox.values
         .where((product) => product.category.toLowerCase() == category.toLowerCase())
         .toList();
+  }
+
+  Future<void> savePDFTemplate(PDFTemplate template) async {
+    _ensureInitialized();
+    await _pdfTemplateBox.put(template.id, template);
+  }
+
+  Future<PDFTemplate?> getPDFTemplate(String id) async {
+    _ensureInitialized();
+    return _pdfTemplateBox.get(id);
+  }
+
+  Future<List<PDFTemplate>> getAllPDFTemplates() async {
+    _ensureInitialized();
+    return _pdfTemplateBox.values.toList();
+  }
+
+  Future<List<PDFTemplate>> getActivePDFTemplates() async {
+    _ensureInitialized();
+    return _pdfTemplateBox.values.where((template) => template.isActive).toList();
+  }
+
+  Future<List<PDFTemplate>> getPDFTemplatesByType(String templateType) async {
+    _ensureInitialized();
+    return _pdfTemplateBox.values
+        .where((template) => template.templateType.toLowerCase() == templateType.toLowerCase())
+        .toList();
+  }
+
+  Future<void> deletePDFTemplate(String id) async {
+    _ensureInitialized();
+    await _pdfTemplateBox.delete(id);
+  }
+
+  Future<void> toggleTemplateActive(String templateId) async {
+    _ensureInitialized();
+    final template = _pdfTemplateBox.get(templateId);
+    if (template != null) {
+      template.isActive = !template.isActive;
+      template.updatedAt = DateTime.now();
+      await template.save();
+    }
+  }
+
+// Search templates
+  Future<List<PDFTemplate>> searchPDFTemplates(String query) async {
+    _ensureInitialized();
+    if (query.isEmpty) return await getAllPDFTemplates();
+
+    final lowerQuery = query.toLowerCase();
+    return _pdfTemplateBox.values.where((template) =>
+    template.templateName.toLowerCase().contains(lowerQuery) ||
+        template.description.toLowerCase().contains(lowerQuery) ||
+        template.templateType.toLowerCase().contains(lowerQuery)
+    ).toList();
   }
 
   Future<List<Product>> getDiscountableProducts() async {
@@ -345,10 +401,11 @@ class DatabaseService {
       'simplified_quotes': (await getAllSimplifiedMultiLevelQuotes()).map((q) => q.toMap()).toList(),
       'roofScopeData': (await getAllRoofScopeData()).map((r) => r.toMap()).toList(),
       'projectMedia': (await getAllProjectMedia()).map((m) => m.toMap()).toList(),
+      'pdfTemplates': (await getAllPDFTemplates()).map((t) => t.toMap()).toList(), // NEW
       'appSettings': (await getAppSettings())?.toMap(),
-      'analytics': await getQuoteAnalytics(), // Include analytics in export
+      'analytics': await getQuoteAnalytics(),
       'exportDate': DateTime.now().toIso8601String(),
-      'version': '2.0', // Version for enhanced data structure
+      'version': '2.1', // Updated version
     };
   }
 
@@ -362,6 +419,7 @@ class DatabaseService {
       await _roofScopeBox.clear();
       await _mediaBox.clear();
       await _settingsBox.clear();
+      await _pdfTemplateBox.clear();
 
       // Import customers
       if (data['customers'] != null) {
@@ -405,6 +463,13 @@ class DatabaseService {
         print('Enhanced data import completed successfully');
         print('Imported version: ${data['version'] ?? 'legacy'}');
       }
+
+      if (data['pdfTemplates'] != null) {
+        for (final itemData in data['pdfTemplates']) {
+          await savePDFTemplate(PDFTemplate.fromMap(itemData));
+        }
+      }
+
     } catch (e) {
       if (kDebugMode) {
         print('Error importing enhanced data: $e');
@@ -451,6 +516,7 @@ class DatabaseService {
       await _roofScopeBox.compact();
       await _mediaBox.compact();
       await _settingsBox.compact();
+      await _pdfTemplateBox.compact(); // NEW
 
       if (kDebugMode) {
         print('Database compaction completed');
@@ -470,10 +536,10 @@ class DatabaseService {
       'quotes': _simplifiedQuoteBox.length,
       'roofScopeData': _roofScopeBox.length,
       'projectMedia': _mediaBox.length,
+      'pdfTemplates': _pdfTemplateBox.length, // NEW
       'settings': _settingsBox.length,
     };
   }
-
   Future<void> close() async {
     if (!_isInitialized) return;
     await Hive.close();

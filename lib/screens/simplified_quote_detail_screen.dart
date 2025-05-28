@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../models/simplified_quote.dart';
 import '../models/customer.dart';
 import '../providers/app_state_provider.dart';
-
+import '../models/pdf_template.dart';
 class SimplifiedQuoteDetailScreen extends StatefulWidget {
   final SimplifiedMultiLevelQuote quote;
   final Customer customer;
@@ -34,42 +34,98 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Quote ${widget.quote.quoteNumber}'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _editQuote,
-          ),
-          PopupMenuButton<String>(
-            onSelected: _handleMenuAction,
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'generate_pdf', child: Text('Generate PDF')),
-              const PopupMenuItem(value: 'duplicate', child: Text('Duplicate Quote')),
-              const PopupMenuItem(value: 'delete', child: Text('Delete Quote')),
+      backgroundColor: Colors.grey[50],
+      body: NestedScrollView(
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return <Widget>[
+            SliverAppBar(
+              expandedHeight: 100,
+              floating: false,
+              pinned: true,
+              backgroundColor: const Color(0xFF2E86AB),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF2E86AB),
+                        Color(0xFF1B5E7F),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              title: Text('Quote ${widget.quote.quoteNumber}'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: _editQuote,
+                  color: Colors.white,
+                ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: Colors.white),
+                  onSelected: _handleMenuAction,
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'generate_pdf',
+                      child: Row(
+                        children: [
+                          Icon(Icons.picture_as_pdf, size: 18),
+                          SizedBox(width: 8),
+                          Text('Generate PDF'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'duplicate',
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy, size: 18),
+                          SizedBox(width: 8),
+                          Text('Duplicate Quote'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, size: 18, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Delete Quote', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ];
+        },
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildQuoteHeader(),
+              const SizedBox(height: 24),
+              _buildLevelSelector(),
+              const SizedBox(height: 24),
+              if (_selectedLevelId != null) _buildSelectedLevelDetails(),
+              const SizedBox(height: 24),
+              _buildAddonsSection(),
+              const SizedBox(height: 24),
+              _buildDiscountsSection(),
+              const SizedBox(height: 24),
+              _buildTotalSection(),
+              const SizedBox(height: 32),
+              _buildActionButtons(),
             ],
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildQuoteHeader(),
-            const SizedBox(height: 24),
-            _buildLevelSelector(),
-            const SizedBox(height: 24),
-            if (_selectedLevelId != null) _buildSelectedLevelDetails(),
-            const SizedBox(height: 24),
-            _buildAddonsSection(),
-            const SizedBox(height: 24),
-            _buildDiscountsSection(), // NEW - Discount management
-            const SizedBox(height: 24),
-            _buildTotalSection(),
-            const SizedBox(height: 32),
-            _buildActionButtons(),
-          ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -273,7 +329,6 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
     );
   }
 
-  // NEW - Discount management section
   Widget _buildDiscountsSection() {
     if (widget.quote.discounts.isEmpty) {
       return Card(
@@ -536,33 +591,238 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
   }
 
   void _editQuote() {
-    // Navigate to edit screen
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Edit quote functionality coming soon')),
     );
   }
 
+  // Add this to your existing lib/screens/simplified_quote_detail_screen.dart
+
+// Update the _generatePdf method to include template selection:
+
   void _generatePdf() async {
     try {
       final appState = context.read<AppStateProvider>();
-      final pdfPath = await appState.generateSimplifiedQuotePdf(
-        widget.quote,
-        widget.customer,
-        selectedLevelId: _selectedLevelId,
+
+      // Check if there are any available templates
+      final availableTemplates = appState.activePDFTemplates
+          .where((t) => t.templateType == 'quote')
+          .toList();
+
+      String? selectedTemplateId;
+
+      // If templates are available, show selection dialog
+      if (availableTemplates.isNotEmpty) {
+        selectedTemplateId = await _showTemplateSelectionDialog(availableTemplates);
+        if (selectedTemplateId == 'cancelled') return; // User cancelled
+      }
+
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Generating PDF...'),
+            ],
+          ),
+        ),
       );
 
+      String pdfPath;
+
+      if (selectedTemplateId != null) {
+        // Generate using template
+        pdfPath = await appState.generatePDFFromTemplate(
+          templateId: selectedTemplateId,
+          quote: widget.quote,
+          customer: widget.customer,
+          selectedLevelId: _selectedLevelId,
+        );
+      } else {
+        // Generate using standard method
+        pdfPath = await appState.generateSimplifiedQuotePdf(
+          widget.quote,
+          widget.customer,
+          selectedLevelId: _selectedLevelId,
+        );
+      }
+
+      Navigator.pop(context); // Close loading dialog
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF generated: $pdfPath')),
+        SnackBar(
+          content: Text('PDF generated: ${pdfPath.split('/').last}'),
+          action: SnackBarAction(
+            label: 'Open',
+            onPressed: () {
+              // TODO: Open PDF with default app
+            },
+          ),
+        ),
       );
     } catch (e) {
+      Navigator.pop(context); // Close loading dialog if open
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error generating PDF: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Error generating PDF: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+// Add this new method to show template selection dialog:
+
+  Future<String?> _showTemplateSelectionDialog(List<PDFTemplate> templates) async {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Choose PDF Template'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Select a template for your PDF, or use the standard format.',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children: [
+                    // Standard PDF option
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.description),
+                        title: const Text('Standard PDF'),
+                        subtitle: const Text('Use the built-in PDF format'),
+                        onTap: () => Navigator.pop(context, null), // null = standard
+                      ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // Template options
+                    ...templates.map((template) => Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.picture_as_pdf),
+                        title: Text(template.templateName),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (template.description.isNotEmpty)
+                              Text(template.description),
+                            Text(
+                              '${template.fieldMappings.length} mapped fields',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                        isThreeLine: template.description.isNotEmpty,
+                        trailing: IconButton(
+                          icon: const Icon(Icons.preview),
+                          onPressed: () => _previewTemplateInDialog(template),
+                          tooltip: 'Preview template',
+                        ),
+                        onTap: () => Navigator.pop(context, template.id),
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'cancelled'),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context, null); // Use standard PDF
+            },
+            child: const Text('Use Standard'),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Add this method for template preview in dialog:
+
+  void _previewTemplateInDialog(PDFTemplate template) async {
+    try {
+      // Close the selection dialog first
+      Navigator.pop(context);
+
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Generating preview...'),
+            ],
+          ),
+        ),
+      );
+
+      // Generate preview with current quote data
+      final previewPath = await context.read<AppStateProvider>().generatePDFFromTemplate(
+        templateId: template.id,
+        quote: widget.quote,
+        customer: widget.customer,
+        selectedLevelId: _selectedLevelId,
+        customData: {'preview': 'true', 'watermark': 'PREVIEW'},
+      );
+
+      Navigator.pop(context); // Close loading
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Preview generated: ${previewPath.split('/').last}'),
+          action: SnackBarAction(
+            label: 'Open',
+            onPressed: () {
+              // TODO: Open PDF
+            },
+          ),
+        ),
+      );
+
+      // Reshow the template selection dialog
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        final templates = context.read<AppStateProvider>().activePDFTemplates
+            .where((t) => t.templateType == 'quote')
+            .toList();
+        _showTemplateSelectionDialog(templates);
+      }
+    } catch (e) {
+      Navigator.pop(context); // Close loading if open
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error generating preview: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
   void _updateQuoteStatus() {
-    // Show status update dialog
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -593,7 +853,6 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
         _generatePdf();
         break;
       case 'duplicate':
-      // TODO: Implement duplication
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Duplicate functionality coming soon')),
         );
@@ -615,8 +874,8 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
           TextButton(
             onPressed: () {
               context.read<AppStateProvider>().deleteSimplifiedQuote(widget.quote.id);
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Close detail screen
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
@@ -626,7 +885,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
   }
 }
 
-// NEW - Discount creation dialog
+// Discount creation dialog
 class _DiscountDialog extends StatefulWidget {
   final Function(QuoteDiscount) onDiscountAdded;
 

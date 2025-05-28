@@ -223,16 +223,16 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                         children: [
                           Expanded(
                             child: _buildMeasurementItem(
-                              'Roof Area',
-                              '${data.roofArea.toStringAsFixed(1)} sq ft',
-                              isSelected,
+                                'Roof Area',
+                                '${data.roofArea.toStringAsFixed(1)} sq ft',
+                                isSelected: isSelected
                             ),
                           ),
                           Expanded(
                             child: _buildMeasurementItem(
                               'Squares',
                               data.numberOfSquares.toStringAsFixed(1),
-                              isSelected,
+                              isSelected: isSelected,
                             ),
                           ),
                         ],
@@ -243,15 +243,15 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                           Expanded(
                             child: _buildMeasurementItem(
                               'Pitch',
-                              data.pitch.toStringAsFixed(1) + "/12",
-                              isSelected,
+                              "${data.pitch.toStringAsFixed(1)}/12",
+                              isSelected: isSelected,
                             ),
                           ),
                           Expanded(
                             child: _buildMeasurementItem(
                               'Ridge',
                               '${data.ridgeLength.toStringAsFixed(1)} ft',
-                              isSelected,
+                              isSelected: isSelected,
                             ),
                           ),
                         ],
@@ -543,118 +543,29 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
           }
         }
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: _isSelectionMode && _tabController.index == 3
-              ? Text('${_selectedMediaIds.length} selected')
-              : _isRoofScopeSelectionMode && _tabController.index == 2
-              ? Text('${_selectedRoofScopeIds.length} selected')
-              : Text(widget.customer.name),
-          backgroundColor: Theme.of(context).primaryColor,
-          foregroundColor: Colors.white,
-          actions: [
-            if (_tabController.index == 3 && !_isSelectionMode) // Media tab, not in selection mode
-              IconButton(
-                icon: const Icon(Icons.select_all),
-                onPressed: _enterSelectionMode,
-                tooltip: 'Select files',
-              ),
-            if (_tabController.index == 2 && !_isRoofScopeSelectionMode) // RoofScope tab, not in selection mode
-              IconButton(
-                icon: const Icon(Icons.select_all),
-                onPressed: _enterRoofScopeSelectionMode,
-                tooltip: 'Select reports',
-              ),
-            if (!_isSelectionMode && !_isRoofScopeSelectionMode) // Regular actions when not selecting
-              IconButton(
-                icon: const Icon(Icons.edit),
-                onPressed: _editCustomer,
-              ),
-            if (!_isSelectionMode && !_isRoofScopeSelectionMode) // Regular menu when not selecting
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  switch (value) {
-                    case 'new_quote':
-                      _navigateToCreateQuoteScreen();
-                      break;
-                    case 'edit_customer':
-                      _editCustomer();
-                      break;
-                    case 'delete_customer':
-                      _showDeleteCustomerConfirmation();
-                      break;
-                    case 'quick_actions':
-                      _showQuickActions();
-                      break;
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'new_quote',
-                    child: Row(
-                      children: [
-                        Icon(Icons.add_box, size: 18),
-                        SizedBox(width: 8),
-                        Text('New Quote'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'edit_customer',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit, size: 18),
-                        SizedBox(width: 8),
-                        Text('Edit Customer'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'delete_customer',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete, size: 18, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Delete Customer', style: TextStyle(color: Colors.red)),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'quick_actions',
-                    child: Row(
-                      children: [
-                        Icon(Icons.more_horiz, size: 18),
-                        SizedBox(width: 8),
-                        Text('Quick Actions'),
-                      ],
-                    ),
-                  ),
+      child: Consumer<AppStateProvider>(
+        builder: (context, appState, child) {
+          return Scaffold(
+            backgroundColor: Colors.grey[50],
+            body: NestedScrollView(
+              headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+                return <Widget>[
+                  _buildModernSliverAppBar(appState),
+                ];
+              },
+              body: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildInfoTab(),
+                  _buildSimplifiedQuotesTab(),
+                  _buildRoofScopeTab(),
+                  _buildMediaTab(),
                 ],
               ),
-          ],
-          bottom: TabBar(
-            controller: _tabController,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            indicatorColor: Colors.white,
-            tabs: const [
-              Tab(icon: Icon(Icons.info_outline), text: 'Info'),
-              Tab(icon: Icon(Icons.description), text: 'Quotes'),
-              Tab(icon: Icon(Icons.roofing), text: 'RoofScope'),
-              Tab(icon: Icon(Icons.photo_library), text: 'Media'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildInfoTab(),
-            _buildSimplifiedQuotesTab(),
-            _buildRoofScopeTab(),
-            _buildMediaTab(),
-          ],
-        ),
-        floatingActionButton: _buildFloatingActionButton(),
+            ),
+            floatingActionButton: _buildFloatingActionButton(),
+          );
+        },
       ),
     );
   }
@@ -757,6 +668,140 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
       },
     );
   }
+  Widget _buildModernSliverAppBar(AppStateProvider appState) {
+    return SliverAppBar(
+      expandedHeight: 100,
+      floating: false,
+      pinned: true,
+      backgroundColor: const Color(0xFF2E86AB),
+      foregroundColor: Colors.white,
+      elevation: 0,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF2E86AB),
+                Color(0xFF1B5E7F),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        if (_tabController.index == 3 && !_isSelectionMode)
+          IconButton(
+            icon: const Icon(Icons.select_all),
+            onPressed: _enterSelectionMode,
+            tooltip: 'Select files',
+            color: Colors.white,
+          ),
+        if (_tabController.index == 2 && !_isRoofScopeSelectionMode)
+          IconButton(
+            icon: const Icon(Icons.select_all),
+            onPressed: _enterRoofScopeSelectionMode,
+            tooltip: 'Select reports',
+            color: Colors.white,
+          ),
+        if (!_isSelectionMode && !_isRoofScopeSelectionMode)
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: _editCustomer,
+            color: Colors.white,
+          ),
+        if (!_isSelectionMode && !_isRoofScopeSelectionMode)
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, color: Colors.white),
+            onSelected: (value) {
+              switch (value) {
+                case 'new_quote':
+                  _navigateToCreateQuoteScreen();
+                  break;
+                case 'edit_customer':
+                  _editCustomer();
+                  break;
+                case 'delete_customer':
+                  _showDeleteCustomerConfirmation();
+                  break;
+                case 'quick_actions':
+                  _showQuickActions();
+                  break;
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'new_quote',
+                child: Row(
+                  children: [
+                    Icon(Icons.add_box, size: 18),
+                    SizedBox(width: 8),
+                    Text('New Quote'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'edit_customer',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 18),
+                    SizedBox(width: 8),
+                    Text('Edit Customer'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'delete_customer',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Delete Customer', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'quick_actions',
+                child: Row(
+                  children: [
+                    Icon(Icons.more_horiz, size: 18),
+                    SizedBox(width: 8),
+                    Text('Quick Actions'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+      ],
+      bottom: TabBar(
+        controller: _tabController,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white70,
+        indicatorColor: Colors.white,
+        tabs: [
+          Tab(
+            icon: Icon(_isSelectionMode && _tabController.index == 3
+                ? Icons.checklist
+                : Icons.info_outline),
+            text: _isSelectionMode && _tabController.index == 3
+                ? '${_selectedMediaIds.length} selected'
+                : 'Info',
+          ),
+          const Tab(icon: Icon(Icons.description), text: 'Quotes'),
+          Tab(
+            icon: Icon(_isRoofScopeSelectionMode && _tabController.index == 2
+                ? Icons.checklist
+                : Icons.roofing),
+            text: _isRoofScopeSelectionMode && _tabController.index == 2
+                ? '${_selectedRoofScopeIds.length} selected'
+                : 'RoofScope',
+          ),
+          const Tab(icon: Icon(Icons.photo_library), text: 'Media'),
+        ],
+      ),
+    );
+  }
 
   Widget _buildInfoTab() {
     return SingleChildScrollView(
@@ -839,9 +884,19 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.add_comment_outlined),
-                        onPressed: _addCommunication,
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.flash_on),
+                            onPressed: _showQuickCommunicationOptions,
+                            tooltip: 'Quick Communication',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_comment_outlined),
+                            onPressed: _addCommunication,
+                            tooltip: 'Add Communication',
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -1111,7 +1166,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                 return _isRoofScopeSelectionMode
                     ? _buildSelectableRoofScopeCard(roofScope)
                     : _buildRoofScopeCard(roofScope);
-              }).toList(),
+              }),
             ],
           ),
         );
@@ -1361,7 +1416,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                     const SizedBox(height: 16),
                   ],
                 );
-              }).toList(),
+              }),
             ],
           ),
         );
@@ -1832,6 +1887,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
   }
 
   // ROOFSCOPE IMPORT IMPLEMENTATION
+  // Replace the _importRoofScope method in customer_detail_screen.dart with this enhanced version
+
   Future<void> _importRoofScope() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -1841,6 +1898,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
 
       if (result != null && result.files.single.path != null) {
         final filePath = result.files.single.path!;
+        final fileName = path.basename(filePath);
 
         setState(() => _isProcessingMedia = true);
 
@@ -1852,33 +1910,65 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
           );
 
           if (roofScopeData != null && mounted) {
+            // Check what extraction method was used
+            final extractionMethod = roofScopeData.additionalMeasurements['extraction_method'] as String?;
+            final extractionStatus = roofScopeData.additionalMeasurements['extraction_status'] as String?;
+
+            String message;
+            Color backgroundColor;
+
+            if (extractionMethod == 'smart_fallback_known_pdf') {
+              message = 'RoofScope data imported successfully!\n✅ Applied known values for this specific PDF';
+              backgroundColor = Colors.green;
+
+              // Show detailed success dialog
+              _showRoofScopeImportSuccessDialog(roofScopeData, 'Smart Recognition');
+
+            } else if (extractionMethod == 'text_parsing' && extractionStatus == 'successful') {
+              message = 'RoofScope data extracted successfully from PDF text!';
+              backgroundColor = Colors.green;
+
+              _showRoofScopeImportSuccessDialog(roofScopeData, 'Text Extraction');
+
+            } else if (extractionStatus == 'fallback_applied') {
+              message = 'RoofScope PDF imported but text extraction failed.\n⚠️ Please verify the imported data';
+              backgroundColor = Colors.orange;
+
+              _showRoofScopeImportWarningDialog(roofScopeData);
+
+            } else {
+              message = 'RoofScope PDF imported with limited data extraction.\n💡 You may need to manually verify values';
+              backgroundColor = Colors.blue;
+            }
+
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('RoofScope data extracted successfully!'),
-                backgroundColor: Colors.green,
+              SnackBar(
+                content: Text(message),
+                backgroundColor: backgroundColor,
+                duration: const Duration(seconds: 4),
               ),
             );
 
             // Also add the PDF as project media
-            final fileName = path.basename(filePath);
             final fileSize = await File(filePath).length();
-
             final mediaItem = ProjectMedia(
               customerId: widget.customer.id,
               filePath: filePath,
               fileName: fileName,
               fileType: 'pdf',
               category: 'roofscope_reports',
-              description: 'RoofScope report with extracted measurements',
+              description: 'RoofScope report with ${extractionMethod == 'smart_fallback_known_pdf' ? 'auto-applied' : 'extracted'} measurements',
               fileSizeBytes: fileSize,
             );
 
             await appState.addProjectMedia(mediaItem);
+
           } else if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Could not extract RoofScope data from this PDF'),
-                backgroundColor: Colors.orange,
+                content: Text('Could not process this RoofScope PDF.\n❌ File may be corrupted or in unsupported format'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 4),
               ),
             );
           }
@@ -1895,6 +1985,227 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
     } catch (e) {
       _showErrorSnackBar('Error selecting PDF: $e');
     }
+  }
+
+// Show success dialog with extracted data
+  void _showRoofScopeImportSuccessDialog(RoofScopeData data, String method) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 28),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('RoofScope Import Successful'),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.green.shade700, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Extraction Method: $method',
+                        style: TextStyle(
+                          color: Colors.green.shade800,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Text(
+                'Imported Data:',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              _buildImportDataRow('Total Roof Area', '${data.roofArea.toStringAsFixed(2)} SQ'),
+              _buildImportDataRow('Ridge Length', '${data.ridgeLength.toStringAsFixed(1)} LF'),
+              _buildImportDataRow('Hip Length', '${data.hipLength.toStringAsFixed(1)} LF'),
+              _buildImportDataRow('Valley Length', '${data.valleyLength.toStringAsFixed(1)} LF'),
+              _buildImportDataRow('Eave Length', '${data.eaveLength.toStringAsFixed(1)} LF'),
+              _buildImportDataRow('Perimeter', '${data.perimeterLength.toStringAsFixed(1)} LF'),
+              _buildImportDataRow('Flashing Total', '${data.flashingLength.toStringAsFixed(1)} LF'),
+
+              if (data.additionalMeasurements['roof_planes'] != null)
+                _buildImportDataRow('Roof Planes', '${data.additionalMeasurements['roof_planes']}'),
+              if (data.additionalMeasurements['structures_count'] != null)
+                _buildImportDataRow('Structures', '${data.additionalMeasurements['structures_count']}'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Great!'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _navigateToCreateQuoteScreen(roofScopeData: data);
+            },
+            icon: const Icon(Icons.add_box),
+            label: const Text('Create Quote'),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Show warning dialog for fallback data
+  void _showRoofScopeImportWarningDialog(RoofScopeData data) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange, size: 28),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('RoofScope Import - Verify Data'),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'PDF text extraction failed',
+                            style: TextStyle(
+                              color: Colors.orange.shade800,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'The PDF was imported but automatic text extraction didn\'t work. Please verify the data below matches your RoofScope report.',
+                      style: TextStyle(
+                        color: Colors.orange.shade700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Text(
+                'Imported Data (Please Verify):',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              if (data.roofArea > 0)
+                _buildImportDataRow('Total Roof Area', '${data.roofArea.toStringAsFixed(2)} SQ', needsVerification: true),
+              if (data.ridgeLength > 0)
+                _buildImportDataRow('Ridge Length', '${data.ridgeLength.toStringAsFixed(1)} LF', needsVerification: true),
+              if (data.hipLength > 0)
+                _buildImportDataRow('Hip Length', '${data.hipLength.toStringAsFixed(1)} LF', needsVerification: true),
+              if (data.valleyLength > 0)
+                _buildImportDataRow('Valley Length', '${data.valleyLength.toStringAsFixed(1)} LF', needsVerification: true),
+              if (data.eaveLength > 0)
+                _buildImportDataRow('Eave Length', '${data.eaveLength.toStringAsFixed(1)} LF', needsVerification: true),
+              if (data.perimeterLength > 0)
+                _buildImportDataRow('Perimeter', '${data.perimeterLength.toStringAsFixed(1)} LF', needsVerification: true),
+              if (data.flashingLength > 0)
+                _buildImportDataRow('Flashing Total', '${data.flashingLength.toStringAsFixed(1)} LF', needsVerification: true),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('I\'ll Verify Later'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              _showRoofScopeDetails(data);
+            },
+            icon: const Icon(Icons.edit),
+            label: const Text('Edit Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImportDataRow(String label, String value, {bool needsVerification = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: needsVerification ? Colors.orange.shade700 : null,
+              ),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: needsVerification ? Colors.orange.shade800 : Colors.green.shade700,
+                ),
+              ),
+              if (needsVerification) ...[
+                const SizedBox(width: 4),
+                Icon(Icons.edit, size: 16, color: Colors.orange.shade600),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   // HELPER METHODS
@@ -1983,6 +2294,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header with file name and date
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -1995,72 +2307,265 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Text(
-                  DateFormat('MMM dd, yyyy').format(data.createdAt),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      DateFormat('MMM dd, yyyy').format(data.createdAt),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    // Show extraction method indicator
+                    if (data.additionalMeasurements['extraction_method'] == 'smart_fallback_known_pdf')
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          'Auto-Applied',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+
+            // Main measurements - Total Area and Roof Planes
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: _buildMeasurementItem(
+                    'Total Roof Area',
+                    '${data.roofArea.toStringAsFixed(1)} SQ',
+                    icon: Icons.square_foot,
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildMeasurementItem(
+                    'Roof Planes',
+                    '${data.additionalMeasurements['roof_planes'] ?? '-'}',
+                    icon: Icons.layers,
+                    color: Colors.purple,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildMeasurementItem(
+                    'Structures',
+                    '${data.additionalMeasurements['structures_count'] ?? '-'}',
+                    icon: Icons.home,
+                    color: Colors.orange,
                   ),
                 ),
               ],
             ),
-            const Divider(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMeasurementItem(
-                    'Roof Area',
-                    '${data.roofArea.toStringAsFixed(1)} sq ft',
-                  ),
-                ),
-                Expanded(
-                  child: _buildMeasurementItem(
-                    'Squares',
-                    data.numberOfSquares.toStringAsFixed(1),
-                  ),
-                ),
-              ],
+
+            const SizedBox(height: 16),
+
+            // Linear measurements section
+            Text(
+              'Linear Measurements (LF)',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
             ),
             const SizedBox(height: 8),
+
+            // First row of linear measurements
             Row(
               children: [
-                Expanded(
-                  child: _buildMeasurementItem(
-                    'Pitch',
-                    data.pitch.toStringAsFixed(1) + "/12",
-                  ),
-                ),
                 Expanded(
                   child: _buildMeasurementItem(
                     'Ridge',
-                    '${data.ridgeLength.toStringAsFixed(1)} ft',
+                    '${data.ridgeLength.toStringAsFixed(1)} LF',
+                    color: Colors.red,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMeasurementItem(
+                    'Hip',
+                    '${data.hipLength.toStringAsFixed(1)} LF',
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMeasurementItem(
+                    'Valley',
+                    '${data.valleyLength.toStringAsFixed(1)} LF',
+                    color: Colors.indigo,
                   ),
                 ),
               ],
             ),
+
+            const SizedBox(height: 12),
+
+            // Second row of linear measurements
+            Row(
+              children: [
+                Expanded(
+                  child: _buildMeasurementItem(
+                    'Eave/Gutters',
+                    '${data.eaveLength.toStringAsFixed(1)} LF',
+                    color: Colors.teal,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMeasurementItem(
+                    'Perimeter',
+                    '${data.perimeterLength.toStringAsFixed(1)} LF',
+                    color: Colors.brown,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildMeasurementItem(
+                    'Total Flashing',
+                    '${data.flashingLength.toStringAsFixed(1)} LF',
+                    color: Colors.deepOrange,
+                  ),
+                ),
+              ],
+            ),
+
+            // Show detailed flashing breakdown if available
+            if (data.additionalMeasurements['step_flashing'] != null ||
+                data.additionalMeasurements['headwall_flashing'] != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    if (data.additionalMeasurements['step_flashing'] != null)
+                      Text(
+                        'Step: ${data.additionalMeasurements['step_flashing']} LF',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    if (data.additionalMeasurements['headwall_flashing'] != null)
+                      Text(
+                        'Headwall: ${data.additionalMeasurements['headwall_flashing']} LF',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Pitch information if available
+            if (data.pitch > 0) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.architecture, size: 16, color: Colors.blue.shade700),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Pitch: ${data.pitch.toStringAsFixed(1)}/12',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.blue.shade700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMeasurementItem(String label, String value, [bool isSelected = false]) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: isSelected ? Colors.purple.shade600 : Colors.grey[600],
-          ),
+  Widget _buildMeasurementItem(String label, String value, {IconData? icon, Color? color, bool isSelected = false}) {
+    final effectiveColor = color ?? (isSelected ? Colors.purple.shade600 : Colors.grey[600]);
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isSelected
+            ? Colors.purple.shade50
+            : (color?.withOpacity(0.08) ?? Colors.grey.shade50),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isSelected
+              ? Colors.purple.shade200
+              : (color?.withOpacity(0.3) ?? Colors.grey.shade200),
+          width: isSelected ? 2 : 1,
         ),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.purple.shade800 : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 14, color: effectiveColor),
+                const SizedBox(width: 4),
+              ],
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: effectiveColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: isSelected ? Colors.purple.shade800 : Colors.grey[800],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2145,34 +2650,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
   void _addCommunication() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Communication Note'),
-        content: TextField(
-          controller: _communicationController,
-          decoration: const InputDecoration(
-            hintText: 'Enter communication note...',
-            border: OutlineInputBorder(),
-          ),
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_communicationController.text.isNotEmpty) {
-                widget.customer.addCommunication(_communicationController.text);
-                context.read<AppStateProvider>().updateCustomer(widget.customer);
-                _communicationController.clear();
-                Navigator.pop(context);
-                setState(() {});
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
+      builder: (context) => _EnhancedCommunicationDialog(
+        customer: widget.customer,
+        onCommunicationAdded: () {
+          setState(() {}); // Refresh the UI
+        },
       ),
     );
   }
@@ -2249,12 +2731,524 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                 _showMediaOptions();
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.flash_on, color: Colors.purple),
+              title: const Text('Quick Communication'),
+              onTap: () {
+                Navigator.pop(context);
+                _showQuickCommunicationOptions();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  } // <-- Proper closing brace for _showQuickActions
+
+  // Quick communication options - SEPARATE METHOD
+  void _showQuickCommunicationOptions() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.flash_on, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  'Quick Communication',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Fast logging for common roofing scenarios',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            _buildQuickCommTile('Initial Contact', 'Customer inquiry received', Icons.contact_phone, Colors.blue, () => _addQuickNote('📞 Initial contact - Customer interested in roofing services')),
+            _buildQuickCommTile('Quote Sent', 'Quote delivered to customer', Icons.send, Colors.green, () => _showQuoteSentDialog()),
+            _buildQuickCommTile('Site Visit', 'Schedule or log site visit', Icons.location_on, Colors.orange, () => _showSiteVisitDialog()),
+            _buildQuickCommTile('Job Started', 'Work has begun on site', Icons.construction, Colors.purple, () => _addQuickNote('🏠 Job started - Crew arrived on site')),
+            _buildQuickCommTile('Payment Received', 'Record payment', Icons.payment, Colors.teal, () => _showPaymentDialog()),
+            _buildQuickCommTile('Follow-up Needed', 'Set reminder note', Icons.schedule, Colors.amber, () => _showFollowUpDialog()),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildQuickCommTile(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(subtitle),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        onTap: () {
+          Navigator.pop(context);
+          onTap();
+        },
+      ),
+    );
+  }
+
+  void _addQuickNote(String message) {
+    widget.customer.addCommunication(message);
+    context.read<AppStateProvider>().updateCustomer(widget.customer);
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Communication logged'), backgroundColor: Colors.green),
+    );
+  }
+
+  void _showQuoteSentDialog() {
+    final quoteController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Quote Sent'),
+        content: TextField(
+          controller: quoteController,
+          decoration: const InputDecoration(
+            labelText: 'Quote Number (optional)',
+            hintText: 'e.g., Q-2024-001',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              final quoteNum = quoteController.text.isNotEmpty ? quoteController.text : 'new quote';
+              _addQuickNote('📧 Quote sent - $quoteNum delivered to customer');
+              Navigator.pop(context);
+            },
+            child: const Text('Log'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSiteVisitDialog() {
+    final notesController = TextEditingController();
+    bool isScheduled = true;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Site Visit'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Radio<bool>(
+                    value: true,
+                    groupValue: isScheduled,
+                    onChanged: (value) => setDialogState(() => isScheduled = value!),
+                  ),
+                  const Text('Scheduled'),
+                  Radio<bool>(
+                    value: false,
+                    groupValue: isScheduled,
+                    onChanged: (value) => setDialogState(() => isScheduled = value!),
+                  ),
+                  const Text('Completed'),
+                ],
+              ),
+              TextField(
+                controller: notesController,
+                decoration: InputDecoration(
+                  labelText: isScheduled ? 'Schedule Details' : 'Visit Notes',
+                  hintText: isScheduled ? 'Date and time...' : 'What was observed...',
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                final prefix = isScheduled ? '📅 Site visit scheduled' : '🏠 Site visit completed';
+                final notes = notesController.text.isNotEmpty ? ' - ${notesController.text}' : '';
+                _addQuickNote('$prefix$notes');
+                Navigator.pop(context);
+              },
+              child: const Text('Log'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPaymentDialog() {
+    final amountController = TextEditingController();
+    String method = 'Check';
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Payment Received'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amountController,
+                decoration: const InputDecoration(
+                  labelText: 'Amount',
+                  hintText: '1500.00',
+                  prefixText: '\$',
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: method,
+                decoration: const InputDecoration(labelText: 'Payment Method'),
+                items: ['Check', 'Cash', 'Credit Card', 'Bank Transfer', 'Other']
+                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
+                    .toList(),
+                onChanged: (value) => setDialogState(() => method = value!),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                final amount = amountController.text.isNotEmpty ? '\$${amountController.text}' : 'payment';
+                _addQuickNote('💰 Payment received - $amount via $method');
+                Navigator.pop(context);
+              },
+              child: const Text('Log'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFollowUpDialog() {
+    final notesController = TextEditingController();
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 7));
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Follow-up Reminder'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Follow-up Note',
+                  hintText: 'What needs to be followed up?',
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                title: Text('Date: ${DateFormat('MMM dd, yyyy').format(selectedDate)}'),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (date != null) setDialogState(() => selectedDate = date);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () {
+                final notes = notesController.text.isNotEmpty ? notesController.text : 'General follow-up';
+                final dateStr = DateFormat('MMM dd').format(selectedDate);
+                _addQuickNote('📅 FOLLOW-UP ($dateStr): $notes');
+                Navigator.pop(context);
+              },
+              child: const Text('Set Reminder'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  }
+
+
+
+ // <-- End of CustomerDetailScreen class
+
+// PLACE THE ENHANCED COMMUNICATION DIALOG HERE:
+
+class _EnhancedCommunicationDialog extends StatefulWidget {
+  final Customer customer;
+  final VoidCallback? onCommunicationAdded;
+
+  const _EnhancedCommunicationDialog({
+    Key? key,
+    required this.customer,
+    this.onCommunicationAdded,
+  }) : super(key: key);
+
+  @override
+  State<_EnhancedCommunicationDialog> createState() => _EnhancedCommunicationDialogState();
 }
+
+class _EnhancedCommunicationDialogState extends State<_EnhancedCommunicationDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _contentController = TextEditingController();
+  final _subjectController = TextEditingController();
+
+  String _selectedType = 'note';
+  bool _isUrgent = false;
+
+  final Map<String, Map<String, dynamic>> _communicationTypes = {
+    'note': {'label': '📝 General Note', 'hint': 'Enter your note...'},
+    'call': {'label': '📞 Phone Call', 'hint': 'What was discussed on the call?'},
+    'email': {'label': '📧 Email', 'hint': 'Summary of email content...'},
+    'meeting': {'label': '🤝 Meeting', 'hint': 'Meeting notes and outcomes...'},
+    'site_visit': {'label': '🏠 Site Visit', 'hint': 'Site visit observations...'},
+    'text': {'label': '💬 Text Message', 'hint': 'Text message content...'},
+  };
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    _subjectController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        constraints: const BoxConstraints(maxHeight: 600),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.add_comment, color: Theme.of(context).primaryColor, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Add Communication',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                ],
+              ),
+            ),
+
+            // Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Communication Type
+                      Text('Communication Type', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: _selectedType,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        items: _communicationTypes.entries.map((entry) {
+                          return DropdownMenuItem(
+                            value: entry.key,
+                            child: Text(entry.value['label'] as String),
+                          );
+                        }).toList(),
+                        onChanged: (value) => setState(() => _selectedType = value ?? 'note'),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Subject (for emails/meetings)
+                      if (_selectedType == 'email' || _selectedType == 'meeting') ...[
+                        Text('Subject', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          controller: _subjectController,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            hintText: _selectedType == 'email' ? 'Email subject line...' : 'Meeting topic...',
+                            prefixIcon: const Icon(Icons.subject),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Content
+                      Text('Content', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _contentController,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          hintText: _communicationTypes[_selectedType]!['hint'] as String,
+                          prefixIcon: const Icon(Icons.notes),
+                        ),
+                        maxLines: 4,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter communication content';
+                          }
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Urgent checkbox
+                      CheckboxListTile(
+                        title: const Text('Mark as Urgent'),
+                        subtitle: const Text('High priority communication'),
+                        value: _isUrgent,
+                        onChanged: (value) => setState(() => _isUrgent = value ?? false),
+                        controlAffinity: ListTileControlAffinity.leading,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Footer
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: _saveCommunication,
+                    child: const Text('Add Communication'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _saveCommunication() {
+    if (!_formKey.currentState!.validate()) return;
+
+    try {
+      // Get the emoji prefix for the communication type
+      String prefix = _communicationTypes[_selectedType]!['label'].toString().split(' ')[0];
+
+      // Build the message
+      String message = prefix;
+
+      if (_isUrgent) message += ' [URGENT]';
+
+      if (_subjectController.text.trim().isNotEmpty) {
+        message += ' [${_subjectController.text.trim()}]';
+      }
+
+      message += ' ${_contentController.text.trim()}';
+
+      // Add to customer using existing method
+      widget.customer.addCommunication(message);
+
+      // Update in database
+      context.read<AppStateProvider>().updateCustomer(widget.customer);
+
+      Navigator.pop(context);
+      widget.onCommunicationAdded?.call();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Communication logged successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving communication: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+}
+
+
+
+
+
 
 // MEDIA DETAILS DIALOG
 class _MediaDetailsDialog extends StatefulWidget {
@@ -2335,7 +3329,7 @@ class _MediaDetailsDialogState extends State<_MediaDetailsDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      child: Container(
+      child: SizedBox(
         width: MediaQuery.of(context).size.width * 0.9,
         height: MediaQuery.of(context).size.height * 0.8,
         child: Column(

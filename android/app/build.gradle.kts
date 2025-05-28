@@ -7,8 +7,9 @@ plugins {
 
 android {
     namespace = "com.example.rufko"
+    ndkVersion = "27.0.12077973"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

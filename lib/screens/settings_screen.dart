@@ -1,4 +1,4 @@
-// lib/screens/settings_screen.dart - COMPLETE IMPLEMENTATION
+// lib/screens/settings_screen.dart - MODERN UI VERSION
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -8,11 +8,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../providers/app_state_provider.dart';
 import '../services/database_service.dart';
-import '../services/excel_service.dart';
-import '../models/product.dart';
 import '../models/app_settings.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -28,10 +27,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Enhanced Settings'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
+        title: const Text('Settings'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
+        elevation: 0,
       ),
       body: _isProcessing
           ? const Center(
@@ -50,18 +51,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildSectionHeader('Product Configuration'),
           _buildProductConfigurationSection(),
           const SizedBox(height: 24),
-          _buildSectionHeader('Data Management'),
-          _buildDataManagementSection(),
+
+          _buildSectionHeader('Company & Business'),
+          _buildCompanyAndBusinessSection(),
           const SizedBox(height: 24),
-          _buildSectionHeader('Excel Integration'),
-          _buildExcelSection(),
-          const SizedBox(height: 24),
-          _buildSectionHeader('Company & PDF Settings'),
-          _buildCompanyAndPdfSection(),
-          const SizedBox(height: 24),
+
           _buildSectionHeader('Discount Settings'),
           _buildDiscountSettingsSection(),
           const SizedBox(height: 24),
+
+          _buildSectionHeader('Data Management'),
+          _buildDataManagementSection(),
+          const SizedBox(height: 24),
+
           _buildSectionHeader('About'),
           _buildAboutSection(),
           const SizedBox(height: 40),
@@ -72,12 +74,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 8),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).primaryColorDark,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey[800],
         ),
       ),
     );
@@ -86,54 +88,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildProductConfigurationSection() {
     return Card(
       elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.category, color: Colors.blue.shade700),
-            ),
-            title: const Text('Product Categories'),
-            subtitle: const Text('Manage available product categories'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          _buildSettingsTile(
+            icon: Icons.category,
+            iconColor: Colors.blue.shade600,
+            title: 'Product Categories',
+            subtitle: 'Manage available product categories',
             onTap: _showCategoriesManager,
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.green.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.straighten, color: Colors.green.shade700),
-            ),
-            title: const Text('Product Units'),
-            subtitle: const Text('Manage available measurement units'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          _buildDivider(),
+          _buildSettingsTile(
+            icon: Icons.straighten,
+            iconColor: Colors.green.shade600,
+            title: 'Product Units',
+            subtitle: 'Manage available measurement units',
             onTap: _showUnitsManager,
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.purple.shade100,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.layers, color: Colors.purple.shade700),
-            ),
-            title: const Text('Quote Level Names'),
-            subtitle: const Text('Configure default quote level names'),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          _buildDivider(),
+          _buildSettingsTile(
+            icon: Icons.layers,
+            iconColor: Colors.purple.shade600,
+            title: 'Quote Level Names',
+            subtitle: 'Configure default quote level names',
             onTap: _showQuoteLevelsManager,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCompanyAndBusinessSection() {
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, child) {
+        final settings = appState.appSettings ?? AppSettings();
+
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Column(
+            children: [
+              _buildSettingsTile(
+                icon: Icons.business,
+                iconColor: Colors.indigo.shade600,
+                title: 'Company Information',
+                subtitle: settings.companyName?.isNotEmpty == true
+                    ? settings.companyName!
+                    : 'Set company name, logo, and contact info',
+                onTap: _showCompanyInfoDialog,
+                trailing: settings.companyLogoPath != null
+                    ? Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      File(settings.companyLogoPath!),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Icon(Icons.business, color: Colors.grey[400]),
+                    ),
+                  ),
+                )
+                    : null,
+              ),
+              _buildDivider(),
+              _buildSettingsTile(
+                icon: Icons.percent,
+                iconColor: Colors.cyan.shade600,
+                title: 'Default Tax Rate',
+                subtitle: 'Current: ${settings.taxRate.toStringAsFixed(2)}%',
+                onTap: _showTaxRateDialog,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -144,37 +179,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         return Card(
           elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Column(
             children: [
-              ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.discount, color: Colors.orange.shade700),
-                ),
-                title: const Text('Discount System'),
-                subtitle: Text('Max discount: ${settings.defaultDiscountLimit.toStringAsFixed(1)}%'),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              _buildSettingsTile(
+                icon: Icons.discount,
+                iconColor: Colors.orange.shade600,
+                title: 'Discount System',
+                subtitle: 'Max discount: ${settings.defaultDiscountLimit.toStringAsFixed(1)}%',
                 onTap: _showDiscountSettingsDialog,
               ),
-              SwitchListTile(
-                title: const Text('Product Discount Toggle'),
-                subtitle: const Text('Allow products to be marked as non-discountable'),
-                value: settings.allowProductDiscountToggle,
-                onChanged: (value) {
-                  settings.updateDiscountSettings(allowToggle: value);
-                  appState.updateAppSettings(settings);
-                },
-                secondary: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.indigo.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(Icons.toggle_on, color: Colors.indigo.shade700),
+              _buildDivider(),
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.toggle_on, color: Colors.teal.shade600, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Product Discount Toggle',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            'Allow products to be marked as non-discountable',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: settings.allowProductDiscountToggle,
+                      onChanged: (value) {
+                        settings.updateDiscountSettings(allowToggle: value);
+                        appState.updateAppSettings(settings);
+                      },
+                      activeColor: Theme.of(context).primaryColor,
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -187,87 +246,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildDataManagementSection() {
     return Card(
       elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          ListTile(
-            leading: const Icon(Icons.backup_outlined, color: Colors.blueAccent),
-            title: const Text('Export All Data'),
-            subtitle: const Text('Create a JSON backup of all app data'),
+          _buildSettingsTile(
+            icon: Icons.backup,
+            iconColor: Colors.blue.shade600,
+            title: 'Export All Data',
+            subtitle: 'Create a JSON backup of all app data',
             onTap: _exportData,
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: const Icon(Icons.restore_page_outlined, color: Colors.greenAccent),
-            title: const Text('Import Data from Backup'),
-            subtitle: const Text('Restore data from a JSON backup file'),
+          _buildDivider(),
+          _buildSettingsTile(
+            icon: Icons.restore,
+            iconColor: Colors.green.shade600,
+            title: 'Import Data from Backup',
+            subtitle: 'Restore data from a JSON backup file',
             onTap: _importData,
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: Icon(Icons.delete_sweep_outlined, color: Colors.red.shade700),
-            title: Text('Clear All Data', style: TextStyle(color: Colors.red.shade700)),
-            subtitle: const Text('Permanently delete all app data'),
+          _buildDivider(),
+          _buildSettingsTile(
+            icon: Icons.delete_sweep,
+            iconColor: Colors.red.shade600,
+            title: 'Clear All Data',
+            subtitle: 'Permanently delete all app data',
             onTap: _showClearDataDialog,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildExcelSection() {
-    return Card(
-      elevation: 2,
-      child: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.file_upload_outlined, color: Colors.green),
-            title: const Text('Import Products from Excel'),
-            subtitle: const Text('Load products using an .xlsx or .xls file'),
-            onTap: _importProductsFromExcel,
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: const Icon(Icons.file_download_outlined, color: Colors.blueGrey),
-            title: const Text('Export Products to Excel'),
-            subtitle: const Text('Save current products to an Excel file'),
-            onTap: _exportProductsToExcel,
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: const Icon(Icons.description_outlined, color: Colors.teal),
-            title: const Text('Download Product Template'),
-            subtitle: const Text('Get an Excel template for importing products'),
-            onTap: _downloadExcelTemplate,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCompanyAndPdfSection() {
-    return Card(
-      elevation: 2,
-      child: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.business_outlined, color: Colors.deepPurpleAccent),
-            title: const Text('Company Information'),
-            subtitle: const Text('Set name, address, logo for PDFs etc.'),
-            trailing: const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
-            onTap: _showCompanyInfoDialog,
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          Consumer<AppStateProvider>(
-            builder: (context, appState, child) {
-              final settings = appState.appSettings ?? AppSettings();
-              return ListTile(
-                leading: const Icon(Icons.percent_outlined, color: Colors.cyan),
-                title: const Text('Default Tax Rate'),
-                subtitle: Text('Current: ${settings.taxRate.toStringAsFixed(2)}%'),
-                trailing: const Icon(Icons.edit_outlined, size: 20, color: Colors.grey),
-                onTap: _showTaxRateDialog,
-              );
-            },
+            isDestructive: true,
           ),
         ],
       ),
@@ -277,40 +281,160 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildAboutSection() {
     return Card(
       elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          const ListTile(
-            leading: Icon(Icons.info_outline, color: Colors.blue),
-            title: Text('App Version'),
-            subtitle: Text('1.0.0 (Enhanced Build)'),
+          _buildSettingsTile(
+            icon: Icons.info,
+            iconColor: Colors.blue.shade600,
+            title: 'App Version',
+            subtitle: '1.0.0 (Modern Build)',
+            showArrow: false,
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: const Icon(Icons.help_outline, color: Colors.green),
-            title: const Text('Help & Support'),
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Help & Support'),
-                  content: const SingleChildScrollView(
-                    child: Text(
-                        'Rufko helps streamline roofing estimates with enhanced product management, '
-                            'flexible discounting, and comprehensive quote generation.\n\n'
-                            'New Features:\n'
-                            '• Dynamic product categories and units\n'
-                            '• Advanced discount system\n'
-                            '• Enhanced level pricing\n'
-                            '• Flexible quote configuration\n\n'
-                            'For assistance, please contact support.'
+          _buildDivider(),
+          _buildSettingsTile(
+            icon: Icons.help,
+            iconColor: Colors.green.shade600,
+            title: 'Help & Support',
+            subtitle: 'Get help with using Rufko',
+            onTap: _showHelpDialog,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+    Widget? trailing,
+    bool showArrow = true,
+    bool isDestructive = false,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: isDestructive ? Colors.red.shade100 : iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: isDestructive ? Colors.red.shade600 : iconColor,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: isDestructive ? Colors.red.shade700 : Colors.black87,
                     ),
                   ),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
-                  ],
-                ),
-              );
-            },
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: 12),
+              trailing,
+            ] else if (showArrow && onTap != null) ...[
+              const SizedBox(width: 12),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.grey[400],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      height: 1,
+      color: Colors.grey[200],
+    );
+  }
+
+  void _showHelpDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.help, color: Colors.green.shade600),
+            ),
+            const SizedBox(width: 12),
+            const Text('Help & Support'),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Rufko helps streamline roofing estimates with enhanced product management, flexible discounting, and comprehensive quote generation.\n',
+                style: TextStyle(fontSize: 16),
+              ),
+              Text(
+                'Key Features:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              SizedBox(height: 8),
+              Text('• Dynamic product categories and units'),
+              Text('• Advanced 3-tier pricing system'),
+              Text('• Professional quote generation'),
+              Text('• Customer relationship management'),
+              Text('• Photo documentation'),
+              Text('• RoofScope PDF data extraction'),
+              Text('• Flexible discount system'),
+              SizedBox(height: 16),
+              Text(
+                'For technical support or feature requests, please contact our development team.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -345,6 +469,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SnackBar(
             content: Text('Data exported to: $fileName'),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             action: SnackBarAction(
               label: 'Open',
               onPressed: () => OpenFilex.open(file.path),
@@ -358,6 +484,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SnackBar(
             content: Text('Export failed: $e'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         );
       }
@@ -380,19 +508,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Import Data'),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.orange.shade600),
+                const SizedBox(width: 12),
+                const Text('Import Data'),
+              ],
+            ),
             content: const Text(
-                'This will replace ALL current data with the backup data. '
-                    'Are you sure you want to continue?'
+              'This will replace ALL current data with the backup data. '
+                  'Are you sure you want to continue?\n\n'
+                  'This action cannot be undone.',
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
                 child: const Text('Cancel'),
               ),
-              TextButton(
+              ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Import', style: TextStyle(color: Colors.red)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade600,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Import'),
               ),
             ],
           ),
@@ -413,9 +553,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Data imported successfully!'),
+              SnackBar(
+                content: const Text('Data imported successfully!'),
                 backgroundColor: Colors.green,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             );
           }
@@ -427,6 +569,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SnackBar(
             content: Text('Import failed: $e'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         );
       }
@@ -439,21 +583,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear All Data'),
-        content: const Column(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red.shade600, size: 28),
+            const SizedBox(width: 12),
+            const Text('Clear All Data'),
+          ],
+        ),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.warning, color: Colors.red, size: 48),
-            SizedBox(height: 16),
-            Text(
-              'This will permanently delete ALL data including:\n'
-                  '• All customers and quotes\n'
-                  '• All products\n'
-                  '• All media files\n'
-                  '• All RoofScope data\n'
-                  '• App settings\n\n'
-                  'This action cannot be undone!',
-              textAlign: TextAlign.center,
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.delete_forever, color: Colors.red.shade600, size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    'This will permanently delete ALL data including:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.red.shade800,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDeleteItem('All customers and quotes'),
+                _buildDeleteItem('All products and pricing'),
+                _buildDeleteItem('All media files and photos'),
+                _buildDeleteItem('All RoofScope data'),
+                _buildDeleteItem('App settings and configurations'),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'This action cannot be undone!',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade800,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),
@@ -462,7 +650,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () async {
               try {
                 Navigator.pop(context);
@@ -477,9 +665,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('All data cleared successfully'),
+                    SnackBar(
+                      content: const Text('All data cleared successfully'),
                       backgroundColor: Colors.orange,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   );
                 }
@@ -489,6 +679,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     SnackBar(
                       content: Text('Error clearing data: $e'),
                       backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                   );
                 }
@@ -496,147 +688,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (mounted) setState(() => _isProcessing = false);
               }
             },
-            child: const Text('DELETE ALL', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('DELETE ALL'),
           ),
         ],
       ),
     );
   }
 
-  // Excel Methods
-  Future<void> _importProductsFromExcel() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['xlsx', 'xls'],
-      );
-
-      if (result != null && result.files.single.path != null) {
-        setState(() => _isProcessing = true);
-
-        final filePath = result.files.single.path!;
-        final excelService = ExcelService();
-
-        // Load products from Excel
-        final products = await excelService.loadProductsFromExcel(filePath);
-
-        if (products.isNotEmpty) {
-          final appState = context.read<AppStateProvider>();
-          await appState.importProducts(products);
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Imported ${products.length} products successfully!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('No products found in Excel file'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Import failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
-    }
+  Widget _buildDeleteItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Icon(Icons.close, color: Colors.red.shade600, size: 16),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
   }
 
-  Future<void> _exportProductsToExcel() async {
-    try {
-      setState(() => _isProcessing = true);
-
-      final appState = context.read<AppStateProvider>();
-      final products = appState.products;
-
-      if (products.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No products to export'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      final excelService = ExcelService();
-      final filePath = await excelService.saveProductsToExcel(products);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Exported ${products.length} products to Excel'),
-            backgroundColor: Colors.green,
-            action: SnackBarAction(
-              label: 'Open',
-              onPressed: () => OpenFilex.open(filePath),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Export failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
-    }
-  }
-
-  Future<void> _downloadExcelTemplate() async {
-    try {
-      setState(() => _isProcessing = true);
-
-      final excelService = ExcelService();
-      final templatePath = await excelService.createProductTemplate();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Product template created'),
-            backgroundColor: Colors.green,
-            action: SnackBarAction(
-              label: 'Open',
-              onPressed: () => OpenFilex.open(templatePath),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Template creation failed: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
-    }
-  }
-
-  // Company & PDF Methods
+  // Company & Business Methods
   void _showCompanyInfoDialog() {
     final appState = context.read<AppStateProvider>();
     final settings = appState.appSettings ?? AppSettings();
@@ -648,76 +724,260 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Company Information'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
             children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Company Name',
-                  border: OutlineInputBorder(),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.indigo.shade100,
+                  borderRadius: BorderRadius.circular(8),
                 ),
+                child: Icon(Icons.business, color: Colors.indigo.shade600),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: addressController,
-                decoration: const InputDecoration(
-                  labelText: 'Address',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
+              const SizedBox(width: 12),
+              const Text('Company Information'),
             ],
           ),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Company Logo Section
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Company Logo',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (settings.companyLogoPath != null) ...[
+                          Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.file(
+                                File(settings.companyLogoPath!),
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Icon(Icons.business, color: Colors.grey[400], size: 48),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: () => _selectCompanyLogo(setDialogState, settings, appState),
+                                icon: const Icon(Icons.edit),
+                                label: const Text('Change'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  settings.updateCompanyLogo(null);
+                                  appState.updateAppSettings(settings);
+                                  setDialogState(() {});
+                                },
+                                icon: const Icon(Icons.delete),
+                                label: const Text('Remove'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.red.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ] else ...[
+                          Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.grey.shade300,
+                                style: BorderStyle.solid,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.add_photo_alternate,
+                              size: 48,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton.icon(
+                            onPressed: () => _selectCompanyLogo(setDialogState, settings, appState),
+                            icon: const Icon(Icons.add_a_photo),
+                            label: const Text('Add Logo'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Company Information Fields
+                  _buildCompanyTextField(
+                    controller: nameController,
+                    label: 'Company Name',
+                    icon: Icons.business,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildCompanyTextField(
+                    controller: addressController,
+                    label: 'Address',
+                    icon: Icons.location_on,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildCompanyTextField(
+                    controller: phoneController,
+                    label: 'Phone',
+                    icon: Icons.phone,
+                    keyboardType: TextInputType.phone,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildCompanyTextField(
+                    controller: emailController,
+                    label: 'Email',
+                    icon: Icons.email,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                settings.updateCompanyInfo(
+                  name: nameController.text.trim().isEmpty ? null : nameController.text.trim(),
+                  address: addressController.text.trim().isEmpty ? null : addressController.text.trim(),
+                  phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
+                  email: emailController.text.trim().isEmpty ? null : emailController.text.trim(),
+                );
+                appState.updateAppSettings(settings);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Company information updated!'),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                );
+              },
+              child: const Text('Save'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              settings.updateCompanyInfo(
-                name: nameController.text.trim().isEmpty ? null : nameController.text.trim(),
-                address: addressController.text.trim().isEmpty ? null : addressController.text.trim(),
-                phone: phoneController.text.trim().isEmpty ? null : phoneController.text.trim(),
-                email: emailController.text.trim().isEmpty ? null : emailController.text.trim(),
-              );
-              appState.updateAppSettings(settings);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Company information updated!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
+  }
+
+  Widget _buildCompanyTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+  }) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withOpacity(0.7)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+    );
+  }
+
+  Future<void> _selectCompanyLogo(StateSetter setDialogState, AppSettings settings, AppStateProvider appState) async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        // Get the app documents directory
+        final directory = await getApplicationDocumentsDirectory();
+        final logoDir = Directory('${directory.path}/company_logos');
+
+        // Create directory if it doesn't exist
+        if (!await logoDir.exists()) {
+          await logoDir.create(recursive: true);
+        }
+
+        // Copy image to app directory with unique name
+        final fileName = 'company_logo_${DateTime.now().millisecondsSinceEpoch}.${image.path.split('.').last}';
+        final newPath = '${logoDir.path}/$fileName';
+
+        await File(image.path).copy(newPath);
+
+        // Update settings
+        settings.updateCompanyLogo(newPath);
+        appState.updateAppSettings(settings);
+
+        setDialogState(() {});
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Company logo updated!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error selecting logo: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    }
   }
 
   void _showTaxRateDialog() {
@@ -728,13 +988,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Default Tax Rate'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.cyan.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.percent, color: Colors.cyan.shade600),
+            ),
+            const SizedBox(width: 12),
+            const Text('Default Tax Rate'),
+          ],
+        ),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Tax Rate (%)',
-            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.percent, color: Theme.of(context).primaryColor.withOpacity(0.7)),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
+            ),
             suffixText: '%',
+            filled: true,
+            fillColor: Colors.white,
           ),
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
         ),
@@ -754,13 +1035,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   SnackBar(
                     content: Text('Tax rate updated to ${rate.toStringAsFixed(2)}%'),
                     backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a valid tax rate (0-100%)'),
+                  SnackBar(
+                    content: const Text('Please enter a valid tax rate (0-100%)'),
                     backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 );
               }
@@ -785,7 +1070,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           settings.updateProductCategories(updatedCategories);
           appState.updateAppSettings(settings);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Categories updated successfully!'), backgroundColor: Colors.green),
+            SnackBar(
+              content: const Text('Categories updated successfully!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
           );
         },
       ),
@@ -806,7 +1096,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           settings.updateDefaultUnit(newDefaultUnit);
           appState.updateAppSettings(settings);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Units updated successfully!'), backgroundColor: Colors.green),
+            SnackBar(
+              content: const Text('Units updated successfully!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
           );
         },
       ),
@@ -825,7 +1120,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           settings.updateDefaultQuoteLevelNames(updatedLevels);
           appState.updateAppSettings(settings);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Quote levels updated successfully!'), backgroundColor: Colors.green),
+            SnackBar(
+              content: const Text('Quote levels updated successfully!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
           );
         },
       ),
@@ -845,7 +1145,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           settings.updateDiscountSettings(types: types, discountLimit: limit);
           appState.updateAppSettings(settings);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Discount settings updated!'), backgroundColor: Colors.green),
+            SnackBar(
+              content: const Text('Discount settings updated!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
           );
         },
       ),
@@ -853,10 +1158,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-// Dialog classes remain the same as in your original code...
-// (I'll include them for completeness but they're unchanged)
+// Dialog classes (keeping the existing implementations but with modern styling)
+// Replace the _CategoryManagerDialog class in your settings_screen.dart with this enhanced version
 
-// Category Manager Dialog
 class _CategoryManagerDialog extends StatefulWidget {
   final List<String> categories;
   final Function(List<String>) onSave;
@@ -889,47 +1193,137 @@ class _CategoryManagerDialogState extends State<_CategoryManagerDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Manage Product Categories'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.category, color: Colors.blue.shade600),
+          ),
+          const SizedBox(width: 12),
+          const Text('Manage Product Categories'),
+        ],
+      ),
       content: SizedBox(
         width: double.maxFinite,
-        height: 400,
+        height: 450, // Increased height to accommodate edit functionality
         child: Column(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _addController,
-                    decoration: const InputDecoration(
-                      labelText: 'New Category',
-                      border: OutlineInputBorder(),
-                      isDense: true,
+            // Add new category section
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _addController,
+                      decoration: InputDecoration(
+                        labelText: 'New Category',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        isDense: true,
+                        filled: true,
+                        fillColor: Colors.white,
+                        prefixIcon: Icon(Icons.add, color: Colors.blue.shade600),
+                      ),
+                      onSubmitted: (_) => _addCategory(),
                     ),
-                    onSubmitted: (_) => _addCategory(),
                   ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _addCategory,
-                  child: const Icon(Icons.add),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: _addCategory,
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      backgroundColor: Colors.blue.shade600,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Icon(Icons.add),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
+
+            // Categories list header
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  Text(
+                    'Current Categories (${_categories.length})',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_categories.length > 1)
+                    Text(
+                      'Tap to edit',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Categories list
             Expanded(
               child: ListView.builder(
                 itemCount: _categories.length,
                 itemBuilder: (context, index) {
                   final category = _categories[index];
-                  return Card(
-                    child: ListTile(
-                      title: Text(category),
-                      trailing: _categories.length > 1
-                          ? IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _removeCategory(index),
-                      )
-                          : null,
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.blue.shade100,
+                          radius: 20,
+                          child: Icon(
+                            Icons.category,
+                            color: Colors.blue.shade600,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(
+                          category,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Edit button
+                            IconButton(
+                              icon: Icon(Icons.edit_outlined, color: Colors.blue.shade600),
+                              onPressed: () => _editCategory(index, category),
+                              tooltip: 'Edit category',
+                            ),
+                            // Delete button (only show if more than 1 category)
+                            if (_categories.length > 1)
+                              IconButton(
+                                icon: Icon(Icons.delete_outline, color: Colors.red.shade600),
+                                onPressed: () => _removeCategory(index),
+                                tooltip: 'Delete category',
+                              ),
+                          ],
+                        ),
+                        onTap: () => _editCategory(index, category),
+                      ),
                     ),
                   );
                 },
@@ -948,7 +1342,7 @@ class _CategoryManagerDialogState extends State<_CategoryManagerDialog> {
             widget.onSave(_categories);
             Navigator.pop(context);
           },
-          child: const Text('Save'),
+          child: const Text('Save Changes'),
         ),
       ],
     );
@@ -961,19 +1355,190 @@ class _CategoryManagerDialogState extends State<_CategoryManagerDialog> {
         _categories.add(newCategory);
         _addController.clear();
       });
+    } else if (_categories.contains(newCategory)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Category already exists'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
     }
   }
 
   void _removeCategory(int index) {
     if (_categories.length > 1) {
-      setState(() {
-        _categories.removeAt(index);
-      });
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange.shade600),
+              const SizedBox(width: 12),
+              const Text('Delete Category'),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to delete "${_categories[index]}"?\n\nProducts in this category will need to be reassigned.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() {
+                  _categories.removeAt(index);
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
     }
+  }
+
+  void _editCategory(int index, String currentName) {
+    final TextEditingController editController = TextEditingController(text: currentName);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.edit, color: Colors.blue.shade600),
+            ),
+            const SizedBox(width: 12),
+            const Text('Edit Category'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: editController,
+              decoration: InputDecoration(
+                labelText: 'Category Name',
+                prefixIcon: Icon(Icons.category, color: Colors.blue.shade600),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+              autofocus: true,
+              onSubmitted: (value) {
+                if (value.trim().isNotEmpty) {
+                  _updateCategory(index, value.trim(), editController);
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Existing products with this category will be updated automatically.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              editController.dispose();
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newName = editController.text.trim();
+              if (newName.isNotEmpty) {
+                _updateCategory(index, newName, editController);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue.shade600,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _updateCategory(int index, String newName, TextEditingController controller) {
+    if (newName == _categories[index]) {
+      // No change
+      controller.dispose();
+      Navigator.pop(context);
+      return;
+    }
+
+    if (_categories.contains(newName)) {
+      // Category name already exists
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Category name already exists'),
+          backgroundColor: Colors.orange,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _categories[index] = newName;
+    });
+
+    controller.dispose();
+    Navigator.pop(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Category updated to "$newName"'),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
   }
 }
 
-// Units Manager Dialog
 class _UnitsManagerDialog extends StatefulWidget {
   final List<String> units;
   final String defaultUnit;
@@ -1010,51 +1575,84 @@ class _UnitsManagerDialogState extends State<_UnitsManagerDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Manage Product Units'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.green.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.straighten, color: Colors.green.shade600),
+          ),
+          const SizedBox(width: 12),
+          const Text('Manage Product Units'),
+        ],
+      ),
       content: SizedBox(
         width: double.maxFinite,
         height: 400,
         child: Column(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _addController,
-                    decoration: const InputDecoration(
-                      labelText: 'New Unit',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                    onSubmitted: (_) => _addUnit(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _addUnit,
-                  child: const Icon(Icons.add),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _defaultUnit,
-              decoration: const InputDecoration(
-                labelText: 'Default Unit',
-                border: OutlineInputBorder(),
-                isDense: true,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.shade200),
               ),
-              items: _units.map((unit) => DropdownMenuItem(
-                value: unit,
-                child: Text(unit),
-              )).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _defaultUnit = value;
-                  });
-                }
-              },
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _addController,
+                          decoration: InputDecoration(
+                            labelText: 'New Unit',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            isDense: true,
+                            filled: true,
+                            fillColor: Colors.white,
+                          ),
+                          onSubmitted: (_) => _addUnit(),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: _addUnit,
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Icon(Icons.add),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: _defaultUnit,
+                    decoration: InputDecoration(
+                      labelText: 'Default Unit',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      isDense: true,
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    items: _units.map((unit) => DropdownMenuItem(
+                      value: unit,
+                      child: Text(unit),
+                    )).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          _defaultUnit = value;
+                        });
+                      }
+                    },
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 16),
             Expanded(
@@ -1063,19 +1661,30 @@ class _UnitsManagerDialogState extends State<_UnitsManagerDialog> {
                 itemBuilder: (context, index) {
                   final unit = _units[index];
                   final isDefault = unit == _defaultUnit;
-                  return Card(
-                    color: isDefault ? Colors.blue.shade50 : null,
-                    child: ListTile(
-                      title: Text(unit),
-                      leading: isDefault
-                          ? Icon(Icons.star, color: Colors.blue.shade700)
-                          : const Icon(Icons.straighten),
-                      trailing: _units.length > 1 && !isDefault
-                          ? IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _removeUnit(index),
-                      )
-                          : null,
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: Card(
+                      color: isDefault ? Colors.green.shade50 : null,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      child: ListTile(
+                        leading: Icon(
+                          isDefault ? Icons.star : Icons.straighten,
+                          color: isDefault ? Colors.green.shade700 : Colors.grey[600],
+                        ),
+                        title: Text(
+                          unit,
+                          style: TextStyle(
+                            fontWeight: isDefault ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                        subtitle: isDefault ? const Text('Default unit') : null,
+                        trailing: _units.length > 1 && !isDefault
+                            ? IconButton(
+                          icon: Icon(Icons.delete_outline, color: Colors.red.shade600),
+                          onPressed: () => _removeUnit(index),
+                        )
+                            : null,
+                      ),
                     ),
                   );
                 },
@@ -1119,7 +1728,6 @@ class _UnitsManagerDialogState extends State<_UnitsManagerDialog> {
   }
 }
 
-// Quote Levels Manager Dialog
 class _QuoteLevelsManagerDialog extends StatefulWidget {
   final List<String> levelNames;
   final Function(List<String>) onSave;
@@ -1156,37 +1764,92 @@ class _QuoteLevelsManagerDialogState extends State<_QuoteLevelsManagerDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Configure Quote Levels'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.purple.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.layers, color: Colors.purple.shade600),
+          ),
+          const SizedBox(width: 12),
+          const Text('Configure Quote Levels'),
+        ],
+      ),
       content: SizedBox(
         width: double.maxFinite,
-        height: 300,
+        height: 350,
         child: Column(
           children: [
-            const Text('Set names for default quote levels:'),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.purple.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.purple.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.purple.shade600, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Set names for default quote levels used in product pricing.',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
             Expanded(
               child: ListView.builder(
                 itemCount: _controllers.length,
                 itemBuilder: (context, index) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8.0),
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
                     child: Row(
                       children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.purple.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${index + 1}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.purple.shade700,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
                         Expanded(
                           child: TextField(
                             controller: _controllers[index],
                             decoration: InputDecoration(
                               labelText: 'Level ${index + 1} Name',
-                              border: const OutlineInputBorder(),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                              filled: true,
+                              fillColor: Colors.white,
                               isDense: true,
                             ),
                           ),
                         ),
-                        if (_controllers.length > 3)
+                        if (_controllers.length > 3) ...[
+                          const SizedBox(width: 8),
                           IconButton(
-                            icon: const Icon(Icons.remove_circle, color: Colors.red),
+                            icon: Icon(Icons.remove_circle_outline, color: Colors.red.shade600),
                             onPressed: () => _removeLevel(index),
                           ),
+                        ],
                       ],
                     ),
                   );
@@ -1197,6 +1860,10 @@ class _QuoteLevelsManagerDialogState extends State<_QuoteLevelsManagerDialog> {
               onPressed: _addLevel,
               icon: const Icon(Icons.add),
               label: const Text('Add Level'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.purple.shade600,
+                foregroundColor: Colors.white,
+              ),
             ),
           ],
         ),
@@ -1237,7 +1904,6 @@ class _QuoteLevelsManagerDialogState extends State<_QuoteLevelsManagerDialog> {
   }
 }
 
-// Discount Settings Dialog
 class _DiscountSettingsDialog extends StatefulWidget {
   final List<String> discountTypes;
   final double defaultDiscountLimit;
@@ -1275,42 +1941,87 @@ class _DiscountSettingsDialogState extends State<_DiscountSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Discount Settings'),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.discount, color: Colors.orange.shade600),
+          ),
+          const SizedBox(width: 12),
+          const Text('Discount Settings'),
+        ],
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _limitController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Maximum Discount Percentage',
+              prefixIcon: Icon(Icons.percent, color: Colors.orange.shade600),
               suffixText: '%',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              filled: true,
+              fillColor: Colors.white,
             ),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: (value) {
               _discountLimit = double.tryParse(value) ?? _discountLimit;
             },
           ),
-          const SizedBox(height: 16),
-          const Text('Available Discount Types:'),
-          const SizedBox(height: 8),
-          ...['percentage', 'fixed_amount', 'voucher'].map((type) {
-            return CheckboxListTile(
-              title: Text(type.replaceAll('_', ' ').toUpperCase()),
-              value: _discountTypes.contains(type),
-              onChanged: (value) {
-                setState(() {
-                  if (value == true) {
-                    if (!_discountTypes.contains(type)) {
-                      _discountTypes.add(type);
-                    }
-                  } else {
-                    _discountTypes.remove(type);
-                  }
-                });
-              },
-            );
-          }).toList(),
+          const SizedBox(height: 20),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Available Discount Types:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange.shade800,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...['percentage', 'fixed_amount', 'voucher'].map((type) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 4),
+                    child: CheckboxListTile(
+                      title: Text(
+                        type.replaceAll('_', ' ').toUpperCase(),
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      value: _discountTypes.contains(type),
+                      onChanged: (value) {
+                        setState(() {
+                          if (value == true) {
+                            if (!_discountTypes.contains(type)) {
+                              _discountTypes.add(type);
+                            }
+                          } else {
+                            _discountTypes.remove(type);
+                          }
+                        });
+                      },
+                      activeColor: Colors.orange.shade600,
+                      dense: true,
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
         ],
       ),
       actions: [

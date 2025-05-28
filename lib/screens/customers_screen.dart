@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
 import '../models/customer.dart';
-import '../models/simplified_quote.dart'; // For type hinting in AppStateProvider calls
 import '../widgets/customer_card.dart';   // Assuming this will be adapted
 import 'customer_detail_screen.dart';
 
@@ -296,12 +295,6 @@ class _CustomersScreenState extends State<CustomersScreen> with TickerProviderSt
             Text('Import Customers', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
             const SizedBox(height: 24),
             ListTile(
-              leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.green.shade100, borderRadius: BorderRadius.circular(8)), child: Icon(Icons.table_chart, color: Colors.green.shade700)),
-              title: const Text('Import from Excel'),
-              subtitle: const Text('Load customer data from .xlsx or .xls file'),
-              onTap: () { Navigator.pop(context); _importFromExcel(); },
-            ),
-            ListTile(
               leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(8)), child: Icon(Icons.contacts, color: Colors.blue.shade700)),
               title: const Text('Import from Device Contacts'),
               subtitle: const Text('Select customers from your phone contacts'),
@@ -319,15 +312,11 @@ class _CustomersScreenState extends State<CustomersScreen> with TickerProviderSt
     );
   }
 
-  void _importFromExcel() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Customer Excel import: Navigate to Settings -> Data Management (coming soon)')));
-  }
+
   void _importFromContacts() {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contacts import functionality coming soon')));
   }
-  void _importFromBackup() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Data import/restore: Navigate to Settings -> Data Management')));
-  }
+
 }
 
 class _CustomerFormDialog extends StatefulWidget {
