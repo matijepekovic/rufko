@@ -88,53 +88,56 @@ class FieldMappingAdapter extends TypeAdapter<FieldMapping> {
     };
     return FieldMapping(
       fieldId: fields[0] as String?,
-      fieldType: fields[1] as String,
-      x: fields[2] as double,
-      y: fields[3] as double,
-      width: fields[4] as double,
-      height: fields[5] as double,
-      fontFamily: fields[6] as String,
-      fontSize: fields[7] as double,
-      fontColor: fields[8] as String,
-      isBold: fields[9] as bool,
-      isItalic: fields[10] as bool,
-      alignment: fields[11] as String,
-      placeholder: fields[12] as String?,
-      additionalProperties: (fields[13] as Map?)?.cast<String, dynamic>(),
+      appDataType: fields[1] as String,
+      pdfFormFieldName: fields[2] as String,
+      detectedPdfFieldType: fields[3] as PdfFormFieldType,
+      visualX: fields[4] as double?,
+      visualY: fields[5] as double?,
+      visualWidth: fields[6] as double?,
+      visualHeight: fields[7] as double?,
+      pageNumber: fields[8] as int,
+      fontFamilyOverride: fields[9] as String?,
+      fontSizeOverride: fields[10] as double?,
+      fontColorOverride: fields[11] as String?,
+      alignmentOverride: fields[12] as String?,
+      defaultValue: fields[13] as String?,
+      additionalProperties: (fields[14] as Map?)?.cast<String, dynamic>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, FieldMapping obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.fieldId)
       ..writeByte(1)
-      ..write(obj.fieldType)
+      ..write(obj.appDataType)
       ..writeByte(2)
-      ..write(obj.x)
+      ..write(obj.pdfFormFieldName)
       ..writeByte(3)
-      ..write(obj.y)
+      ..write(obj.detectedPdfFieldType)
       ..writeByte(4)
-      ..write(obj.width)
+      ..write(obj.visualX)
       ..writeByte(5)
-      ..write(obj.height)
+      ..write(obj.visualY)
       ..writeByte(6)
-      ..write(obj.fontFamily)
+      ..write(obj.visualWidth)
       ..writeByte(7)
-      ..write(obj.fontSize)
+      ..write(obj.visualHeight)
       ..writeByte(8)
-      ..write(obj.fontColor)
+      ..write(obj.pageNumber)
       ..writeByte(9)
-      ..write(obj.isBold)
+      ..write(obj.fontFamilyOverride)
       ..writeByte(10)
-      ..write(obj.isItalic)
+      ..write(obj.fontSizeOverride)
       ..writeByte(11)
-      ..write(obj.alignment)
+      ..write(obj.fontColorOverride)
       ..writeByte(12)
-      ..write(obj.placeholder)
+      ..write(obj.alignmentOverride)
       ..writeByte(13)
+      ..write(obj.defaultValue)
+      ..writeByte(14)
       ..write(obj.additionalProperties);
   }
 

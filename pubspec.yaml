@@ -16,10 +16,12 @@ dependencies:
 
   # Excel Integration
   excel: ^4.0.6
+  share_plus: ^7.2.2
 
   # PDF Generation and Parsing
   pdf: ^3.11.3
   syncfusion_flutter_pdf: ^26.2.14
+  syncfusion_flutter_pdfviewer: ^26.2.14
 
   # File Handling
   file_picker: ^8.3.7

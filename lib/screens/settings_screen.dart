@@ -9,7 +9,7 @@ import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:image_picker/image_picker.dart';
-
+import 'custom_app_data_screen.dart';
 import '../providers/app_state_provider.dart';
 import '../services/database_service.dart';
 import '../models/app_settings.dart';
@@ -138,7 +138,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     : 'Set company name, logo, and contact info',
                 onTap: _showCompanyInfoDialog,
                 trailing: settings.companyLogoPath != null
-                    ? Container(
+                    ? Container( // THIS PART REMAINS UNCHANGED
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
@@ -164,6 +164,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: 'Default Tax Rate',
                 subtitle: 'Current: ${settings.taxRate.toStringAsFixed(2)}%',
                 onTap: _showTaxRateDialog,
+              ),
+              _buildDivider(), // <<< ADDED THIS DIVIDER
+              _buildSettingsTile( // <<< ADDED THIS SETTINGS TILE
+                icon: Icons.data_object,
+                iconColor: Colors.teal.shade600,
+                title: 'Custom App Data Fields',
+                subtitle: 'Configure app-wide custom data values',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CustomAppDataScreen()),
+                  );
+                },
               ),
             ],
           ),

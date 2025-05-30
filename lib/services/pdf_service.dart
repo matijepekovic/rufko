@@ -156,6 +156,8 @@ class PdfService {
   }
 
   pw.Widget _buildPdfCustomerInfo(Customer customer) {
+    final String displayAddress = customer.fullDisplayAddress; // Use the new getter
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -163,12 +165,15 @@ class PdfService {
             fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
         pw.Text(customer.name,
             style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-        if (customer.address != null && customer.address!.isNotEmpty) pw.Text(
-            customer.address!),
-        if (customer.phone != null && customer.phone!.isNotEmpty) pw.Text(
-            'Phone: ${customer.phone}'),
-        if (customer.email != null && customer.email!.isNotEmpty) pw.Text(
-            'Email: ${customer.email}'),
+
+        // Use the combined displayAddress
+        if (displayAddress.isNotEmpty && displayAddress != 'No address provided')
+          pw.Text(displayAddress),
+
+        if (customer.phone != null && customer.phone!.isNotEmpty)
+          pw.Text('Phone: ${customer.phone}'),
+        if (customer.email != null && customer.email!.isNotEmpty)
+          pw.Text('Email: ${customer.email}'),
       ],
     );
   }
@@ -965,7 +970,7 @@ class PdfService {
         'grandTotal',
       ];
 
-      final templateFields = template.fieldMappings.map((f) => f.fieldType).toList();
+      final templateFields = template.fieldMappings.map((f) => f.appDataType).toList();
       final hasEssentialFields = essentialFields.every((field) => templateFields.contains(field));
 
       if (!hasEssentialFields && kDebugMode) {

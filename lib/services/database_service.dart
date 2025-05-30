@@ -1,6 +1,8 @@
 // lib/services/database_service.dart - UPDATED FOR ENHANCED MODELS
 
 import 'package:hive_flutter/hive_flutter.dart';
+import 'dart:io';
+import 'dart:convert';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/roof_scope_data.dart';
@@ -9,6 +11,8 @@ import '../models/app_settings.dart';
 import '../models/simplified_quote.dart'; // Enhanced quote model with discounts
 import 'package:flutter/foundation.dart';
 import '../models/pdf_template.dart';
+import '../models/custom_app_data.dart';
+import 'package:path_provider/path_provider.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -17,6 +21,7 @@ class DatabaseService {
   static DatabaseService get instance => _instance;
 
   // Hive boxes
+  late Box<CustomAppDataField> _customAppDataFieldBox;
   late Box<Customer> _customerBox;
   late Box<Product> _productBox;
   late Box<SimplifiedMultiLevelQuote> _simplifiedQuoteBox;
@@ -37,6 +42,7 @@ class DatabaseService {
       _mediaBox = await Hive.openBox<ProjectMedia>('project_media');
       _settingsBox = await Hive.openBox<AppSettings>('app_settings');
       _pdfTemplateBox = await Hive.openBox<PDFTemplate>('pdf_templates');
+      _customAppDataFieldBox = await Hive.openBox<CustomAppDataField>('custom_app_data_fields');
       _isInitialized = true;
       if (kDebugMode) {
         print('Database initialized successfully with enhanced models');
@@ -152,6 +158,50 @@ class DatabaseService {
       await template.save();
     }
   }
+
+  // --- Custom App Data Field Operations ---
+  Future<void> saveCustomAppDataField(CustomAppDataField field) async {
+    _ensureInitialized();
+    await _customAppDataFieldBox.put(field.id, field);
+  }
+
+  Future<CustomAppDataField?> getCustomAppDataField(String fieldId) async {
+    _ensureInitialized();
+    return _customAppDataFieldBox.get(fieldId);
+  }
+
+  Future<List<CustomAppDataField>> getAllCustomAppDataFields() async {
+    _ensureInitialized();
+    return _customAppDataFieldBox.values.toList();
+  }
+
+  Future<void> deleteCustomAppDataField(String fieldId) async {
+    _ensureInitialized();
+    await _customAppDataFieldBox.delete(fieldId);
+  }
+
+  Future<List<CustomAppDataField>> getCustomAppDataFieldsByCategory(String category) async {
+    _ensureInitialized();
+    return _customAppDataFieldBox.values
+        .where((field) => field.category == category)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  Future<void> saveMultipleCustomAppDataFields(List<CustomAppDataField> fields) async {
+    _ensureInitialized();
+    final Map<String, CustomAppDataField> fieldsMap = {
+      for (var field in fields) field.id: field
+    };
+    await _customAppDataFieldBox.putAll(fieldsMap);
+  }
+
+  Future<void> clearAllCustomAppDataFields() async {
+    _ensureInitialized();
+    await _customAppDataFieldBox.clear();
+  }
+  // --- END OF Custom App Data Field Operations ---
+
 
 // Search templates
   Future<List<PDFTemplate>> searchPDFTemplates(String query) async {
@@ -395,17 +445,43 @@ class DatabaseService {
   // --- Backup and Restore with Enhanced Data ---
   Future<Map<String, dynamic>> exportAllData() async {
     _ensureInitialized();
+
+    // Export PDF template files as base64
+    final pdfTemplates = await getAllPDFTemplates();
+    final pdfTemplatesWithFiles = <Map<String, dynamic>>[];
+
+    for (final template in pdfTemplates) {
+      final templateMap = template.toMap();
+      try {
+        final file = File(template.pdfFilePath);
+        if (await file.exists()) {
+          final bytes = await file.readAsBytes();
+          templateMap['pdfFileContent'] = base64Encode(bytes);
+          templateMap['originalFileName'] = file.path.split('/').last;
+          if (kDebugMode) print('📦 Exported PDF file: ${template.templateName} (${(bytes.length / 1024).toStringAsFixed(1)} KB)');
+        } else {
+          if (kDebugMode) print('⚠️ PDF file not found for template: ${template.templateName}');
+          templateMap['pdfFileContent'] = null;
+        }
+      } catch (e) {
+        if (kDebugMode) print('❌ Error reading PDF file for ${template.templateName}: $e');
+        templateMap['pdfFileContent'] = null;
+      }
+      pdfTemplatesWithFiles.add(templateMap);
+    }
+
     return {
       'customers': (await getAllCustomers()).map((c) => c.toMap()).toList(),
       'products': (await getAllProducts()).map((p) => p.toMap()).toList(),
       'simplified_quotes': (await getAllSimplifiedMultiLevelQuotes()).map((q) => q.toMap()).toList(),
       'roofScopeData': (await getAllRoofScopeData()).map((r) => r.toMap()).toList(),
       'projectMedia': (await getAllProjectMedia()).map((m) => m.toMap()).toList(),
-      'pdfTemplates': (await getAllPDFTemplates()).map((t) => t.toMap()).toList(), // NEW
+      'pdfTemplates': pdfTemplatesWithFiles, // Now includes actual PDF files
+      'customAppDataFields': (await getAllCustomAppDataFields()).map((f) => f.toMap()).toList(), // ADDED
       'appSettings': (await getAppSettings())?.toMap(),
       'analytics': await getQuoteAnalytics(),
       'exportDate': DateTime.now().toIso8601String(),
-      'version': '2.1', // Updated version
+      'version': '2.2', // Updated version for complete export
     };
   }
 
@@ -420,6 +496,7 @@ class DatabaseService {
       await _mediaBox.clear();
       await _settingsBox.clear();
       await _pdfTemplateBox.clear();
+      await _customAppDataFieldBox.clear(); // ADDED: Clear custom fields
 
       // Import customers
       if (data['customers'] != null) {
@@ -459,20 +536,66 @@ class DatabaseService {
         await saveAppSettings(AppSettings.fromMap(data['appSettings']));
       }
 
-      if (kDebugMode) {
-        print('Enhanced data import completed successfully');
-        print('Imported version: ${data['version'] ?? 'legacy'}');
+      // ADDED: Import custom app data fields
+      if (data['customAppDataFields'] != null) {
+        for (final itemData in data['customAppDataFields']) {
+          await saveCustomAppDataField(CustomAppDataField.fromMap(itemData));
+        }
+        if (kDebugMode) print('✅ Imported ${data['customAppDataFields'].length} custom app data fields');
       }
 
+      // ENHANCED: Import PDF templates with actual files
       if (data['pdfTemplates'] != null) {
-        for (final itemData in data['pdfTemplates']) {
-          await savePDFTemplate(PDFTemplate.fromMap(itemData));
+        final appDir = await getApplicationDocumentsDirectory();
+        final templatesDir = Directory('${appDir.path}/templates');
+        if (!await templatesDir.exists()) {
+          await templatesDir.create(recursive: true);
         }
+
+        for (final itemData in data['pdfTemplates']) {
+          try {
+            // Create template from metadata
+            final template = PDFTemplate.fromMap(itemData);
+
+            // Restore PDF file if included
+            if (itemData['pdfFileContent'] != null) {
+              final base64Content = itemData['pdfFileContent'] as String;
+              final fileBytes = base64Decode(base64Content);
+
+              // Generate new filename
+              final originalFileName = itemData['originalFileName'] ?? 'imported_template.pdf';
+              final newFileName = '${DateTime.now().millisecondsSinceEpoch}_$originalFileName';
+              final newPath = '${templatesDir.path}/$newFileName';
+
+              // Write file to disk
+              final file = File(newPath);
+              await file.writeAsBytes(fileBytes);
+
+              // Update template path to new location
+              template.pdfFilePath = newPath;
+              template.updatedAt = DateTime.now();
+
+              if (kDebugMode) print('📄 Restored PDF file: ${template.templateName} to $newPath');
+            } else {
+              if (kDebugMode) print('⚠️ No PDF file content for template: ${template.templateName}');
+            }
+
+            await savePDFTemplate(template);
+          } catch (e) {
+            if (kDebugMode) print('❌ Error importing PDF template: $e');
+          }
+        }
+        if (kDebugMode) print('✅ Imported ${data['pdfTemplates'].length} PDF templates');
+      }
+
+      if (kDebugMode) {
+        print('🎉 COMPLETE data import finished successfully');
+        print('Imported version: ${data['version'] ?? 'legacy'}');
       }
 
     } catch (e) {
       if (kDebugMode) {
-        print('Error importing enhanced data: $e');
+        print('Error importing complete data: $e');
       }
       rethrow;
     }

@@ -332,30 +332,27 @@ class _CustomerFormDialogState extends State<_CustomerFormDialog> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
-  final _addressController = TextEditingController();
   final _notesController = TextEditingController();
 
-  bool get _isEditing => widget.customer != null;
+  // NEW Controllers for structured address
+  final _streetAddressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController(); // For state abbreviation
+  final _zipController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    if (_isEditing && widget.customer != null) {
-      _nameController.text = widget.customer!.name;
-      _phoneController.text = widget.customer!.phone ?? '';
-      _emailController.text = widget.customer!.email ?? '';
-      _addressController.text = widget.customer!.address ?? '';
-      _notesController.text = widget.customer!.notes ?? '';
-    }
-  }
+  bool get _isEditing => widget.customer != null;
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
-    _addressController.dispose();
     _notesController.dispose();
+    // Dispose new controllers
+    _streetAddressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _zipController.dispose();
     super.dispose();
   }
 
@@ -364,13 +361,16 @@ class _CustomerFormDialogState extends State<_CustomerFormDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        constraints: const BoxConstraints(maxHeight: 650), // Adjusted for better scroll
+        width: MediaQuery.of(context).size.width * 0.9, // Responsive width
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85, // Max height
+          maxWidth: 500, // Max width for larger screens
+        ),
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Important for scrollable content
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container( // Header
-              padding: const EdgeInsets.all(20), // Adjusted padding
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Theme.of(context).primaryColor.withOpacity(0.05),
                 borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
@@ -385,15 +385,16 @@ class _CustomerFormDialogState extends State<_CustomerFormDialog> {
                 ],
               ),
             ),
-            Flexible( // Use Flexible for the scrollable part
+            Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Form(
                   key: _formKey,
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch, // Make children take full width
                     children: [
                       _buildTextField(controller: _nameController, label: 'Full Name*', icon: Icons.person, validator: (value) => (value == null || value.trim().isEmpty) ? 'Name is required' : null),
-                      const SizedBox(height: 16), // Adjusted spacing
+                      const SizedBox(height: 16),
                       _buildTextField(controller: _phoneController, label: 'Phone Number', icon: Icons.phone, keyboardType: TextInputType.phone),
                       const SizedBox(height: 16),
                       _buildTextField(controller: _emailController, label: 'Email Address', icon: Icons.email, keyboardType: TextInputType.emailAddress, validator: (value) {
@@ -403,9 +404,25 @@ class _CustomerFormDialogState extends State<_CustomerFormDialog> {
                         }
                         return null;
                       }),
+                      const SizedBox(height: 20),
+                      Text("Address Details:", style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.grey[700])),
+                      const Divider(height: 10),
+                      const SizedBox(height: 10),
+                      _buildTextField(controller: _streetAddressController, label: 'Street Address', icon: Icons.home_outlined, hint: "e.g., 123 Main St"),
                       const SizedBox(height: 16),
-                      _buildTextField(controller: _addressController, label: 'Address', icon: Icons.location_on, maxLines: 2),
+                      Row(
+                        children: [
+                          Expanded(child: _buildTextField(controller: _cityController, label: 'City', icon: Icons.location_city)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _buildTextField(controller: _stateController, label: 'State', icon: Icons.map_outlined, hint: "e.g., WA")),
+                        ],
+                      ),
                       const SizedBox(height: 16),
+                      _buildTextField(controller: _zipController, label: 'Zip Code', icon: Icons.markunread_mailbox_outlined, keyboardType: TextInputType.number, hint: "e.g., 98001"),
+                      const SizedBox(height: 20),
+                      Text("Other Information:", style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.grey[700])),
+                      const Divider(height: 10),
+                      const SizedBox(height: 10),
                       _buildTextField(controller: _notesController, label: 'Notes', icon: Icons.note_alt_outlined, maxLines: 3, hint: 'Additional information...'),
                     ],
                   ),
@@ -444,7 +461,7 @@ class _CustomerFormDialogState extends State<_CustomerFormDialog> {
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5)),
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), // Adjusted padding
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       maxLines: maxLines,
       keyboardType: keyboardType,
@@ -455,22 +472,38 @@ class _CustomerFormDialogState extends State<_CustomerFormDialog> {
   void _saveCustomer() {
     if (!_formKey.currentState!.validate()) return;
     final appState = context.read<AppStateProvider>();
+
+    final String name = _nameController.text.trim();
+    final String? phone = _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim();
+    final String? email = _emailController.text.trim().isEmpty ? null : _emailController.text.trim();
+    final String? notes = _notesController.text.trim().isEmpty ? null : _notesController.text.trim();
+    final String? street = _streetAddressController.text.trim().isEmpty ? null : _streetAddressController.text.trim();
+    final String? city = _cityController.text.trim().isEmpty ? null : _cityController.text.trim();
+    final String? stateAbbr = _stateController.text.trim().isEmpty ? null : _stateController.text.trim();
+    final String? zip = _zipController.text.trim().isEmpty ? null : _zipController.text.trim();
+
     if (_isEditing && widget.customer != null) {
-      widget.customer!.updateInfo(
-        name: _nameController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      widget.customer!.updateInfo( // This calls save() internally if in box
+        name: name,
+        phone: phone,
+        email: email,
+        notes: notes,
+        streetAddress: street,
+        city: city,
+        stateAbbreviation: stateAbbr,
+        zipCode: zip,
       );
-      appState.updateCustomer(widget.customer!);
+      // appState.updateCustomer(widget.customer!); // updateInfo already saves if in box
     } else {
       final customer = Customer(
-        name: _nameController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-        address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
-        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        name: name,
+        phone: phone,
+        email: email,
+        notes: notes,
+        streetAddress: street,
+        city: city,
+        stateAbbreviation: stateAbbr,
+        zipCode: zip,
       );
       appState.addCustomer(customer);
     }

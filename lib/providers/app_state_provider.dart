@@ -10,6 +10,7 @@ import '../models/roof_scope_data.dart';
 import '../models/project_media.dart';
 import '../models/app_settings.dart';
 import '../models/pdf_template.dart';
+import '../models/custom_app_data.dart';  // ADD THIS IMPORT
 import '../services/database_service.dart';
 import '../services/pdf_service.dart';
 import '../services/template_service.dart';
@@ -25,6 +26,7 @@ class AppStateProvider extends ChangeNotifier {
   List<RoofScopeData> _roofScopeDataList = [];
   List<ProjectMedia> _projectMedia = [];
   List<PDFTemplate> _pdfTemplates = [];
+  List<CustomAppDataField> _customAppDataFields = [];  // ADD THIS LINE
 
   bool _isLoading = false;
   String _loadingMessage = '';
@@ -38,6 +40,7 @@ class AppStateProvider extends ChangeNotifier {
   List<ProjectMedia> get projectMedia => _projectMedia;
   List<PDFTemplate> get pdfTemplates => _pdfTemplates;
   List<PDFTemplate> get activePDFTemplates => _pdfTemplates.where((t) => t.isActive).toList();
+  List<CustomAppDataField> get customAppDataFields => _customAppDataFields;  // ADD THIS LINE
 
   bool get isLoading => _isLoading;
   String get loadingMessage => _loadingMessage;
@@ -50,6 +53,7 @@ class AppStateProvider extends ChangeNotifier {
     setLoading(true, 'Initializing app data...');
     await _loadAppSettings();
     await loadAllData();
+    await initializeDefaultCustomFields();
     setLoading(false);
   }
 
@@ -58,6 +62,133 @@ class AppStateProvider extends ChangeNotifier {
     _isLoading = loading;
     _loadingMessage = message;
     notifyListeners();
+  }
+
+  Future<String> regeneratePDFFromTemplate({
+    required String templateId,
+    required SimplifiedMultiLevelQuote quote,
+    required Customer customer,
+    String? selectedLevelId,
+    Map<String, String>? customDataOverrides,
+  }) async {
+    try {
+      final template = _pdfTemplates.firstWhere(
+            (t) => t.id == templateId,
+        orElse: () => throw Exception('Template not found: $templateId'),
+      );
+
+      if (!template.isActive) {
+        throw Exception('Template is not active: ${template.templateName}');
+      }
+
+      // Merge original data with overrides
+      final finalCustomData = <String, String>{
+        'regenerated_at': DateTime.now().toIso8601String(),
+        'has_edits': 'true',
+        ...?customDataOverrides,
+      };
+
+      final pdfPath = await TemplateService.instance.generatePDFFromTemplate(
+        template: template,
+        quote: quote,
+        customer: customer,
+        selectedLevelId: selectedLevelId,
+        customData: finalCustomData,
+      );
+
+      if (kDebugMode) {
+        print('🔄 Regenerated PDF from template with edits: ${template.templateName}');
+      }
+
+      return pdfPath;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error regenerating PDF from template: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Generate PDF with enhanced options for preview system
+  Future<Map<String, dynamic>> generatePDFForPreview({
+    String? templateId,
+    required SimplifiedMultiLevelQuote quote,
+    required Customer customer,
+    String? selectedLevelId,
+    Map<String, String>? customData,
+  }) async {
+    try {
+      String pdfPath;
+      String generationMethod;
+      String? usedTemplateId;
+
+      if (templateId != null) {
+        // Template-based generation
+        pdfPath = await generatePDFFromTemplate(
+          templateId: templateId,
+          quote: quote,
+          customer: customer,
+          selectedLevelId: selectedLevelId,
+          customData: customData,
+        );
+        generationMethod = 'template';
+        usedTemplateId = templateId;
+      } else {
+        // Standard generation
+        pdfPath = await generateSimplifiedQuotePdf(
+          quote,
+          customer,
+          selectedLevelId: selectedLevelId,
+        );
+        generationMethod = 'standard';
+      }
+
+      return {
+        'pdfPath': pdfPath,
+        'generationMethod': generationMethod,
+        'templateId': usedTemplateId,
+        'selectedLevelId': selectedLevelId,
+        'customData': customData ?? {},
+        'generatedAt': DateTime.now().toIso8601String(),
+      };
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error generating PDF for preview: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Validate PDF file exists and is readable
+  Future<bool> validatePDFFile(String pdfPath) async {
+    try {
+      final file = File(pdfPath);
+      if (!await file.exists()) {
+        if (kDebugMode) print('PDF file does not exist: $pdfPath');
+        return false;
+      }
+
+      final fileSize = await file.length();
+      if (fileSize == 0) {
+        if (kDebugMode) print('PDF file is empty: $pdfPath');
+        return false;
+      }
+
+      // Try to read first few bytes to ensure file is not corrupt
+      final bytes = await file.openRead(0, 100).toList();
+      final firstBytes = bytes.expand((x) => x).take(10).toList();
+      final header = String.fromCharCodes(firstBytes);
+
+      if (!header.startsWith('%PDF')) {
+        if (kDebugMode) print('Invalid PDF header: $pdfPath');
+        return false;
+      }
+
+      return true;
+    } catch (e) {
+      if (kDebugMode) print('Error validating PDF file: $e');
+      return false;
+    }
   }
 
   Future<void> _loadAppSettings() async {
@@ -89,6 +220,7 @@ class AppStateProvider extends ChangeNotifier {
         loadRoofScopeData(),
         loadProjectMedia(),
         loadPDFTemplates(),
+        loadCustomAppDataFields(),
       ]);
       notifyListeners();
     } catch (e) {
@@ -149,6 +281,14 @@ class AppStateProvider extends ChangeNotifier {
       if (kDebugMode) {
         print('Error loading PDF templates: $e');
       }
+    }
+  }
+  Future<void> loadCustomAppDataFields() async {
+    try {
+      _customAppDataFields = await _db.getAllCustomAppDataFields(); // Uses DatabaseService
+      // notifyListeners(); // Usually called by setLoading in loadAllData or individually if preferred
+    } catch (e) {
+      if (kDebugMode) print('Error loading custom app data fields: $e');
     }
   }
 
@@ -1020,6 +1160,188 @@ class AppStateProvider extends ChangeNotifier {
     }
 
     return invalidTemplates;
+  }
+
+  Future<void> addExistingPDFTemplateToList(PDFTemplate template) async {
+    try {
+      final existingIndex = _pdfTemplates.indexWhere((t) => t.id == template.id);
+      if (existingIndex == -1) {
+        _pdfTemplates.add(template);
+        notifyListeners();
+
+        if (kDebugMode) {
+          print('✅ Added template to memory list: ${template.templateName}');
+          print('📊 Total templates: ${_pdfTemplates.length}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print('❌ Error adding template to list: $e');
+      rethrow;
+    }
+  }
+
+  // --- Custom App Data Field Operations ---
+  Future<void> addCustomAppDataField(CustomAppDataField field) async {
+    try {
+      await _db.saveCustomAppDataField(field);
+      _customAppDataFields.add(field);
+      // notifyListeners(); // <--- COMMENT THIS OUT TEMPORARILY
+
+      if (kDebugMode) {
+        print('✅ Added custom field (NO NOTIFY): ${field.fieldName} = "${field.currentValue}"');
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error adding custom app data field: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateCustomAppDataField(String fieldId, String newValue) async {
+    try {
+      final fieldIndex = _customAppDataFields.indexWhere((f) => f.id == fieldId);
+      if (fieldIndex != -1) {
+        final field = _customAppDataFields[fieldIndex];
+        field.updateValue(newValue);
+        await _db.saveCustomAppDataField(field);
+        notifyListeners();
+
+        if (kDebugMode) {
+          print('✅ Updated custom field: ${field.fieldName} = "$newValue"');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error updating custom app data field: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateCustomAppDataFieldStructure(CustomAppDataField updatedField) async {
+    try {
+      await _db.saveCustomAppDataField(updatedField);
+      final index = _customAppDataFields.indexWhere((f) => f.id == updatedField.id);
+      if (index != -1) {
+        _customAppDataFields[index] = updatedField;
+        notifyListeners();
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error updating custom app data field structure: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteCustomAppDataField(String fieldId) async {
+    try {
+      await _db.deleteCustomAppDataField(fieldId);
+      _customAppDataFields.removeWhere((f) => f.id == fieldId);
+      notifyListeners();
+    } catch (e) {
+      if (kDebugMode) print('Error deleting custom app data field: $e');
+      rethrow;
+    }
+  }
+
+  CustomAppDataField? getCustomAppDataField(String fieldName) {
+    try {
+      return _customAppDataFields.firstWhere((f) => f.fieldName == fieldName);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  List<CustomAppDataField> getCustomAppDataFieldsByCategory(String category) {
+    return _customAppDataFields.where((f) => f.category == category).toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  Map<String, String> getCustomAppDataMap() {
+    final dataMap = <String, String>{};
+    for (final field in _customAppDataFields) {
+      dataMap[field.fieldName] = field.currentValue;
+    }
+    return dataMap;
+  }
+
+  Future<void> initializeDefaultCustomFields() async {
+    try {
+      // Only add if no custom fields exist
+      if (_customAppDataFields.isEmpty) {
+        final defaultFields = CustomAppDataTemplates.getAllDefaultFields();
+
+        for (final field in defaultFields) {
+          await addCustomAppDataField(field);
+        }
+
+        if (kDebugMode) {
+          print('✅ Initialized ${defaultFields.length} default custom fields');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error initializing default custom fields: $e');
+    }
+  }
+
+  Future<void> addTemplateFields(List<CustomAppDataField> templateFields) async {
+    try {
+      setLoading(true, 'Adding template fields...');
+
+      for (final field in templateFields) {
+        // Check if field already exists
+        final existing = _customAppDataFields.where((f) => f.fieldName == field.fieldName).toList();
+        if (existing.isEmpty) {
+          await addCustomAppDataField(field);
+        }
+      }
+
+      if (kDebugMode) {
+        print('✅ Added ${templateFields.length} template fields');
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error adding template fields: $e');
+      rethrow;
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  Map<String, dynamic> exportCustomAppData() {
+    return {
+      'customAppDataFields': _customAppDataFields.map((f) => f.toMap()).toList(),
+      'exportDate': DateTime.now().toIso8601String(),
+      'version': '1.0',
+    };
+  }
+
+  Future<void> importCustomAppData(Map<String, dynamic> data) async {
+    try {
+      setLoading(true, 'Importing custom app data...');
+
+      if (data['customAppDataFields'] != null) {
+        final importedFields = (data['customAppDataFields'] as List)
+            .map((fieldData) => CustomAppDataField.fromMap(fieldData))
+            .toList();
+
+        for (final field in importedFields) {
+          // Check if field already exists
+          final existingIndex = _customAppDataFields.indexWhere((f) => f.fieldName == field.fieldName);
+          if (existingIndex != -1) {
+            // Update existing field
+            await updateCustomAppDataFieldStructure(field);
+          } else {
+            // Add new field
+            await addCustomAppDataField(field);
+          }
+        }
+
+        if (kDebugMode) {
+          print('✅ Imported ${importedFields.length} custom app data fields');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print('Error importing custom app data: $e');
+      rethrow;
+    } finally {
+      setLoading(false);
+    }
   }
 
   // --- Search Operations ---

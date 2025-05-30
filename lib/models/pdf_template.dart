@@ -2,47 +2,54 @@
 
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
+import 'product.dart'; // 🔧 ADDED IMPORT FOR PRODUCT
 
-part 'pdf_template.g.dart';
+part 'pdf_template.g.dart'; // This will be regenerated
 
-@HiveType(typeId: 21) // Fixed: Use unique typeId
+// @HiveType(typeId: 22) // Keep this commented out if using manual adapter
+enum PdfFormFieldType {
+  @HiveField(0)
+  UNKNOWN,
+  @HiveField(1)
+  TEXT_BOX,
+  @HiveField(2)
+  CHECK_BOX,
+  @HiveField(3)
+  RADIO_BUTTON_GROUP,
+  @HiveField(4)
+  COMBO_BOX,
+  @HiveField(5)
+  LIST_BOX,
+  @HiveField(6)
+  SIGNATURE_FIELD,
+}
+
+@HiveType(typeId: 21)
 class PDFTemplate extends HiveObject {
   @HiveField(0)
   late String id;
-
   @HiveField(1)
   late String templateName;
-
   @HiveField(2)
   late String description;
-
   @HiveField(3)
   late String pdfFilePath;
-
   @HiveField(4)
-  late String templateType; // 'quote', 'invoice', 'estimate'
-
+  late String templateType;
   @HiveField(5)
   late double pageWidth;
-
   @HiveField(6)
   late double pageHeight;
-
   @HiveField(7)
   late int totalPages;
-
   @HiveField(8)
   late List<FieldMapping> fieldMappings;
-
   @HiveField(9)
   late bool isActive;
-
   @HiveField(10)
   late DateTime createdAt;
-
   @HiveField(11)
   late DateTime updatedAt;
-
   @HiveField(12)
   late Map<String, dynamic> metadata;
 
@@ -68,15 +75,16 @@ class PDFTemplate extends HiveObject {
     this.metadata = metadata ?? {};
   }
 
-  // Field management methods
   void addField(FieldMapping field) {
     fieldMappings.add(field);
     updatedAt = DateTime.now();
+    if(isInBox) save();
   }
 
   void removeField(String fieldId) {
     fieldMappings.removeWhere((f) => f.fieldId == fieldId);
     updatedAt = DateTime.now();
+    if(isInBox) save();
   }
 
   void updateField(FieldMapping field) {
@@ -84,6 +92,7 @@ class PDFTemplate extends HiveObject {
     if (index != -1) {
       fieldMappings[index] = field;
       updatedAt = DateTime.now();
+      if(isInBox) save();
     }
   }
 
@@ -95,70 +104,389 @@ class PDFTemplate extends HiveObject {
     }
   }
 
-  // Available field types for quotes
-  static List<String> getQuoteFieldTypes() {
-    return [
+  // 🚀 NEW: Dynamic field generation method
+  static List<String> getQuoteFieldTypes([List<Product>? availableProducts]) {
+    final baseFields = [
+      // Customer fields
       'customerName',
-      'customerAddress',
+      'customerStreetAddress',
+      'customerCity',
+      'customerState',
+      'customerZipCode',
+      'customerFullAddress',
       'customerPhone',
       'customerEmail',
+
+      // Company fields
       'companyName',
       'companyAddress',
       'companyPhone',
       'companyEmail',
+
+      // Quote basic fields
       'quoteNumber',
       'quoteDate',
       'validUntil',
       'quoteStatus',
-      'levelName',
-      'levelPrice',
-      'itemName',
-      'itemQuantity',
-      'itemUnitPrice',
-      'itemTotal',
+      'todaysDate',
+
+      // Level 1 (Builder Grade) fields
+      'level1Name',
+      'level1Subtotal',
+      'level1Tax',
+      'level1TotalWithTax',
+
+      // Level 2 (Homeowner Grade) fields
+      'level2Name',
+      'level2Subtotal',
+      'level2Tax',
+      'level2TotalWithTax',
+
+      // Level 3 (Platinum Preferred) fields
+      'level3Name',
+      'level3Subtotal',
+      'level3Tax',
+      'level3TotalWithTax',
+
+      // Totals and calculations
       'subtotal',
       'taxRate',
       'taxAmount',
       'discount',
       'grandTotal',
+
+      // Text fields
       'notes',
       'terms',
+      'upgradeQuoteText',
+
+      // Custom fields
+      'customText1', 'customText2', 'customText3',
+      'customNumeric1', 'customNumeric2',
+      'customDate1', 'customDate2',
+      'customBoolean1_for_checkbox', 'customBoolean2_for_checkbox'
     ];
+
+    // 🚀 Generate dynamic product fields
+    final productFields = <String>[];
+
+    if (availableProducts != null && availableProducts.isNotEmpty) {
+      for (final product in availableProducts) {
+        // Create safe field name from product name
+        final safeProductName = _createSafeFieldName(product.name);
+
+        // Generate 4 fields for each product
+        productFields.addAll([
+          '${safeProductName}Name',
+          '${safeProductName}Qty',
+          '${safeProductName}UnitPrice',
+          '${safeProductName}Total',
+        ]);
+      }
+    } else {
+      // Fallback to legacy product slots if no products provided
+      productFields.addAll([
+        'product1Name', 'product1Qty', 'product1UnitPrice', 'product1Total',
+        'product2Name', 'product2Qty', 'product2UnitPrice', 'product2Total',
+        'product3Name', 'product3Qty', 'product3UnitPrice', 'product3Total',
+        'product4Name', 'product4Qty', 'product4UnitPrice', 'product4Total',
+        'product5Name', 'product5Qty', 'product5UnitPrice', 'product5Total',
+      ]);
+    }
+
+    return [...baseFields, ...productFields];
   }
 
-  // Get display name for field type
-  static String getFieldDisplayName(String fieldType) {
+  // 🔧 Helper method to create safe field names
+  static String _createSafeFieldName(String productName) {
+    return productName
+        .replaceAll(RegExp(r'[^\w\s]'), '') // Remove special characters
+        .replaceAll(RegExp(r'\s+'), '') // Remove spaces
+        .replaceAllMapped(RegExp(r'^\w'), (match) => match.group(0)!.toLowerCase()) // First letter lowercase
+        .replaceAllMapped(RegExp(r'\s\w'), (match) => match.group(0)!.toUpperCase().replaceAll(' ', '')); // Camel case
+  }
+
+  // 🚀 NEW: Get categorized field types for organized UI (FIXED VERSION)
+  // 🚀 NEW: Get categorized field types for organized UI (WITH CUSTOM FIELDS INTEGRATION)
+  static Map<String, List<String>> getCategorizedQuoteFieldTypes([List<Product>? availableProducts]) {
+    final categories = <String, List<String>>{
+      'Customer Information': [
+        'customerName', 'customerStreetAddress', 'customerCity', 'customerState',
+        'customerZipCode', 'customerFullAddress', 'customerPhone', 'customerEmail'
+      ],
+
+      'Company Information': [
+        'companyName', 'companyAddress', 'companyPhone', 'companyEmail'
+      ],
+
+      'Quote Information': [
+        'quoteNumber', 'quoteDate', 'validUntil', 'quoteStatus', 'todaysDate'
+      ],
+
+      'Quote Levels (3 levels)': [
+        'level1Name', 'level1Subtotal', 'level1Tax', 'level1TotalWithTax',
+        'level2Name', 'level2Subtotal', 'level2Tax', 'level2TotalWithTax',
+        'level3Name', 'level3Subtotal', 'level3Tax', 'level3TotalWithTax'
+      ],
+
+      'Calculations & Totals': [
+        'subtotal', 'taxRate', 'taxAmount', 'discount', 'grandTotal'
+      ],
+
+      'Text & Notes': [
+        'notes', 'terms', 'upgradeQuoteText'
+      ],
+
+      'Custom Fields': [
+        'customText1', 'customText2', 'customText3',
+        'customNumeric1', 'customNumeric2',
+        'customDate1', 'customDate2',
+        'customBoolean1_for_checkbox', 'customBoolean2_for_checkbox'
+      ],
+    };
+
+    // 🚀 Add product categories dynamically
+    if (availableProducts != null && availableProducts.isNotEmpty) {
+      final productsByCategory = <String, List<Product>>{};
+
+      for (final product in availableProducts) {
+        final category = product.category.isEmpty ? 'Other' : product.category;
+        productsByCategory.putIfAbsent(category, () => []).add(product);
+      }
+
+      productsByCategory.forEach((categoryName, products) {
+        final categoryFields = <String>[];
+
+        for (final product in products) {
+          final safeProductName = _createSafeFieldName(product.name);
+          categoryFields.addAll([
+            '${safeProductName}Name',
+            '${safeProductName}Qty',
+            '${safeProductName}UnitPrice',
+            '${safeProductName}Total',
+          ]);
+        }
+
+        categories['🏠 $categoryName (${products.length} products)'] = categoryFields;
+      });
+    } else {
+      categories['Products (Legacy - 5 slots)'] = [
+        'product1Name', 'product1Qty', 'product1UnitPrice', 'product1Total',
+        'product2Name', 'product2Qty', 'product2UnitPrice', 'product2Total',
+        'product3Name', 'product3Qty', 'product3UnitPrice', 'product3Total',
+        'product4Name', 'product4Qty', 'product4UnitPrice', 'product4Total',
+        'product5Name', 'product5Qty', 'product5UnitPrice', 'product5Total',
+      ];
+    }
+
+    return categories;
+  }
+
+// 🚀 NEW: Enhanced method that includes custom app data fields
+  static Map<String, List<String>> getCategorizedQuoteFieldTypesWithCustomFields(
+      List<Product>? availableProducts,
+      List<dynamic>? customAppDataFields, // Accept dynamic list from provider
+      ) {
+    // Start with base categories
+    final categories = getCategorizedQuoteFieldTypes(availableProducts);
+
+    // Process custom app data fields if provided
+    if (customAppDataFields != null && customAppDataFields.isNotEmpty) {
+      final customFieldsByCategory = <String, List<String>>{};
+
+      // Group custom fields by their categories
+      for (final field in customAppDataFields) {
+        // Handle both CustomAppDataField objects and Map representations
+        final String categoryKey;
+        final String fieldName;
+        final String displayName;
+
+        if (field is Map<String, dynamic>) {
+          categoryKey = field['category'] as String? ?? 'custom';
+          fieldName = field['fieldName'] as String? ?? '';
+          displayName = field['displayName'] as String? ?? fieldName;
+        } else {
+          // Assume it has category, fieldName, and displayName properties
+          categoryKey = field.category as String? ?? 'custom';
+          fieldName = field.fieldName as String? ?? '';
+          displayName = field.displayName as String? ?? fieldName;
+        }
+
+        if (fieldName.isNotEmpty) {
+          customFieldsByCategory.putIfAbsent(categoryKey, () => []).add(fieldName);
+        }
+      }
+
+      // Category mapping: map custom categories to existing ones
+      final categoryMappings = {
+        'company': 'Company Information',
+        'contact': 'Contact Information', // Will create new if doesn't exist
+        'legal': 'Legal Information',
+        'pricing': 'Pricing Information',
+        'custom': 'Custom App Data',
+      };
+
+      // Process each custom field category
+      customFieldsByCategory.forEach((customCategoryKey, customFields) {
+        final targetCategoryName = categoryMappings[customCategoryKey] ??
+            _formatCategoryName(customCategoryKey);
+
+        // Check if target category already exists (case-insensitive)
+        String? existingCategoryKey;
+        for (final existingKey in categories.keys) {
+          if (existingKey.toLowerCase().contains(
+              targetCategoryName.toLowerCase()) ||
+              targetCategoryName.toLowerCase().contains(
+                  existingKey.toLowerCase().replaceAll(
+                      RegExp(r'[^\w\s]'), ''))) {
+            existingCategoryKey = existingKey;
+            break;
+          }
+        }
+
+        if (existingCategoryKey != null) {
+          // Merge into existing category, but avoid duplicates
+          final existingFields = categories[existingCategoryKey]!;
+          for (final customField in customFields) {
+            if (!existingFields.contains(customField)) {
+              existingFields.add(customField);
+            }
+          }
+        } else {
+          // Create new category
+          categories[targetCategoryName] = customFields;
+        }
+      });
+
+    }
+
+    return categories;
+  }
+
+// Helper method to format category names nicely
+  static String _formatCategoryName(String categoryKey) {
+    return categoryKey
+        .split('_')
+        .map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : '')
+        .join(' ')
+        + ' Fields';
+  }
+
+  // 🚀 UPDATED: Enhanced getFieldDisplayName method to handle dynamic product names
+  // 🚀 UPDATED: Enhanced getFieldDisplayName method to handle custom fields
+  static String getFieldDisplayName(String appDataType, [List<dynamic>? customAppDataFields]) {
     final names = {
+      // Customer fields
       'customerName': 'Customer Name',
-      'customerAddress': 'Customer Address',
+      'customerStreetAddress': 'Customer Street',
+      'customerCity': 'Customer City',
+      'customerState': 'Customer State/Pr.',
+      'customerZipCode': 'Customer Zip/Postal',
+      'customerFullAddress': 'Customer Full Address',
       'customerPhone': 'Customer Phone',
       'customerEmail': 'Customer Email',
+
+      // Company fields
       'companyName': 'Company Name',
       'companyAddress': 'Company Address',
       'companyPhone': 'Company Phone',
       'companyEmail': 'Company Email',
+
+      // Quote basic fields
       'quoteNumber': 'Quote Number',
       'quoteDate': 'Quote Date',
       'validUntil': 'Valid Until',
       'quoteStatus': 'Quote Status',
-      'levelName': 'Level Name',
-      'levelPrice': 'Level Price',
-      'itemName': 'Item Name',
-      'itemQuantity': 'Item Quantity',
-      'itemUnitPrice': 'Item Unit Price',
-      'itemTotal': 'Item Total',
-      'subtotal': 'Subtotal',
-      'taxRate': 'Tax Rate',
-      'taxAmount': 'Tax Amount',
-      'discount': 'Discount',
-      'grandTotal': 'Grand Total',
-      'notes': 'Notes',
-      'terms': 'Terms & Conditions',
+      'todaysDate': 'Today\'s Date',
+
+      // Level fields (simplified)
+      'level1Name': 'Level 1 Name', 'level1Subtotal': 'Level 1 Subtotal',
+      'level1Tax': 'Level 1 Tax', 'level1TotalWithTax': 'Level 1 Total',
+      'level2Name': 'Level 2 Name', 'level2Subtotal': 'Level 2 Subtotal',
+      'level2Tax': 'Level 2 Tax', 'level2TotalWithTax': 'Level 2 Total',
+      'level3Name': 'Level 3 Name', 'level3Subtotal': 'Level 3 Subtotal',
+      'level3Tax': 'Level 3 Tax', 'level3TotalWithTax': 'Level 3 Total',
+
+      // Legacy product fields
+      'product1Name': 'Product 1 Name', 'product1Qty': 'Product 1 Qty',
+      'product1UnitPrice': 'Product 1 Unit Price', 'product1Total': 'Product 1 Total',
+      'product2Name': 'Product 2 Name', 'product2Qty': 'Product 2 Qty',
+      'product2UnitPrice': 'Product 2 Unit Price', 'product2Total': 'Product 2 Total',
+      'product3Name': 'Product 3 Name', 'product3Qty': 'Product 3 Qty',
+      'product3UnitPrice': 'Product 3 Unit Price', 'product3Total': 'Product 3 Total',
+      'product4Name': 'Product 4 Name', 'product4Qty': 'Product 4 Qty',
+      'product4UnitPrice': 'Product 4 Unit Price', 'product4Total': 'Product 4 Total',
+      'product5Name': 'Product 5 Name', 'product5Qty': 'Product 5 Qty',
+      'product5UnitPrice': 'Product 5 Unit Price', 'product5Total': 'Product 5 Total',
+
+      // Totals and calculations
+      'subtotal': 'Subtotal', 'discount': 'Discount', 'grandTotal': 'Grand Total',
+      'taxRate': 'Tax Rate (%)', 'taxAmount': 'Tax Amount',
+
+      // Text fields
+      'notes': 'Notes/Scope', 'terms': 'Terms & Conditions',
+      'upgradeQuoteText': 'Upgrade Quote Details',
+
+      // Custom fields
+      'customText1': 'Custom Text 1', 'customText2': 'Custom Text 2', 'customText3': 'Custom Text 3',
+      'customNumeric1': 'Custom Numeric 1', 'customNumeric2': 'Custom Numeric 2',
+      'customDate1': 'Custom Date 1', 'customDate2': 'Custom Date 2',
+      'customBoolean1_for_checkbox': 'Custom Checkbox 1', 'customBoolean2_for_checkbox': 'Custom Checkbox 2'
     };
-    return names[fieldType] ?? fieldType;
+
+    // First check if it's a known static field
+    if (names.containsKey(appDataType)) {
+      return names[appDataType]!;
+    }
+
+    // 🚀 Check custom app data fields
+    if (customAppDataFields != null) {
+      for (final field in customAppDataFields) {
+        final String fieldName;
+        final String displayName;
+        final String currentValue;
+
+        if (field is Map<String, dynamic>) {
+          fieldName = field['fieldName'] as String? ?? '';
+          displayName = field['displayName'] as String? ?? fieldName;
+          currentValue = field['currentValue'] as String? ?? '';
+        } else {
+          fieldName = field.fieldName as String? ?? '';
+          displayName = field.displayName as String? ?? fieldName;
+          currentValue = field.currentValue as String? ?? '';
+        }
+
+        if (fieldName == appDataType) {
+          // Show field name + value if value exists, otherwise just field name
+          if (currentValue.isNotEmpty) {
+            return '$fieldName: $currentValue';
+          } else {
+            return fieldName;
+          }
+        }
+      }
+    }
+
+    // Handle dynamic product field names
+    if (appDataType.endsWith('Name')) {
+      final productName = appDataType.substring(0, appDataType.length - 4);
+      return '$productName - Name';
+    } else if (appDataType.endsWith('Qty')) {
+      final productName = appDataType.substring(0, appDataType.length - 3);
+      return '$productName - Quantity';
+    } else if (appDataType.endsWith('UnitPrice')) {
+      final productName = appDataType.substring(0, appDataType.length - 9);
+      return '$productName - Unit Price';
+    } else if (appDataType.endsWith('Total')) {
+      final productName = appDataType.substring(0, appDataType.length - 5);
+      return '$productName - Total';
+    }
+
+    // Fallback: Convert camelCase to readable format
+    String pretty = appDataType.replaceAllMapped(RegExp(r'[A-Z]'), (Match m) => ' ${m.group(0)}');
+    return pretty.trim();
   }
 
-  // Serialization methods
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -189,15 +517,47 @@ class PDFTemplate extends HiveObject {
       totalPages: map['totalPages']?.toInt() ?? 1,
       fieldMappings: (map['fieldMappings'] as List<dynamic>?)
           ?.map((item) => FieldMapping.fromMap(item as Map<String, dynamic>))
-          .toList() ?? [],
+          .toList() ??
+          [],
       isActive: map['isActive'] ?? true,
-      createdAt: map['createdAt'] != null
-          ? DateTime.parse(map['createdAt'])
-          : DateTime.now(),
-      updatedAt: map['updatedAt'] != null
-          ? DateTime.parse(map['updatedAt'])
-          : DateTime.now(),
+      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
+      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
       metadata: Map<String, dynamic>.from(map['metadata'] ?? {}),
+    );
+  }
+
+  // 🔧 FIXED: Clone method with no (Copy) suffix
+  PDFTemplate clone({bool preserveId = false}) {
+    return PDFTemplate(
+      id: preserveId ? this.id : Uuid().v4(),
+      templateName: this.templateName, // 🔧 Remove the (Copy) addition
+      description: this.description,
+      pdfFilePath: this.pdfFilePath,
+      templateType: this.templateType,
+      pageWidth: this.pageWidth,
+      pageHeight: this.pageHeight,
+      totalPages: this.totalPages,
+      fieldMappings: this.fieldMappings.map((fm) => FieldMapping(
+        appDataType: fm.appDataType,
+        pdfFormFieldName: fm.pdfFormFieldName,
+        detectedPdfFieldType: fm.detectedPdfFieldType,
+        visualX: fm.visualX,
+        visualY: fm.visualY,
+        visualWidth: fm.visualWidth,
+        visualHeight: fm.visualHeight,
+        pageNumber: fm.pageNumber,
+        fontFamilyOverride: fm.fontFamilyOverride,
+        fontSizeOverride: fm.fontSizeOverride,
+        fontColorOverride: fm.fontColorOverride,
+        alignmentOverride: fm.alignmentOverride,
+        defaultValue: fm.defaultValue,
+        overrideValueEnabled: fm.overrideValueEnabled, // Clone this new field
+        additionalProperties: Map<String, dynamic>.from(fm.additionalProperties),
+      )).toList(),
+      isActive: this.isActive,
+      createdAt: this.createdAt,
+      updatedAt: DateTime.now(),
+      metadata: Map<String, dynamic>.from(this.metadata),
     );
   }
 
@@ -207,111 +567,133 @@ class PDFTemplate extends HiveObject {
   }
 }
 
-@HiveType(typeId: 20) // Fixed: Use unique typeId
+@HiveType(typeId: 20)
 class FieldMapping extends HiveObject {
   @HiveField(0)
   late String fieldId;
-
   @HiveField(1)
-  late String fieldType;
-
+  late String appDataType;
   @HiveField(2)
-  late double x; // Relative position (0.0 - 1.0)
-
+  late String pdfFormFieldName;
   @HiveField(3)
-  late double y; // Relative position (0.0 - 1.0)
-
+  late PdfFormFieldType detectedPdfFieldType;
   @HiveField(4)
-  late double width; // Relative width (0.0 - 1.0)
-
+  double? visualX;
   @HiveField(5)
-  late double height; // Relative height (0.0 - 1.0)
-
+  double? visualY;
   @HiveField(6)
-  late String fontFamily;
-
+  double? visualWidth;
   @HiveField(7)
-  late double fontSize;
-
+  double? visualHeight;
   @HiveField(8)
-  late String fontColor;
-
+  late int pageNumber;
   @HiveField(9)
-  late bool isBold;
-
+  String? fontFamilyOverride;
   @HiveField(10)
-  late bool isItalic;
-
+  double? fontSizeOverride;
   @HiveField(11)
-  late String alignment; // 'left', 'center', 'right'
-
+  String? fontColorOverride;
   @HiveField(12)
-  String? placeholder;
-
+  String? alignmentOverride;
   @HiveField(13)
+  String? defaultValue; // This will store the "override value"
+  @HiveField(14)
   late Map<String, dynamic> additionalProperties;
+  @HiveField(15) // New field for the override toggle
+  late bool overrideValueEnabled;
 
   FieldMapping({
     String? fieldId,
-    required this.fieldType,
-    this.x = 0.0,
-    this.y = 0.0,
-    this.width = 0.2,
-    this.height = 0.05,
-    this.fontFamily = 'Arial',
-    this.fontSize = 12.0,
-    this.fontColor = '#000000',
-    this.isBold = false,
-    this.isItalic = false,
-    this.alignment = 'left',
-    this.placeholder,
+    required this.appDataType,
+    required this.pdfFormFieldName,
+    this.detectedPdfFieldType = PdfFormFieldType.UNKNOWN,
+    this.visualX,
+    this.visualY,
+    this.visualWidth,
+    this.visualHeight,
+    this.pageNumber = 0,
+    this.fontFamilyOverride,
+    this.fontSizeOverride,
+    this.fontColorOverride,
+    this.alignmentOverride,
+    this.defaultValue,
     Map<String, dynamic>? additionalProperties,
+    bool? overrideValueEnabled, // New constructor parameter
   }) {
     this.fieldId = fieldId ?? const Uuid().v4();
     this.additionalProperties = additionalProperties ?? {};
+    this.overrideValueEnabled = overrideValueEnabled ?? false; // Default to false
   }
 
-  // Serialization methods
   Map<String, dynamic> toMap() {
     return {
       'fieldId': fieldId,
-      'fieldType': fieldType,
-      'x': x,
-      'y': y,
-      'width': width,
-      'height': height,
-      'fontFamily': fontFamily,
-      'fontSize': fontSize,
-      'fontColor': fontColor,
-      'isBold': isBold,
-      'isItalic': isItalic,
-      'alignment': alignment,
-      'placeholder': placeholder,
+      'appDataType': appDataType,
+      'pdfFormFieldName': pdfFormFieldName,
+      'detectedPdfFieldType': detectedPdfFieldType.index,
+      'visualX': visualX,
+      'visualY': visualY,
+      'visualWidth': visualWidth,
+      'visualHeight': visualHeight,
+      'pageNumber': pageNumber,
+      'fontFamilyOverride': fontFamilyOverride,
+      'fontSizeOverride': fontSizeOverride,
+      'fontColorOverride': fontColorOverride,
+      'alignmentOverride': alignmentOverride,
+      'defaultValue': defaultValue,
       'additionalProperties': additionalProperties,
+      'overrideValueEnabled': overrideValueEnabled, // Add to map
     };
   }
 
   static FieldMapping fromMap(Map<String, dynamic> map) {
+    String appDataTypeValue = map['appDataType'] ?? map['fieldType'] ?? '';
+    String pdfFormFieldNameValue = map['pdfFormFieldName'] ?? '';
+    PdfFormFieldType detectedTypeValue = map['detectedPdfFieldType'] != null
+        ? PdfFormFieldType.values[map['detectedPdfFieldType'] as int]
+        : PdfFormFieldType.UNKNOWN;
+
     return FieldMapping(
       fieldId: map['fieldId'],
-      fieldType: map['fieldType'] ?? '',
-      x: map['x']?.toDouble() ?? 0.0,
-      y: map['y']?.toDouble() ?? 0.0,
-      width: map['width']?.toDouble() ?? 0.2,
-      height: map['height']?.toDouble() ?? 0.05,
-      fontFamily: map['fontFamily'] ?? 'Arial',
-      fontSize: map['fontSize']?.toDouble() ?? 12.0,
-      fontColor: map['fontColor'] ?? '#000000',
-      isBold: map['isBold'] ?? false,
-      isItalic: map['isItalic'] ?? false,
-      alignment: map['alignment'] ?? 'left',
-      placeholder: map['placeholder'],
+      appDataType: appDataTypeValue,
+      pdfFormFieldName: pdfFormFieldNameValue,
+      detectedPdfFieldType: detectedTypeValue,
+      visualX: map['visualX']?.toDouble() ?? map['x']?.toDouble(),
+      visualY: map['visualY']?.toDouble() ?? map['y']?.toDouble(),
+      visualWidth: map['visualWidth']?.toDouble() ?? map['width']?.toDouble(),
+      visualHeight: map['visualHeight']?.toDouble() ?? map['height']?.toDouble(),
+      pageNumber: map['pageNumber']?.toInt() ?? 0,
+      fontFamilyOverride: map['fontFamilyOverride'] ?? map['fontFamily'],
+      fontSizeOverride: map['fontSizeOverride']?.toDouble() ?? map['fontSize']?.toDouble(),
+      fontColorOverride: map['fontColorOverride'] ?? map['fontColor'],
+      alignmentOverride: map['alignmentOverride'] ?? map['alignment'],
+      defaultValue: map['defaultValue'] ?? map['placeholder'],
       additionalProperties: Map<String, dynamic>.from(map['additionalProperties'] ?? {}),
+      overrideValueEnabled: map['overrideValueEnabled'] as bool? ?? false, // Parse from map, default to false
     );
   }
 
   @override
   String toString() {
-    return 'FieldMapping(id: $fieldId, type: $fieldType, pos: ($x, $y))';
+    return 'FieldMapping(id: $fieldId, appData: $appDataType, pdfField: $pdfFormFieldName, type: $detectedPdfFieldType, overrideEnabled: $overrideValueEnabled, overrideValue: $defaultValue)';
+  }
+}
+
+class PdfFormFieldTypeAdapter extends TypeAdapter<PdfFormFieldType> {
+  @override
+  final int typeId = 22;
+
+  @override
+  PdfFormFieldType read(BinaryReader reader) {
+    final index = reader.readByte();
+    if (index >= 0 && index < PdfFormFieldType.values.length) {
+      return PdfFormFieldType.values[index];
+    }
+    return PdfFormFieldType.UNKNOWN;
+  }
+
+  @override
+  void write(BinaryWriter writer, PdfFormFieldType obj) {
+    writer.writeByte(obj.index);
   }
 }

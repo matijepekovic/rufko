@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/pdf_template.dart';
 import '../providers/app_state_provider.dart';
@@ -444,46 +445,62 @@ class _TemplatesScreenState extends State<TemplatesScreen> {
       final duplicatedTemplate = PDFTemplate(
         templateName: '${template.templateName} (Copy)',
         description: template.description,
-        pdfFilePath: template.pdfFilePath, // Same PDF file
-        fieldMappings: template.fieldMappings.map((field) =>
-            FieldMapping(
-              fieldType: field.fieldType,
-              x: field.x,
-              y: field.y,
-              width: field.width,
-              height: field.height,
-              fontFamily: field.fontFamily,
-              fontSize: field.fontSize,
-              fontColor: field.fontColor,
-              alignment: field.alignment,
-              isBold: field.isBold,
-              isItalic: field.isItalic,
-              placeholder: field.placeholder,
-              additionalProperties: Map.from(field.additionalProperties),
-            )
-        ).toList(),
+        // IMPORTANT: For a true duplicate that can be independently edited later,
+        // you might want to also copy the physical PDF file (template.pdfFilePath)
+        // to a new unique path and update pdfFilePath here. For now, it points to the same PDF.
+        pdfFilePath: template.pdfFilePath,
+        fieldMappings: template.fieldMappings.map((originalField) {
+          // Create a new FieldMapping, preserving the core linked data
+          // and visual hints if they exist.
+          return FieldMapping(
+            // fieldId will be new via default constructor Uuid().v4()
+            appDataType: originalField.appDataType,
+            pdfFormFieldName: originalField.pdfFormFieldName, // Keep the link to the same PDF field
+            detectedPdfFieldType: originalField.detectedPdfFieldType,
+            visualX: originalField.visualX,
+            visualY: originalField.visualY,
+            visualWidth: originalField.visualWidth,
+            visualHeight: originalField.visualHeight,
+            pageNumber: originalField.pageNumber,
+            fontFamilyOverride: originalField.fontFamilyOverride,
+            fontSizeOverride: originalField.fontSizeOverride,
+            fontColorOverride: originalField.fontColorOverride,
+            alignmentOverride: originalField.alignmentOverride,
+            defaultValue: originalField.defaultValue,
+            additionalProperties: Map.from(originalField.additionalProperties), // Deep copy
+          );
+        }).toList(),
         templateType: template.templateType,
         pageWidth: template.pageWidth,
         pageHeight: template.pageHeight,
         totalPages: template.totalPages,
-        metadata: Map.from(template.metadata),
+        metadata: Map.from(template.metadata), // Deep copy metadata
+        isActive: true, // Typically a duplicated template starts as active
+        // createdAt and updatedAt will be new via default constructor
       );
 
       await appState.addPDFTemplate(duplicatedTemplate);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Template duplicated successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (mounted) { // Good practice to check if mounted before ScaffoldMessenger
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Template duplicated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error duplicating template: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error duplicating template: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      if (kDebugMode) {
+        print("Error duplicating template: $e");
+      }
     }
   }
 

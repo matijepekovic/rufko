@@ -2,307 +2,274 @@
 
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import '../models/pdf_template.dart';
+import 'package:flutter/material.dart'; // For Color and IconData
+import '../models/pdf_template.dart'; // Import the updated model
 
 class TemplateValidator {
-  static const List<String> _essentialQuoteFields = [
+  static const List<String> _essentialQuoteAppDatas = [
     'customerName',
     'quoteNumber',
     'grandTotal',
   ];
 
-  static const List<String> _recommendedQuoteFields = [
+  static const List<String> _recommendedQuoteAppDatas = [
     'customerAddress',
     'quoteDate',
     'companyName',
     'subtotal',
-    'taxAmount',
+    // 'taxAmount', // Tax is often calculated, so direct mapping might not always be present
   ];
 
-  /// Validate a single PDF template
+  /// Validate a single PDF template based on the new model structure
   static Future<TemplateValidationResult> validateTemplate(PDFTemplate template) async {
-    final result = TemplateValidationResult(template.id);
+    final result = TemplateValidationResult(template.id, template.templateName);
 
     try {
-      // Check if PDF file exists
+      // 1. Check if PDF file exists
       final pdfFile = File(template.pdfFilePath);
       if (!await pdfFile.exists()) {
-        result.addError('PDF file not found: ${template.pdfFilePath}');
+        result.addError('Physical PDF file not found at: ${template.pdfFilePath}');
       } else {
-        result.addSuccess('PDF file exists');
-
-        // Check file size (warn if very large)
+        result.addSuccess('PDF file exists.');
         final fileSize = await pdfFile.length();
-        if (fileSize > 10 * 1024 * 1024) { // 10MB
-          result.addWarning('PDF file is large (${(fileSize / 1024 / 1024).toStringAsFixed(1)}MB)');
+        if (fileSize > 15 * 1024 * 1024) { // 15MB warning
+          result.addWarning('PDF file is large (${(fileSize / (1024 * 1024)).toStringAsFixed(1)}MB). This might affect performance.');
         }
       }
 
-      // Check template basic properties
+      // 2. Check template basic properties
       if (template.templateName.trim().isEmpty) {
-        result.addError('Template name is empty');
+        result.addError('Template name is empty.');
+      }
+      if (template.pageWidth <= 0 || template.pageHeight <= 0) {
+        result.addError('Invalid page dimensions (Width: ${template.pageWidth}, Height: ${template.pageHeight}). Re-upload PDF.');
       }
 
+      // 3. Check field mappings
       if (template.fieldMappings.isEmpty) {
-        result.addWarning('No fields mapped - template will generate empty PDF');
-      }
+        result.addWarning('No fields mapped. The generated PDF will likely be mostly blank except for the background.');
+      } else {
+        final Set<String> mappedAppDataTypes = {};
+        final Set<String> mappedPdfFieldNames = {};
 
-      // Check for essential quote fields
-      final mappedFieldTypes = template.fieldMappings.map((f) => f.fieldType).toSet();
+        for (final FieldMapping field in template.fieldMappings) {
+          // Validate individual field mapping
+          _validateFieldMapping(field, template, result);
 
-      for (final essentialField in _essentialQuoteFields) {
-        if (!mappedFieldTypes.contains(essentialField)) {
-          result.addError('Missing essential field: ${PDFTemplate.getFieldDisplayName(essentialField)}');
+          if (field.appDataType.isNotEmpty && !field.appDataType.startsWith('unmapped_')) {
+            mappedAppDataTypes.add(field.appDataType);
+          }
+          if (field.pdfFormFieldName.isNotEmpty) {
+            if (mappedPdfFieldNames.contains(field.pdfFormFieldName)) {
+              result.addWarning('PDF Form Field "${field.pdfFormFieldName}" is mapped multiple times. Ensure this is intended.');
+            }
+            mappedPdfFieldNames.add(field.pdfFormFieldName);
+          }
         }
-      }
 
-      // Check for recommended fields
-      for (final recommendedField in _recommendedQuoteFields) {
-        if (!mappedFieldTypes.contains(recommendedField)) {
-          result.addWarning('Missing recommended field: ${PDFTemplate.getFieldDisplayName(recommendedField)}');
+        // Check for essential application data types being mapped
+        for (final essentialAppData in _essentialQuoteAppDatas) {
+          if (!mappedAppDataTypes.contains(essentialAppData)) {
+            result.addError('Essential app data field "${PDFTemplate.getFieldDisplayName(essentialAppData)}" is not mapped to any PDF field.');
+          }
         }
-      }
 
-      // Validate field mappings
-      for (final field in template.fieldMappings) {
-        _validateFieldMapping(field, result);
-      }
-
-      // Check for duplicate field types (warn if multiple fields of same type)
-      final fieldTypeCounts = <String, int>{};
-      for (final field in template.fieldMappings) {
-        fieldTypeCounts[field.fieldType] = (fieldTypeCounts[field.fieldType] ?? 0) + 1;
-      }
-
-      for (final entry in fieldTypeCounts.entries) {
-        if (entry.value > 1) {
-          result.addWarning('Multiple fields of type "${PDFTemplate.getFieldDisplayName(entry.key)}" (${entry.value} found)');
+        // Check for recommended application data types being mapped
+        for (final recommendedAppData in _recommendedQuoteAppDatas) {
+          if (!mappedAppDataTypes.contains(recommendedAppData)) {
+            result.addWarning('Recommended app data field "${PDFTemplate.getFieldDisplayName(recommendedAppData)}" is not mapped.');
+          }
         }
-      }
 
+        // Check if all detected PDF fields (from metadata) are mapped, if that metadata exists
+        final detectedFieldsMeta = template.metadata['detectedPdfFields'] as List<dynamic>?;
+        if (detectedFieldsMeta != null) {
+          int unmappedDetectedFields = 0;
+          for (var detectedFieldInfo in detectedFieldsMeta) {
+            if (detectedFieldInfo is Map) {
+              final detectedName = detectedFieldInfo['name'] as String?;
+              if (detectedName != null && !mappedPdfFieldNames.contains(detectedName)) {
+                unmappedDetectedFields++;
+              }
+            }
+          }
+          if (unmappedDetectedFields > 0) {
+            result.addWarning('$unmappedDetectedFields detected PDF form field(s) are not currently mapped to any app data.');
+          }
+        }
+
+
+      }
     } catch (e) {
-      result.addError('Validation error: $e');
+      result.addError('An unexpected error occurred during validation: $e');
+      if (kDebugMode) {
+        print('Template Validation Exception for ${template.id}: $e');
+      }
     }
-
     return result;
   }
 
-  /// Validate field mapping properties
-  static void _validateFieldMapping(FieldMapping field, TemplateValidationResult result) {
-    // Check coordinates are within bounds
-    if (field.x < 0 || field.x > 1) {
-      result.addError('Field "${PDFTemplate.getFieldDisplayName(field.fieldType)}" X position out of bounds: ${field.x}');
+  /// Validate individual FieldMapping properties
+  static void _validateFieldMapping(FieldMapping field, PDFTemplate template, TemplateValidationResult result) {
+    if (field.appDataType.isEmpty || field.appDataType.startsWith('unmapped_')) {
+      result.addWarning('Field linked to PDF field "${field.pdfFormFieldName}" has no App Data Source assigned.');
+    }
+    if (field.pdfFormFieldName.isEmpty) {
+      result.addError('App Data Source "${PDFTemplate.getFieldDisplayName(field.appDataType)}" is not linked to any PDF Form Field.');
     }
 
-    if (field.y < 0 || field.y > 1) {
-      result.addError('Field "${PDFTemplate.getFieldDisplayName(field.fieldType)}" Y position out of bounds: ${field.y}');
+    // Validate visual hints if they are populated (they are optional now)
+    if (field.visualX != null && (field.visualX! < 0 || field.visualX! > 1)) {
+      result.addWarning('Field mapping for "${field.pdfFormFieldName}" has visual X hint out of bounds: ${field.visualX}');
+    }
+    if (field.visualY != null && (field.visualY! < 0 || field.visualY! > 1)) {
+      result.addWarning('Field mapping for "${field.pdfFormFieldName}" has visual Y hint out of bounds: ${field.visualY}');
+    }
+    if (field.visualWidth != null && (field.visualWidth! <= 0 || field.visualWidth! > 1)) {
+      result.addWarning('Field mapping for "${field.pdfFormFieldName}" has visual Width hint out of bounds: ${field.visualWidth}');
+    }
+    if (field.visualHeight != null && (field.visualHeight! <= 0 || field.visualHeight! > 1)) {
+      result.addWarning('Field mapping for "${field.pdfFormFieldName}" has visual Height hint out of bounds: ${field.visualHeight}');
     }
 
-    // Check size is reasonable
-    if (field.width <= 0 || field.width > 1) {
-      result.addError('Field "${PDFTemplate.getFieldDisplayName(field.fieldType)}" width out of bounds: ${field.width}');
+    if (field.pageNumber < 0 || field.pageNumber >= template.totalPages) {
+      result.addError('Field mapping for "${field.pdfFormFieldName}" has invalid page number: ${field.pageNumber + 1} (Total pages: ${template.totalPages})');
     }
 
-    if (field.height <= 0 || field.height > 1) {
-      result.addError('Field "${PDFTemplate.getFieldDisplayName(field.fieldType)}" height out of bounds: ${field.height}');
+    // Validate override properties if they are set
+    if (field.fontSizeOverride != null && (field.fontSizeOverride! < 4 || field.fontSizeOverride! > 100)) {
+      result.addWarning('Field mapping for "${field.pdfFormFieldName}" has an unusual font size override: ${field.fontSizeOverride}pt');
     }
-
-    // Check field doesn't extend beyond page bounds
-    if (field.x + field.width > 1) {
-      result.addWarning('Field "${PDFTemplate.getFieldDisplayName(field.fieldType)}" extends beyond right edge');
-    }
-
-    if (field.y + field.height > 1) {
-      result.addWarning('Field "${PDFTemplate.getFieldDisplayName(field.fieldType)}" extends beyond bottom edge');
-    }
-
-    // Check font size is reasonable
-    if (field.fontSize < 6 || field.fontSize > 72) {
-      result.addWarning('Field "${PDFTemplate.getFieldDisplayName(field.fieldType)}" font size may be too ${field.fontSize < 6 ? 'small' : 'large'}: ${field.fontSize}pt');
-    }
-
-    // Check color format
-    if (!_isValidHexColor(field.fontColor)) {
-      result.addError('Field "${PDFTemplate.getFieldDisplayName(field.fieldType)}" has invalid color: ${field.fontColor}');
+    if (field.fontColorOverride != null && !_isValidHexColor(field.fontColorOverride!)) {
+      result.addError('Field mapping for "${field.pdfFormFieldName}" has an invalid font color override: ${field.fontColorOverride}');
     }
   }
 
-  /// Validate multiple templates
   static Future<List<TemplateValidationResult>> validateTemplates(List<PDFTemplate> templates) async {
     final results = <TemplateValidationResult>[];
-
     for (final template in templates) {
-      final result = await validateTemplate(template);
-      results.add(result);
+      results.add(await validateTemplate(template));
     }
-
     return results;
   }
 
-  /// Quick check if template is usable
   static Future<bool> isTemplateUsable(PDFTemplate template) async {
     final result = await validateTemplate(template);
     return result.isUsable;
   }
 
-  /// Get template health score (0-100)
   static Future<int> getTemplateHealthScore(PDFTemplate template) async {
     final result = await validateTemplate(template);
     return result.healthScore;
   }
 
-  /// Check if hex color string is valid
   static bool _isValidHexColor(String color) {
-    final hexPattern = RegExp(r'^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$');
+    final hexPattern = RegExp(r'^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$'); // Allow alpha
     return hexPattern.hasMatch(color);
   }
 
-  /// Get template usage recommendations
-  static List<String> getTemplateRecommendations(PDFTemplate template) {
+  static List<String> getTemplateRecommendations(PDFTemplate template, TemplateValidationResult validationResult) {
     final recommendations = <String>[];
 
-    // Check field coverage
-    final mappedFields = template.fieldMappings.map((f) => f.fieldType).toSet();
-
-    if (!mappedFields.contains('customerName')) {
-      recommendations.add('Add customer name field for personalization');
+    if (validationResult.errors.any((e) => e.contains("not mapped to any PDF field"))) {
+      recommendations.add('Map all essential app data fields to corresponding PDF form fields in the editor.');
     }
-
-    if (!mappedFields.contains('companyName')) {
-      recommendations.add('Add company name field for branding');
+    if (validationResult.warnings.any((w) => w.contains("not currently mapped"))) {
+      recommendations.add('Consider mapping more of the detected PDF form fields to make your template more dynamic.');
     }
-
-    if (template.fieldMappings.length < 5) {
-      recommendations.add('Consider adding more fields for comprehensive quotes');
-    }
-
-    // Check template metadata
     if (template.description.isEmpty) {
-      recommendations.add('Add a description to help identify this template\'s purpose');
+      recommendations.add('Add a description to this template to clarify its purpose or version.');
+    }
+    if (validationResult.warnings.any((w) => w.contains("PDF file is large"))) {
+      recommendations.add('The PDF file is large. Consider optimizing it for smaller size if possible.');
+    }
+    if (recommendations.isEmpty && validationResult.isUsable) {
+      recommendations.add('Template looks good! Review field mappings for accuracy.');
+    }
+    if(!validationResult.isUsable){
+      recommendations.add('Address critical errors before using this template.');
     }
 
     return recommendations;
   }
 }
 
-/// Result of template validation
 class TemplateValidationResult {
   final String templateId;
+  final String templateName; // Added for better context in results
   final List<String> errors = [];
   final List<String> warnings = [];
   final List<String> successes = [];
 
-  TemplateValidationResult(this.templateId);
+  TemplateValidationResult(this.templateId, this.templateName);
 
   void addError(String message) {
     errors.add(message);
-    if (kDebugMode) {
-      print('❌ Template $templateId: $message');
-    }
+    if (kDebugMode) print('❌ Validation Error ($templateName): $message');
   }
 
   void addWarning(String message) {
     warnings.add(message);
-    if (kDebugMode) {
-      print('⚠️ Template $templateId: $message');
-    }
+    if (kDebugMode) print('⚠️ Validation Warning ($templateName): $message');
   }
 
   void addSuccess(String message) {
     successes.add(message);
-    if (kDebugMode) {
-      print('✅ Template $templateId: $message');
-    }
+    if (kDebugMode) print('✅ Validation Success ($templateName): $message');
   }
 
-  /// Whether template can be used despite issues
   bool get isUsable => errors.isEmpty;
-
-  /// Whether template is in perfect condition
   bool get isPerfect => errors.isEmpty && warnings.isEmpty;
 
-  /// Health score from 0-100
   int get healthScore {
-    if (errors.isNotEmpty) {
-      return 0; // Unusable
-    }
-
-    final maxWarnings = 10; // Assume max reasonable warnings
-    final warningPenalty = (warnings.length / maxWarnings * 30).clamp(0, 30);
-
-    return (100 - warningPenalty).round();
+    if (!isUsable) return 0;
+    int score = 100;
+    score -= warnings.length * 5; // Each warning deducts 5 points
+    return score.clamp(0, 100);
   }
 
-  /// Get overall status
   TemplateStatus get status {
     if (errors.isNotEmpty) return TemplateStatus.error;
     if (warnings.isNotEmpty) return TemplateStatus.warning;
     return TemplateStatus.healthy;
   }
 
-  /// Get status color for UI
   Color get statusColor {
     switch (status) {
-      case TemplateStatus.error:
-        return const Color(0xFFD32F2F); // Red
-      case TemplateStatus.warning:
-        return const Color(0xFFF57C00); // Orange
-      case TemplateStatus.healthy:
-        return const Color(0xFF388E3C); // Green
+      case TemplateStatus.error: return Colors.red.shade700;
+      case TemplateStatus.warning: return Colors.orange.shade700;
+      case TemplateStatus.healthy: return Colors.green.shade700;
     }
   }
 
-  /// Get status icon for UI
   IconData get statusIcon {
     switch (status) {
-      case TemplateStatus.error:
-        return Icons.error;
-      case TemplateStatus.warning:
-        return Icons.warning;
-      case TemplateStatus.healthy:
-        return Icons.check_circle;
+      case TemplateStatus.error: return Icons.error_outline;
+      case TemplateStatus.warning: return Icons.warning_amber_outlined;
+      case TemplateStatus.healthy: return Icons.check_circle_outline;
     }
   }
 
-  /// Get human-readable summary
   String get summary {
-    if (errors.isNotEmpty) {
-      return '${errors.length} error(s), ${warnings.length} warning(s)';
-    } else if (warnings.isNotEmpty) {
-      return '${warnings.length} warning(s)';
-    } else {
-      return 'Template is healthy';
-    }
+    if (errors.isNotEmpty) return '${errors.length} Error(s), ${warnings.length} Warning(s)';
+    if (warnings.isNotEmpty) return '${warnings.length} Warning(s)';
+    return 'Healthy';
   }
 
   @override
   String toString() {
-    return 'TemplateValidationResult(id: $templateId, status: $status, errors: ${errors.length}, warnings: ${warnings.length})';
+    return 'TemplateValidationResult(id: $templateId, name: $templateName, status: $status, errors: ${errors.length}, warnings: ${warnings.length})';
   }
 }
 
-enum TemplateStatus {
-  healthy,
-  warning,
-  error,
-}
+enum TemplateStatus { healthy, warning, error }
 
-/// Template validation extensions
 extension TemplateValidationExtensions on List<TemplateValidationResult> {
-  /// Get all templates with errors
   List<TemplateValidationResult> get withErrors => where((r) => r.errors.isNotEmpty).toList();
-
-  /// Get all templates with warnings
-  List<TemplateValidationResult> get withWarnings => where((r) => r.warnings.isNotEmpty).toList();
-
-  /// Get all healthy templates
+  List<TemplateValidationResult> get withWarnings => where((r) => r.warnings.isNotEmpty && r.errors.isEmpty).toList();
   List<TemplateValidationResult> get healthy => where((r) => r.isPerfect).toList();
-
-  /// Get overall health percentage
   double get overallHealthPercentage {
     if (isEmpty) return 100.0;
-    final totalScore = fold<int>(0, (sum, result) => sum + result.healthScore);
-    return totalScore / length;
+    return fold<double>(0, (sum, r) => sum + r.healthScore) / length;
   }
 }

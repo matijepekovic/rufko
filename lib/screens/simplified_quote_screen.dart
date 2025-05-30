@@ -10,6 +10,7 @@ import '../models/simplified_quote.dart';
 import '../models/quote.dart';
 import '../providers/app_state_provider.dart';
 import 'simplified_quote_detail_screen.dart';
+import '../services/tax_service.dart';
 
 class SimplifiedQuoteScreen extends StatefulWidget {
   final Customer customer;
@@ -28,13 +29,22 @@ class SimplifiedQuoteScreen extends StatefulWidget {
 class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   final _formKey = GlobalKey<FormState>();
   final _quantityController = TextEditingController(text: '1.0');
-
+  double _taxRate = 0.0;
   Product? _mainProduct;
   double _mainQuantity = 1.0;
   final List<QuoteLevel> _quoteLevels = [];
   final List<QuoteItem> _addedProducts = [];
 
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize tax rate from customer address
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoDetectTaxRate(context.read<AppStateProvider>());
+    });
+  }
 
   @override
   void dispose() {
@@ -462,9 +472,129 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
         // Quote Totals Section
         if (_quoteLevels.isNotEmpty) ...[
           const SizedBox(height: 16),
+          _buildTaxRateSection(),  // ADD TAX RATE HERE
+          const SizedBox(height: 16),
           _buildQuoteTotalsSection(),
         ],
       ],
+    );
+  }
+
+  Widget _buildTaxRateSection() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.percent,
+                    color: Colors.green.shade700,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Tax Rate',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    initialValue: _taxRate.toStringAsFixed(2),
+                    decoration: InputDecoration(
+                      labelText: 'Tax Rate (%)',
+                      border: const OutlineInputBorder(),
+                      suffixText: '%',
+                      prefixIcon: const Icon(Icons.calculate),
+                      helperText: 'Enter tax rate for this quote',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (value) {
+                      final rate = double.tryParse(value);
+                      if (rate != null && rate >= 0 && rate <= 100) {
+                        setState(() {
+                          _taxRate = rate;
+                          _updateQuoteLevelsQuantity(); // Recalculate totals
+                        });
+                      }
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Please enter tax rate';
+                      final rate = double.tryParse(value);
+                      if (rate == null || rate < 0 || rate > 100) {
+                        return 'Enter valid tax rate (0-100%)';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 3,
+                  child: Consumer<AppStateProvider>(
+                    builder: (context, appState, child) {
+                      return ElevatedButton.icon(
+                        onPressed: () => _autoDetectTaxRate(appState),
+                        icon: const Icon(Icons.location_on, size: 18),
+                        label: const Text('Auto-Detect from Address'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade600,
+                          foregroundColor: Colors.white,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+
+            if (_taxRate > 0) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.green.shade700, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Tax rate: ${_taxRate.toStringAsFixed(2)}% will be applied to all quote levels',
+                      style: TextStyle(
+                        color: Colors.green.shade800,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -497,6 +627,11 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
             // Mobile-friendly layout
             Column(
               children: _quoteLevels.map((level) {
+                // Calculate tax for this level
+                final subtotal = level.subtotal;
+                final taxAmount = subtotal * (_taxRate / 100);
+                final totalWithTax = subtotal + taxAmount;
+
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(12),
@@ -552,25 +687,78 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                       )),
 
                       const Divider(),
+
+                      // SUBTOTAL
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'TOTAL:',
+                            'SUBTOTAL:',
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                               color: Colors.blue.shade800,
                             ),
                           ),
                           Text(
-                            currencyFormat.format(level.subtotal),
+                            currencyFormat.format(subtotal),
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
                               color: Colors.blue.shade800,
                             ),
                           ),
                         ],
+                      ),
+
+                      // TAX (only show if tax rate > 0)
+                      if (_taxRate > 0) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'TAX (${_taxRate.toStringAsFixed(2)}%):',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                            Text(
+                              currencyFormat.format(taxAmount),
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade100,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'TOTAL:',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                            Text(
+                              currencyFormat.format(totalWithTax),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                                color: Colors.blue.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -641,6 +829,203 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     });
   }
 
+  // REPLACE the _autoDetectTaxRate() method in simplified_quote_screen.dart
+// Around line 570-620
+
+  void _autoDetectTaxRate(AppStateProvider appState) {
+    final customer = widget.customer;
+
+    print('🔍 AUTO-DETECTING TAX RATE FOR:');
+    print('   Customer: ${customer.name}');
+    print('   ZIP: ${customer.zipCode}');
+    print('   State: ${customer.stateAbbreviation}');
+    print('   City: ${customer.city}');
+
+    // Try to get tax rate from local database
+    final detectedRate = TaxService.getTaxRateByAddress(
+      city: customer.city,
+      stateAbbreviation: customer.stateAbbreviation,
+      zipCode: customer.zipCode,
+    );
+
+    if (detectedRate != null && detectedRate > 0) {
+      // Found rate in database
+      setState(() {
+        _taxRate = detectedRate;
+        _updateQuoteLevelsQuantity(); // Recalculate with new tax rate
+      });
+
+      String source = '';
+      if (customer.zipCode != null && customer.zipCode!.isNotEmpty) {
+        source = 'ZIP ${customer.zipCode}';
+      } else if (customer.stateAbbreviation != null) {
+        source = 'state ${customer.stateAbbreviation}';
+      }
+
+      print('✅ TAX RATE DETECTED: ${detectedRate.toStringAsFixed(2)}% from $source');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Tax rate set to ${detectedRate.toStringAsFixed(2)}% from $source'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } else {
+      // No rate found - try fallback to app default or prompt user
+      final fallbackRate = appState.appSettings?.taxRate ?? 0.0;
+
+      if (fallbackRate > 0) {
+        setState(() {
+          _taxRate = fallbackRate;
+          _updateQuoteLevelsQuantity();
+        });
+
+        print('📝 USING FALLBACK TAX RATE: ${fallbackRate.toStringAsFixed(2)}%');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Using default tax rate: ${fallbackRate.toStringAsFixed(2)}%'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        // No rate found anywhere - prompt user to enter manually
+        print('⚠️ NO TAX RATE FOUND - prompting user');
+        _showManualTaxRateDialog();
+      }
+    }
+  }
+
+  void _showManualTaxRateDialog() {
+    final customer = widget.customer;
+    final locationText = customer.zipCode?.isNotEmpty == true
+        ? 'ZIP ${customer.zipCode}'
+        : customer.stateAbbreviation?.isNotEmpty == true
+        ? 'state ${customer.stateAbbreviation}'
+        : 'this location';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tax Rate Not Found'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('No tax rate found for $locationText in the local database.'),
+            const SizedBox(height: 16),
+            const Text('You can:'),
+            const SizedBox(height: 8),
+            const Text('• Enter the tax rate manually for this quote'),
+            const Text('• Add this location to your tax database in Settings'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showAddTaxRateDialog();
+            },
+            child: const Text('Add to Database'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Just keep current tax rate (user can manually edit in the field)
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Enter tax rate manually in the field above'),
+                  backgroundColor: Colors.blue,
+                ),
+              );
+            },
+            child: const Text('Enter Manually'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddTaxRateDialog() {
+    final customer = widget.customer;
+    final taxRateController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Tax Rate to Database'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Add tax rate for: ${customer.fullDisplayAddress}'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: taxRateController,
+              decoration: const InputDecoration(
+                labelText: 'Tax Rate (%)',
+                suffixText: '%',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final rateText = taxRateController.text.trim();
+              final rate = double.tryParse(rateText);
+
+              if (rate == null || rate < 0 || rate > 100) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please enter a valid tax rate (0-100%)'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              // Save to database
+              if (customer.zipCode?.isNotEmpty == true) {
+                await TaxService.setZipCodeRate(customer.zipCode!, rate);
+              } else if (customer.stateAbbreviation?.isNotEmpty == true) {
+                await TaxService.setStateRate(customer.stateAbbreviation!, rate);
+              }
+
+              // Set for current quote
+              setState(() {
+                _taxRate = rate;
+                _updateQuoteLevelsQuantity();
+              });
+
+              Navigator.pop(context);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Tax rate ${rate.toStringAsFixed(2)}% saved and applied'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Save & Apply'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddProductDialog() {
     showDialog(
       context: context,
@@ -658,6 +1043,9 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
       ),
     );
   }
+
+  // REPLACE the _generateQuote() method in simplified_quote_screen.dart
+// Around line 720-760
 
   void _generateQuote() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
@@ -693,7 +1081,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
           return level;
         }).toList(),
         addons: [],
-        taxRate: appState.appSettings?.taxRate ?? 0.0,
+        taxRate: _taxRate, // 🔧 FIX: Use the quote-specific tax rate instead of global setting
         baseProductId: _mainProduct!.id,
         baseProductName: _mainProduct!.name,
         baseProductUnit: _mainProduct!.unit,
@@ -704,7 +1092,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Quote ${newQuote.quoteNumber} generated!'),
+            content: Text('Quote ${newQuote.quoteNumber} generated with ${_taxRate.toStringAsFixed(2)}% tax!'),
             backgroundColor: Colors.green,
           ),
         );

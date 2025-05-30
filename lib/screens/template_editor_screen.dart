@@ -1,21 +1,23 @@
 // lib/screens/template_editor_screen.dart
-
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
-import 'dart:io';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:open_filex/open_filex.dart';
 
 import '../models/pdf_template.dart';
 import '../services/template_service.dart';
 import '../providers/app_state_provider.dart';
 
 class TemplateEditorScreen extends StatefulWidget {
-  final PDFTemplate? existingTemplate;
-
   const TemplateEditorScreen({
-    Key? key,
+    super.key,
     this.existingTemplate,
-  }) : super(key: key);
+  });
+
+  final PDFTemplate? existingTemplate;
 
   @override
   State<TemplateEditorScreen> createState() => _TemplateEditorScreenState();
@@ -23,78 +25,151 @@ class TemplateEditorScreen extends StatefulWidget {
 
 class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   PDFTemplate? _currentTemplate;
-  FieldMapping? _selectedField;
-  bool _isLoading = false;
-  bool _showFieldPalette = true;
-  final GlobalKey _pdfViewKey = GlobalKey();
+  FieldMapping? _currentlySelectedAppFieldMapping;
+  Map<String, dynamic>? _visuallySelectedPdfFieldInfo;
 
-  // Controllers for field properties
-  final _fieldTypeController = TextEditingController();
-  final _fontSizeController = TextEditingController();
-  final _placeholderController = TextEditingController();
+  bool _isLoading = false;
+  String _loadingMessage = '';
+
+  final PdfViewerController _pdfViewerController = PdfViewerController();
+  List<Map<String, dynamic>> _detectedPdfFieldsList = [];
+
+  int _currentPageZeroBased = 0;
+  int _totalPagesInPdf = 1;
+
+  double _currentViewerZoomLevel = 1.0;
+  Offset _currentViewerScrollOffset = Offset.zero;
+
+  final GlobalKey _pdfViewerContainerKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    _currentTemplate = widget.existingTemplate;
-    if (_currentTemplate != null) {
-      _loadTemplate();
+
+    if (widget.existingTemplate != null) {
+      _currentTemplate = widget.existingTemplate!;
+      _loadTemplateDetails();
+    } else {
+      if (kDebugMode) print('🔍 NO EXISTING TEMPLATE - Creating new');
     }
+
+    _pdfViewerController.addListener(_viewerControllerListener);
   }
+
 
   @override
   void dispose() {
-    _fieldTypeController.dispose();
-    _fontSizeController.dispose();
-    _placeholderController.dispose();
+    _pdfViewerController.removeListener(_viewerControllerListener);
+    _pdfViewerController.dispose();
     super.dispose();
   }
 
-  void _loadTemplate() {
-    // Initialize template display
-    setState(() {});
+  void _viewerControllerListener() {
+    if (!mounted) return;
+    bool needsRebuild = false;
+    if (_pdfViewerController.zoomLevel != _currentViewerZoomLevel) {
+      _currentViewerZoomLevel = _pdfViewerController.zoomLevel;
+      needsRebuild = true;
+    }
+    if (_pdfViewerController.scrollOffset != _currentViewerScrollOffset) {
+      _currentViewerScrollOffset = _pdfViewerController.scrollOffset;
+      needsRebuild = true;
+    }
+    int controllerPageOneBased = _pdfViewerController.pageNumber;
+    if (controllerPageOneBased > 0 && (controllerPageOneBased -1) != _currentPageZeroBased) {
+      _currentPageZeroBased = controllerPageOneBased -1;
+      if (_visuallySelectedPdfFieldInfo != null &&
+          (_visuallySelectedPdfFieldInfo!['page'] as int? ?? -1) != _currentPageZeroBased) {
+        _visuallySelectedPdfFieldInfo = null;
+      }
+      needsRebuild = true;
+    }
+    if (needsRebuild) {
+      setState(() {});
+    }
+  }
+
+  void _loadTemplateDetails() {
+    if (_currentTemplate == null) return;
+    setState(() {
+      _totalPagesInPdf = _currentTemplate!.totalPages;
+      var detectedFieldsRaw = _currentTemplate!.metadata['detectedPdfFields'];
+      if (detectedFieldsRaw is List) {
+        _detectedPdfFieldsList = List<Map<String, dynamic>>.from(
+            detectedFieldsRaw.map((e) => Map<String, dynamic>.from(e as Map))
+        );
+      } else {
+        _detectedPdfFieldsList = [];
+      }
+      _currentPageZeroBased = 0;
+      _clearAllSelections();
+
+      Future.delayed(Duration.zero, () {
+        if (mounted && _totalPagesInPdf > 0) {
+          if (_pdfViewerController.pageCount >= 1) {
+            _pdfViewerController.jumpToPage(1);
+          } else {
+            Future.delayed(const Duration(milliseconds: 200), () {
+              if (mounted && _pdfViewerController.pageCount >= 1) {
+                _pdfViewerController.jumpToPage(1);
+              }
+            });
+          }
+        }
+      });
+    });
+  }
+
+  void _setLoading(bool isLoading, [String message = '']) {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = isLoading;
+      _loadingMessage = message;
+    });
+  }
+
+  void _clearAllSelections(){
+    if (!mounted) return;
+    setState(() {
+      _currentlySelectedAppFieldMapping = null;
+      _visuallySelectedPdfFieldInfo = null;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Colors.grey[200],
       appBar: AppBar(
-        title: Text(_currentTemplate == null ? 'Create Template' : 'Edit Template'),
+        title: Text(_currentTemplate == null ? 'Create New Template' : 'Edit: ${_currentTemplate?.templateName ?? "Template"}'),
         backgroundColor: const Color(0xFF2E86AB),
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: Icon(_showFieldPalette ? Icons.visibility_off : Icons.visibility),
-            onPressed: () => setState(() => _showFieldPalette = !_showFieldPalette),
-            tooltip: 'Toggle field palette',
-          ),
-          if (_currentTemplate != null) ...[
-            IconButton(
-              icon: const Icon(Icons.preview),
-              onPressed: _previewTemplate,
-              tooltip: 'Preview template',
-            ),
+          if (_currentTemplate != null)
             IconButton(
               icon: const Icon(Icons.save),
               onPressed: _saveTemplate,
-              tooltip: 'Save template',
+              tooltip: 'Save Template',
             ),
-          ],
+          if (_currentTemplate != null)
+            IconButton(
+              icon: const Icon(Icons.preview),
+              onPressed: _previewTemplate,
+              tooltip: 'Preview (with sample data)',
+            ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [const CircularProgressIndicator(), if(_loadingMessage.isNotEmpty) ...[const SizedBox(height: 10), Text(_loadingMessage)]]))
           : _currentTemplate == null
           ? _buildTemplateSelector()
-          : _buildTemplateEditor(),
+          : _buildEditorLayout(),
       floatingActionButton: _currentTemplate == null
           ? FloatingActionButton.extended(
-        onPressed: _uploadPDFTemplate,
+        onPressed: _uploadAndCreateTemplate,
         icon: const Icon(Icons.upload_file),
-        label: const Text('Upload PDF'),
+        label: const Text('Upload PDF Template'),
         backgroundColor: const Color(0xFF2E86AB),
-        foregroundColor: Colors.white, // Fixed: Use foregroundColor instead of backgroundColor
       )
           : null,
     );
@@ -109,35 +184,20 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.picture_as_pdf,
-                size: 64,
-                color: Colors.grey[400],
-              ),
+              Icon(Icons.picture_as_pdf_outlined, size: 64, color: Colors.grey[400]),
               const SizedBox(height: 16),
-              Text(
-                'Upload PDF Template',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
+              Text('Upload PDF to Start', style: Theme.of(context).textTheme.headlineSmall),
               const SizedBox(height: 8),
               Text(
-                'Upload a blank PDF template to start mapping fields',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                'Upload a PDF form. The system will try to detect its fillable fields.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
-                onPressed: _uploadPDFTemplate,
+                onPressed: _uploadAndCreateTemplate,
                 icon: const Icon(Icons.upload_file),
                 label: const Text('Choose PDF File'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
               ),
             ],
           ),
@@ -146,242 +206,21 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     );
   }
 
-  Widget _buildTemplateEditor() {
+  Widget _buildEditorLayout() {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Field Palette
-        if (_showFieldPalette) _buildFieldPalette(),
-
-        // Main Editor Area
+        _buildLeftPanel(),
         Expanded(
-          flex: 3,
-          child: Column(
-            children: [
-              // Toolbar
-              _buildEditorToolbar(),
-
-              // PDF Canvas
-              Expanded(
-                child: _buildPDFCanvas(),
-              ),
-            ],
-          ),
+          flex: 2,
+          child: _buildPdfViewerWithOverlays(),
         ),
-
-        // Properties Panel
-        if (_selectedField != null) _buildPropertiesPanel(),
+        _buildRightPropertiesPanel(),
       ],
     );
   }
 
-  Widget _buildFieldPalette() {
-    return Container(
-      width: 250,
-      color: Colors.white,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.palette),
-                const SizedBox(width: 8),
-                Text(
-                  'Field Types',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(8),
-              children: PDFTemplate.getQuoteFieldTypes().map((fieldType) {
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 4),
-                  child: ListTile(
-                    dense: true,
-                    leading: Icon(_getFieldIcon(fieldType), size: 20),
-                    title: Text(
-                      PDFTemplate.getFieldDisplayName(fieldType),
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                    onTap: () => _addFieldToCanvas(fieldType),
-                    trailing: const Icon(Icons.add, size: 16),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEditorToolbar() {
-    return Container(
-      height: 60,
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Text(
-            _currentTemplate?.templateName ?? 'Untitled Template',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const Spacer(),
-
-          // Zoom controls
-          IconButton(
-            icon: const Icon(Icons.zoom_out),
-            onPressed: () {
-              // TODO: Implement zoom out
-            },
-          ),
-          const Text('100%'),
-          IconButton(
-            icon: const Icon(Icons.zoom_in),
-            onPressed: () {
-              // TODO: Implement zoom in
-            },
-          ),
-
-          const SizedBox(width: 16),
-
-          // Grid toggle
-          IconButton(
-            icon: const Icon(Icons.grid_on),
-            onPressed: () {
-              // TODO: Toggle grid
-            },
-          ),
-
-          // Clear all fields
-          IconButton(
-            icon: const Icon(Icons.clear_all),
-            onPressed: _clearAllFields,
-            tooltip: 'Clear all fields',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPDFCanvas() {
-    return Container(
-      key: _pdfViewKey,
-      color: Colors.grey[200],
-      child: Center(
-        child: Container(
-          width: 400, // Fixed canvas width for simplicity
-          height: 500, // Fixed canvas height for simplicity
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey[400]!),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              // PDF Background (placeholder)
-              Container(
-                width: double.infinity,
-                height: double.infinity,
-                color: Colors.white,
-                child: const Center(
-                  child: Text(
-                    'PDF Template Preview\n(Upload PDF to see background)',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-
-              // Field overlays
-              ..._currentTemplate?.fieldMappings.map((field) => _buildFieldOverlay(field)) ?? [],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFieldOverlay(FieldMapping field) {
-    final isSelected = _selectedField?.fieldId == field.fieldId;
-
-    return Positioned(
-      left: field.x * 400, // Scale to canvas size
-      top: field.y * 500,  // Scale to canvas size
-      width: field.width * 400,
-      height: field.height * 500,
-      child: GestureDetector(
-        onTap: () => _selectField(field),
-        onPanUpdate: (details) => _moveField(field, details),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: isSelected ? Colors.blue : Colors.orange,
-              width: isSelected ? 2 : 1,
-            ),
-            color: (isSelected ? Colors.blue : Colors.orange).withOpacity(0.1), // Fixed: Use color instead of backgroundColor
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Field label
-              Container(
-                padding: const EdgeInsets.all(2),
-                color: isSelected ? Colors.blue : Colors.orange,
-                child: Text(
-                  PDFTemplate.getFieldDisplayName(field.fieldType),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-
-              // Field content preview
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: Text(
-                    field.placeholder ?? '[${PDFTemplate.getFieldDisplayName(field.fieldType)}]',
-                    style: TextStyle(
-                      fontSize: field.fontSize * 0.8, // Scale down for preview
-                      fontWeight: field.isBold ? FontWeight.bold : FontWeight.normal,
-                      fontStyle: field.isItalic ? FontStyle.italic : FontStyle.normal,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPropertiesPanel() {
+  Widget _buildLeftPanel() {
     return Container(
       width: 300,
       color: Colors.white,
@@ -389,153 +228,743 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.settings),
-                const SizedBox(width: 8),
-                const Text(
-                  'Field Properties',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => setState(() => _selectedField = null),
-                ),
-              ],
-            ),
+            color: Colors.grey[100],
+            child: Row(children: [
+              const Icon(Icons.data_object_rounded, color: Color(0xFF2E86AB)),
+              const SizedBox(width: 8),
+              Text('1. Select App Data', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+            ]),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: _buildFieldProperties(),
-            ),
-          ),
+          Expanded(child: _buildAppDataFieldsList()),
         ],
       ),
     );
   }
 
-  Widget _buildFieldProperties() {
-    if (_selectedField == null) return const SizedBox.shrink();
+  Widget _buildAppDataFieldsList() {
+    final appState = context.read<AppStateProvider>();
+    final availableProducts = appState.products;
+    final customFields = appState.customAppDataFields; // Get custom fields
 
-    return SingleChildScrollView(
+    // Use the enhanced method that includes custom fields
+    final categorizedFields = PDFTemplate.getCategorizedQuoteFieldTypesWithCustomFields(
+      availableProducts,
+      customFields,
+    );
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(8),
+      itemCount: categorizedFields.length,
+      itemBuilder: (context, categoryIndex) {
+        final categoryName = categorizedFields.keys.elementAt(categoryIndex);
+        final categoryFields = categorizedFields[categoryName]!;
+        return _buildCategorySection(categoryName, categoryFields);
+      },
+    );
+  }
+
+  Widget _buildCategorySection(String categoryName, List<String> fields) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ExpansionTile(
+        title: Row(
+          children: [
+            _getCategoryIcon(categoryName),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                categoryName,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${fields.length}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.blue.shade700,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        initiallyExpanded: categoryName.contains('Customer') || categoryName.contains('Quote Information'),
+        children: fields.map((appDataType) => _buildFieldListItem(appDataType)).toList(),
+      ),
+    );
+  }
+
+  Widget _getCategoryIcon(String categoryName) {
+    IconData iconData;
+    Color iconColor;
+
+    if (categoryName.contains('Customer')) {
+      iconData = Icons.person;
+      iconColor = Colors.blue.shade600;
+    } else if (categoryName.contains('Company')) {
+      iconData = Icons.business;
+      iconColor = Colors.indigo.shade600;
+    } else if (categoryName.contains('Quote')) {
+      iconData = categoryName.contains('Levels') ? Icons.layers : Icons.description;
+      iconColor = Colors.purple.shade600;
+    } else if (categoryName.contains('Products')) {
+      iconData = Icons.inventory;
+      iconColor = Colors.green.shade600;
+    } else if (categoryName.contains('Calculations')) {
+      iconData = Icons.calculate;
+      iconColor = Colors.orange.shade600;
+    } else if (categoryName.contains('Text')) {
+      iconData = Icons.text_fields;
+      iconColor = Colors.teal.shade600;
+    } else {
+      iconData = Icons.settings;
+      iconColor = Colors.grey.shade600;
+    }
+    return Icon(iconData, size: 18, color: iconColor);
+  }
+
+  String _getFieldHint(String appDataType) {
+    if (appDataType.contains('Name')) return 'Product name';
+    if (appDataType.contains('Qty')) return 'Quantity';
+    if (appDataType.contains('UnitPrice')) return 'Price per unit';
+    if (appDataType.contains('Total')) return 'Line total';
+    if (appDataType.contains('customer')) return 'Customer info';
+    if (appDataType.contains('company')) return 'Your business info';
+    if (appDataType.contains('level')) return 'Quote level data';
+    return 'Tap to link with PDF field';
+  }
+
+  Widget _buildPdfViewerWithOverlays() {
+    if (_currentTemplate == null || _currentTemplate!.pdfFilePath.isEmpty) {
+      return const Center(child: Text('No PDF loaded. Upload a template to begin.'));
+    }
+
+    return Column(
+      children: [
+        Expanded(
+          child: Container(
+            key: _pdfViewerContainerKey,
+            margin: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                border: Border.all(color: Colors.blueGrey.shade300),
+                boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.1 * 255).round()), blurRadius: 5, offset: const Offset(0,2))]
+            ),
+            child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints stackConstraints) {
+                  final viewerWidth = stackConstraints.maxWidth;
+                  final viewerHeight = stackConstraints.maxHeight;
+
+                  List<Widget> stackChildren = [
+                    SfPdfViewer.file(
+                      File(_currentTemplate!.pdfFilePath),
+                      controller: _pdfViewerController,
+                      initialZoomLevel: 0,
+                      onPageChanged: (details) {
+                        if (!mounted) return;
+                        setState(() {
+                          _currentPageZeroBased = details.newPageNumber - 1;
+                          if (_visuallySelectedPdfFieldInfo != null &&
+                              (_visuallySelectedPdfFieldInfo!['page'] as int? ?? -1) != _currentPageZeroBased) {
+                            _visuallySelectedPdfFieldInfo = null;
+                          }
+                        });
+                      },
+                      onTap: _handlePdfTap,
+                    ),
+                  ];
+
+                  if (_visuallySelectedPdfFieldInfo != null &&
+                      _currentTemplate != null &&
+                      (_visuallySelectedPdfFieldInfo!['page'] as int? ?? -1) == _currentPageZeroBased) {
+
+                    final pdfPageNativeWidth = _currentTemplate!.pageWidth;
+                    final pdfPageNativeHeight = _currentTemplate!.pageHeight;
+
+                    if (pdfPageNativeWidth > 0 && pdfPageNativeHeight > 0 && viewerWidth > 0 && viewerHeight > 0) {
+                      double scaleToFitWidth = viewerWidth / pdfPageNativeWidth;
+                      double scaleToFitHeight = viewerHeight / pdfPageNativeHeight;
+                      double initialFitScale = scaleToFitWidth < scaleToFitHeight ? scaleToFitWidth : scaleToFitHeight;
+                      final double effectiveScale = initialFitScale * _currentViewerZoomLevel;
+                      final double displayedPdfWidth = pdfPageNativeWidth * effectiveScale;
+                      final double displayedPdfHeight = pdfPageNativeHeight * effectiveScale;
+                      final double pageRenderOffsetX = ((viewerWidth - displayedPdfWidth) / 2) - _currentViewerScrollOffset.dx;
+                      final double pageRenderOffsetY = ((viewerHeight - displayedPdfHeight) / 2) - _currentViewerScrollOffset.dy;
+
+                      final fieldInfo = _visuallySelectedPdfFieldInfo!;
+                      final pdfRectValues = fieldInfo['rect'] as List<dynamic>?;
+                      if (pdfRectValues != null && pdfRectValues.length == 4) {
+                        final pdfFieldLeftOnPage = (pdfRectValues[0] as num).toDouble();
+                        final pdfFieldTopOnPage = (pdfRectValues[1] as num).toDouble();
+                        final pdfFieldWidthOnPage = (pdfRectValues[2] as num).toDouble();
+                        final pdfFieldHeightOnPage = (pdfRectValues[3] as num).toDouble();
+
+                        final screenLeft = pageRenderOffsetX + (pdfFieldLeftOnPage * effectiveScale);
+                        final screenTop = pageRenderOffsetY + (pdfFieldTopOnPage * effectiveScale);
+                        final screenWidth = pdfFieldWidthOnPage * effectiveScale;
+                        final screenHeight = pdfFieldHeightOnPage * effectiveScale;
+
+                        final double finalScreenWidth = screenWidth.isFinite && screenWidth > 0 ? screenWidth : 1.0;
+                        final double finalScreenHeight = screenHeight.isFinite && screenHeight > 0 ? screenHeight : 1.0;
+
+                        stackChildren.add(
+                            Positioned(
+                              left: screenLeft,
+                              top: screenTop,
+                              width: finalScreenWidth,
+                              height: finalScreenHeight,
+                              child: IgnorePointer(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.redAccent.shade400, width: 2.0),
+                                    color: Colors.redAccent.withAlpha((0.20 * 255).round()),
+                                  ),
+                                ),
+                              ),
+                            )
+                        );
+                      }
+                    }
+                  }
+                  return Stack(children: stackChildren);
+                }
+            ),
+          ),
+        ),
+        if (_totalPagesInPdf > 1)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            color: Colors.blueGrey[50],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(icon: const Icon(Icons.first_page),tooltip: "First Page", iconSize: 20, onPressed: _currentPageZeroBased > 0 ? () => _pdfViewerController.jumpToPage(1) : null),
+                IconButton(icon: const Icon(Icons.chevron_left),tooltip: "Previous Page", iconSize: 20, onPressed: _currentPageZeroBased > 0 ? () => _pdfViewerController.previousPage() : null),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Text('Page ${_currentPageZeroBased + 1} of $_totalPagesInPdf', style: const TextStyle(fontSize: 13)),
+                ),
+                IconButton(icon: const Icon(Icons.chevron_right),tooltip: "Next Page", iconSize: 20, onPressed: _currentPageZeroBased < _totalPagesInPdf - 1 ? () => _pdfViewerController.nextPage() : null),
+                IconButton(icon: const Icon(Icons.last_page),tooltip: "Last Page", iconSize: 20, onPressed: _currentPageZeroBased < _totalPagesInPdf - 1 ? () => _pdfViewerController.jumpToPage(_totalPagesInPdf) : null),
+              ],
+            ),
+          )
+      ],
+    );
+  }
+
+  String _getMappedFieldSubtitle(FieldMapping mapping) {
+    String baseText = 'Linked: ${mapping.pdfFormFieldName}';
+    if (mapping.overrideValueEnabled && mapping.defaultValue != null && mapping.defaultValue!.isNotEmpty) {
+      // Using a visually distinct separator like " | " might be better than \n if space is tight.
+      // For now, \n is fine.
+      return '$baseText\nOverride: "${mapping.defaultValue}"';
+    }
+    return baseText;
+  }
+
+  Widget _buildFieldListItem(String appDataType) {
+    final appState = context.read<AppStateProvider>();
+    FieldMapping existingMapping;
+    try {
+      existingMapping = _currentTemplate!.fieldMappings.firstWhere((m) => m.appDataType == appDataType);
+    } catch (e) {
+      existingMapping = FieldMapping(appDataType: appDataType, pdfFormFieldName: '', overrideValueEnabled: false);
+    }
+
+    final bool isMapped = existingMapping.pdfFormFieldName.isNotEmpty;
+    final bool isCurrentlySelectedForMapping = _currentlySelectedAppFieldMapping?.appDataType == appDataType;
+
+    bool hasOverrideInfo = isMapped &&
+        existingMapping.overrideValueEnabled &&
+        existingMapping.defaultValue != null &&
+        existingMapping.defaultValue!.isNotEmpty;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      child: Card(
+        elevation: isCurrentlySelectedForMapping ? 2 : 0,
+        color: isCurrentlySelectedForMapping
+            ? Colors.blue.shade50
+            : (isMapped ? Colors.teal.withOpacity(0.05) : Colors.white),
+        shape: isCurrentlySelectedForMapping
+            ? RoundedRectangleBorder(
+            side: BorderSide(color: Colors.blue.shade300, width: 1.5),
+            borderRadius: BorderRadius.circular(4)
+        )
+            : null,
+        child: ListTile(
+          dense: true,
+          isThreeLine: hasOverrideInfo, // Adjust for potentially longer subtitle
+          leading: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: isMapped ? Colors.teal.shade100 : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(
+              isMapped ? Icons.link : Icons.radio_button_unchecked,
+              size: 16,
+              color: isMapped ? Colors.teal.shade600 : Colors.grey.shade600,
+            ),
+          ),
+          title: Text(
+            PDFTemplate.getFieldDisplayName(appDataType, appState.customAppDataFields),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isCurrentlySelectedForMapping ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+          subtitle: isMapped
+              ? Text(
+            _getMappedFieldSubtitle(existingMapping), // Use helper
+            style: TextStyle(fontSize: 10, color: Colors.teal.shade700),
+            maxLines: hasOverrideInfo ? 2 : 1,
+            overflow: TextOverflow.ellipsis,
+          )
+              : Text(
+            _getFieldHint(appDataType),
+            style: const TextStyle(fontSize: 10, fontStyle: FontStyle.italic),
+          ),
+          trailing: Icon(
+            Icons.arrow_forward_ios,
+            size: 12,
+            color: Colors.grey[400],
+          ),
+          onTap: () => _handleAppDataFieldSelection(appDataType),
+        ),
+      ),
+    );
+  }
+
+
+  void _handlePdfTap(PdfGestureDetails details) {
+    if (_currentTemplate == null || !mounted || details.pageNumber < 1) {
+      if (kDebugMode) print("PDF Tap: Pre-conditions not met.");
+      return;
+    }
+
+    final int tappedPageIndexZeroBased = details.pageNumber - 1;
+    final Offset tapInPdfPageCoords = details.pagePosition;
+
+    if (kDebugMode) {
+      print("PDF Tap Received: Page ${tappedPageIndexZeroBased + 1}, PDF Coords: $tapInPdfPageCoords, Screen Coords: ${details.position}");
+    }
+
+    Map<String, dynamic>? tappedFieldInfoFromLoop;
+
+    for (final fieldInfo in _detectedPdfFieldsList) {
+      if ((fieldInfo['page'] as int? ?? -1) != tappedPageIndexZeroBased) continue;
+
+      final List<dynamic>? pdfRectValues = fieldInfo['rect'] as List<dynamic>?;
+      if (pdfRectValues == null || pdfRectValues.length != 4) {
+        if (kDebugMode) print("Skipping field ${(fieldInfo['name'] as String?) ?? 'Unnamed'} due to invalid 'rect' data.");
+        continue;
+      }
+
+      final Rect fieldPdfBounds = Rect.fromLTWH(
+        (pdfRectValues[0] as num).toDouble(), (pdfRectValues[1] as num).toDouble(),
+        (pdfRectValues[2] as num).toDouble(), (pdfRectValues[3] as num).toDouble(),
+      );
+
+      if (fieldPdfBounds.contains(tapInPdfPageCoords)) {
+        tappedFieldInfoFromLoop = fieldInfo;
+        if (kDebugMode) print("PDF Tap HIT on field: ${(tappedFieldInfoFromLoop['name'] as String?) ?? 'Unnamed'} with bounds: $fieldPdfBounds");
+        break;
+      }
+    }
+
+    if (!mounted) return;
+
+    if (tappedFieldInfoFromLoop != null) {
+      final Map<String, dynamic> finalTappedFieldInfo = tappedFieldInfoFromLoop;
+      final String tappedFieldName = (finalTappedFieldInfo['name'] as String?) ?? 'UnknownField';
+
+      if (kDebugMode) print("Setting _visuallySelectedPdfFieldInfo to: $tappedFieldName");
+
+      setState(() {
+        _visuallySelectedPdfFieldInfo = finalTappedFieldInfo;
+
+        if (_currentlySelectedAppFieldMapping != null) {
+          if (kDebugMode) print("App Data '${_currentlySelectedAppFieldMapping!.appDataType}' was primed. Right panel should offer to link with '$tappedFieldName'.");
+        } else {
+          try {
+            _currentlySelectedAppFieldMapping = _currentTemplate!.fieldMappings.firstWhere(
+                    (m) => m.pdfFormFieldName == tappedFieldName
+            );
+            if (kDebugMode) print("Tapped PDF field '$tappedFieldName' is already mapped to App Data '${_currentlySelectedAppFieldMapping?.appDataType}'.");
+          } catch (e) {
+            _currentlySelectedAppFieldMapping = null;
+            if (kDebugMode) print("Tapped PDF field '$tappedFieldName' is not currently mapped to any App Data.");
+          }
+        }
+      });
+    } else {
+      if (kDebugMode) print("PDF Tap MISS on page ${tappedPageIndexZeroBased +1}. Clearing visual selection.");
+      setState(() {
+        _visuallySelectedPdfFieldInfo = null;
+      });
+    }
+  }
+
+  Widget _buildRightPropertiesPanel() {
+    String title = "Field Linking & Properties";
+    Widget content = Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(Icons.ads_click_outlined, size: 48, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          const Text("How to Map:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text("1. Select an 'App Data' field from the list on the left.", textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          const Text("2. Then, TAP on a field area in the PDF preview to link them.", textAlign: TextAlign.center),
+        ],
+      ),
+    );
+
+    FieldMapping? mappingToDisplay;
+
+    if (_currentlySelectedAppFieldMapping != null) {
+      mappingToDisplay = _currentlySelectedAppFieldMapping;
+      title = "Map: ${PDFTemplate.getFieldDisplayName(mappingToDisplay!.appDataType)}";
+    } else if (_visuallySelectedPdfFieldInfo != null) {
+      title = "Selected PDF Field: ${_visuallySelectedPdfFieldInfo!['name']}";
+      try {
+        mappingToDisplay = _currentTemplate!.fieldMappings.firstWhere(
+                (m) => m.pdfFormFieldName == _visuallySelectedPdfFieldInfo!['name']
+        );
+        if (_currentlySelectedAppFieldMapping?.appDataType != mappingToDisplay.appDataType) {
+          Future.microtask(() => setState(() => _currentlySelectedAppFieldMapping = mappingToDisplay));
+        }
+      } catch (e) {
+        content = _buildSelectedPdfFieldInfoPanelContent();
+      }
+    }
+
+    if (mappingToDisplay != null) {
+      content = _buildMappingPropertiesPanelContent(mappingToDisplay);
+    }
+
+    return Container(
+      width: 320,
+      decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(left: BorderSide(color: Colors.grey.shade300))
+      ),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Field Type (read-only)
-          TextFormField(
-            initialValue: PDFTemplate.getFieldDisplayName(_selectedField!.fieldType),
-            decoration: const InputDecoration(
-              labelText: 'Field Type',
-              border: OutlineInputBorder(),
-            ),
-            readOnly: true,
-          ),
-          const SizedBox(height: 16),
-
-          // Font Size
-          TextFormField(
-            initialValue: _selectedField!.fontSize.toString(),
-            decoration: const InputDecoration(
-              labelText: 'Font Size',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.number,
-            onChanged: (value) {
-              final size = double.tryParse(value);
-              if (size != null && size > 0) {
-                _updateFieldProperty('fontSize', size);
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Alignment
-          DropdownButtonFormField<String>(
-            value: _selectedField!.alignment,
-            decoration: const InputDecoration(
-              labelText: 'Text Alignment',
-              border: OutlineInputBorder(),
-            ),
-            items: const [
-              DropdownMenuItem(value: 'left', child: Text('Left')),
-              DropdownMenuItem(value: 'center', child: Text('Center')),
-              DropdownMenuItem(value: 'right', child: Text('Right')),
-            ],
-            onChanged: (value) {
-              if (value != null) {
-                _updateFieldProperty('alignment', value);
-              }
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Bold/Italic toggles
-          Row(
-            children: [
-              Expanded(
-                child: CheckboxListTile(
-                  title: const Text('Bold'),
-                  value: _selectedField!.isBold,
-                  onChanged: (value) {
-                    _updateFieldProperty('isBold', value ?? false);
-                  },
-                ),
-              ),
-              Expanded(
-                child: CheckboxListTile(
-                  title: const Text('Italic'),
-                  value: _selectedField!.isItalic,
-                  onChanged: (value) {
-                    _updateFieldProperty('isItalic', value ?? false);
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Placeholder text
-          TextFormField(
-            initialValue: _selectedField!.placeholder,
-            decoration: const InputDecoration(
-              labelText: 'Placeholder Text',
-              border: OutlineInputBorder(),
-              helperText: 'Preview text for this field',
-            ),
-            onChanged: (value) {
-              _updateFieldProperty('placeholder', value);
-            },
-          ),
-          const SizedBox(height: 24),
-
-          // Delete field button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _deleteSelectedField,
-              icon: const Icon(Icons.delete),
-              label: const Text('Delete Field'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-            ),
-          ),
+          Row(children: [
+            Icon(Icons.tune, color: Theme.of(context).primaryColor),
+            const SizedBox(width: 8),
+            Expanded(child: Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
+            IconButton(icon: const Icon(Icons.clear, size: 20), tooltip: "Clear Selections", onPressed: _clearAllSelections)
+          ]),
+          const Divider(),
+          Expanded(child: SingleChildScrollView(child: content)),
         ],
       ),
     );
   }
 
-  // Event handlers
-  void _uploadPDFTemplate() async {
+  Widget _buildSelectedPdfFieldInfoPanelContent() {
+    if (_visuallySelectedPdfFieldInfo == null) return const SizedBox.shrink();
+    final pdfFieldInfo = _visuallySelectedPdfFieldInfo!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical:8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("PDF Field Name:", style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+          Text(pdfFieldInfo['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 8),
+          Text("Detected Type:", style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+          Text((pdfFieldInfo['type'] as String).split('.').last, style: const TextStyle(fontSize: 14)),
+          const SizedBox(height: 8),
+          Text("On Page:", style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
+          Text("${(pdfFieldInfo['page'] as int) + 1}", style: const TextStyle(fontSize: 14)),
+          const SizedBox(height: 20),
+          Card(
+            elevation: 0, color: Colors.blue.shade50,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text("This PDF field is not currently linked. Select an 'App Data' field from the left panel, then click this PDF field again on the preview (or its highlight) to confirm the link.", style: TextStyle(color: Colors.blue.shade900)),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMappingPropertiesPanelContent(FieldMapping mapping) {
+    final bool isFullyMapped = mapping.pdfFormFieldName.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("App Data Source: ${PDFTemplate.getFieldDisplayName(mapping.appDataType)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 16),
+
+          if (isFullyMapped)
+            Card(
+              elevation: 0,
+              color: Colors.green.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Linked to PDF Field:", style: TextStyle(fontSize: 12, color: Colors.green.shade800)),
+                    Text(mapping.pdfFormFieldName, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800, fontSize: 15)),
+                    Text("PDF Field Type: ${mapping.detectedPdfFieldType.toString().split('.').last}", style: TextStyle(fontSize: 11, color: Colors.green.shade700)),
+                    Text("On Page: ${mapping.pageNumber + 1}", style: TextStyle(fontSize: 11, color: Colors.green.shade700)),
+                  ],
+                ),
+              ),
+            )
+          else if (_visuallySelectedPdfFieldInfo != null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Ready to link with PDF Field:", style: TextStyle(fontSize: 12, color: Colors.blue.shade800)),
+                Text(
+                    (_visuallySelectedPdfFieldInfo!['name'] as String?) ?? 'Unknown PDF Field',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade800, fontSize: 15)
+                ),
+                Text(
+                    "Type: ${((_visuallySelectedPdfFieldInfo!['type'] as String?) ?? 'Unknown').split('.').last}, Page: ${((_visuallySelectedPdfFieldInfo!['page'] as int?) ?? 0) + 1}",
+                    style: TextStyle(fontSize: 11, color: Colors.blue.shade700)
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.link),
+                    label: const Text('Confirm Link Now'),
+                    onPressed: _confirmAndCreateMapping,
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  ),
+                ),
+              ],
+            )
+          else
+            Card(
+              elevation:0, color: Colors.amber.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Text("Now, tap on a field in the PDF preview to link it with '${PDFTemplate.getFieldDisplayName(mapping.appDataType)}'.", style: TextStyle(color: Colors.amber.shade900)),
+              ),
+            ),
+
+          const SizedBox(height: 24),
+          Text("Override Value Settings", style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w500)),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text('Enable Override Value'),
+            value: mapping.overrideValueEnabled,
+            onChanged: (bool value) {
+              if (!mounted) return;
+              setState(() {
+                mapping.overrideValueEnabled = value;
+                _currentTemplate?.updateField(mapping);
+              });
+            },
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            activeColor: Theme.of(context).primaryColor,
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            key: ValueKey('${mapping.fieldId}_overrideValue'), // Changed key
+            initialValue: mapping.defaultValue ?? '', // Internal field name is still defaultValue
+            decoration: const InputDecoration(
+              labelText: 'Override Value (for App Data)', // UI Label changed
+              border: OutlineInputBorder(),
+              hintText: 'This value will be used if override is enabled',
+              prefixIcon: Icon(Icons.drive_file_rename_outline),
+            ),
+            // enabled: mapping.overrideValueEnabled, // Optional: only enable if switch is on
+            onChanged: (value) {
+              if (!mounted) return;
+              mapping.defaultValue = value.isEmpty ? null : value;
+              _currentTemplate?.updateField(mapping);
+            },
+          ),
+          const SizedBox(height: 20),
+
+          if (isFullyMapped)
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _unlinkField(mapping),
+                icon: const Icon(Icons.link_off),
+                label: const Text('Unlink This Mapping'),
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.orange.shade700, side: BorderSide(color: Colors.orange.shade300)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmAndCreateMapping() {
+    if (_currentlySelectedAppFieldMapping == null || _visuallySelectedPdfFieldInfo == null || _currentTemplate == null) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Select App Data and tap a PDF field to link.")));
+      return;
+    }
+
+    final FieldMapping appDataMappingInProgress = _currentlySelectedAppFieldMapping!;
+    final String appDataTypeToMap = appDataMappingInProgress.appDataType;
+    final Map<String, dynamic> pdfFieldToMapInfo = _visuallySelectedPdfFieldInfo!;
+    final String targetPdfFieldName = pdfFieldToMapInfo['name'] as String;
+
+    if (kDebugMode) print("Attempting to link App Data '$appDataTypeToMap' to PDF Field '$targetPdfFieldName'");
+
+    FieldMapping? existingMappingForTargetPdfField;
+    for (int i = 0; i < _currentTemplate!.fieldMappings.length; i++) {
+      if (_currentTemplate!.fieldMappings[i].pdfFormFieldName == targetPdfFieldName) {
+        existingMappingForTargetPdfField = _currentTemplate!.fieldMappings[i];
+        break;
+      }
+    }
+
+    if (existingMappingForTargetPdfField != null && existingMappingForTargetPdfField.appDataType != appDataTypeToMap) {
+      if (existingMappingForTargetPdfField.appDataType.startsWith('unmapped_')) {
+        if (kDebugMode) print("Target PDF field '$targetPdfFieldName' was a placeholder. Overwriting.");
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("PDF field '$targetPdfFieldName' is already linked to App Data: '${PDFTemplate.getFieldDisplayName(existingMappingForTargetPdfField.appDataType)}'. Unlink it first."),
+            backgroundColor: Colors.orange, duration: const Duration(seconds: 5),
+          ));
+        }
+        return;
+      }
+    }
+
+    if (appDataMappingInProgress.pdfFormFieldName.isNotEmpty && appDataMappingInProgress.pdfFormFieldName != targetPdfFieldName) {
+      if (kDebugMode) print("App Data '$appDataTypeToMap' was previously linked to '${appDataMappingInProgress.pdfFormFieldName}'. Relinking to '$targetPdfFieldName'.");
+    }
+
+    if (!mounted) return;
+    setState(() {
+      appDataMappingInProgress.pdfFormFieldName = targetPdfFieldName;
+      appDataMappingInProgress.detectedPdfFieldType = PdfFormFieldType.values.firstWhere(
+              (e) => e.toString() == pdfFieldToMapInfo['type'], orElse: () => PdfFormFieldType.UNKNOWN);
+      appDataMappingInProgress.pageNumber = pdfFieldToMapInfo['page'] as int;
+
+      final relRect = pdfFieldToMapInfo['relativeRect'] as List<dynamic>?;
+      if (relRect != null && relRect.length == 4) {
+        appDataMappingInProgress.visualX = relRect[0] as double?;
+        appDataMappingInProgress.visualY = relRect[1] as double?;
+        appDataMappingInProgress.visualWidth = relRect[2] as double?;
+        appDataMappingInProgress.visualHeight = relRect[3] as double?;
+      }
+
+      final int currentIndex = _currentTemplate!.fieldMappings.indexWhere((fm) => fm.appDataType == appDataTypeToMap);
+      if (currentIndex != -1) {
+        _currentTemplate!.fieldMappings[currentIndex] = appDataMappingInProgress;
+      } else {
+        _currentTemplate!.addField(appDataMappingInProgress);
+      }
+
+      if (existingMappingForTargetPdfField != null &&
+          existingMappingForTargetPdfField.appDataType.startsWith('unmapped_') &&
+          existingMappingForTargetPdfField.appDataType != appDataTypeToMap) {
+        final String fieldIdToRemove = existingMappingForTargetPdfField.fieldId;
+        _currentTemplate!.fieldMappings.removeWhere((fm) => fm.fieldId == fieldIdToRemove);
+        if (kDebugMode) print("Removed placeholder mapping for PDF field '$targetPdfFieldName'.");
+      }
+
+      _currentTemplate!.updatedAt = DateTime.now();
+      _currentlySelectedAppFieldMapping = appDataMappingInProgress;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text("Linked App Data '${PDFTemplate.getFieldDisplayName(appDataTypeToMap)}' to PDF Field '$targetPdfFieldName'"),
+      backgroundColor: Colors.green,
+    ));
+  }
+
+  void _handleAppDataFieldSelection(String appDataType) {
+    if (_currentTemplate == null) return;
+    FieldMapping mapping;
+    final existingMappingIndex = _currentTemplate!.fieldMappings.indexWhere((m) => m.appDataType == appDataType);
+
+    if (existingMappingIndex != -1) {
+      mapping = _currentTemplate!.fieldMappings[existingMappingIndex];
+    } else {
+      mapping = FieldMapping(
+        appDataType: appDataType,
+        pdfFormFieldName: '',
+        detectedPdfFieldType: PdfFormFieldType.UNKNOWN,
+        pageNumber: _currentPageZeroBased,
+        overrideValueEnabled: false, // Ensure new mappings have this default
+      );
+      _currentTemplate!.addField(mapping);
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _currentlySelectedAppFieldMapping = mapping;
+
+      if (mapping.pdfFormFieldName.isNotEmpty) {
+        final detectedInfo = _detectedPdfFieldsList.firstWhere(
+                (info) => info['name'] == mapping.pdfFormFieldName,
+            orElse: () => <String,dynamic>{}
+        );
+        if(detectedInfo.isNotEmpty) {
+          _visuallySelectedPdfFieldInfo = detectedInfo;
+          if (mounted && (detectedInfo['page'] as int? ?? 0) != _currentPageZeroBased) {
+            _pdfViewerController.jumpToPage((detectedInfo['page'] as int? ?? 0) + 1);
+          }
+        } else {
+          _visuallySelectedPdfFieldInfo = null;
+        }
+      } else {
+        _visuallySelectedPdfFieldInfo = null;
+      }
+    });
+  }
+
+  void _unlinkField(FieldMapping mapping) {
+    if (!mounted) return;
+    final unlinkedPdfFieldName = mapping.pdfFormFieldName;
+    setState(() {
+      mapping.pdfFormFieldName = '';
+      mapping.detectedPdfFieldType = PdfFormFieldType.UNKNOWN;
+      mapping.visualX = null;
+      mapping.visualY = null;
+      mapping.visualWidth = null;
+      mapping.visualHeight = null;
+      // Keep mapping.defaultValue and mapping.overrideValueEnabled as they are app-data specific, not PDF-link specific
+      _currentTemplate!.updateField(mapping);
+      _currentlySelectedAppFieldMapping = mapping; // Keep it selected to see its override settings
+      if (_visuallySelectedPdfFieldInfo != null && _visuallySelectedPdfFieldInfo!['name'] == unlinkedPdfFieldName) {
+        _visuallySelectedPdfFieldInfo = null;
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text("Field mapping removed. Override settings (if any) are preserved for this App Data type."),
+      backgroundColor: Colors.orange,
+    ));
+  }
+
+  Future<void> _uploadAndCreateTemplate() async {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -543,270 +972,156 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       );
 
       if (result != null && result.files.single.path != null) {
-        setState(() => _isLoading = true);
+        _setLoading(true, 'Processing PDF & Detecting Fields...');
 
         final filePath = result.files.single.path!;
-        final fileName = result.files.single.name;
+        final originalFileName = result.files.single.name;
 
-        // Show name dialog
-        final templateName = await _showTemplateNameDialog(fileName);
-        if (templateName == null) {
-          setState(() => _isLoading = false);
+        final templateName = await _showTemplateNameDialog(originalFileName.replaceAll('.pdf', ''));
+        if (templateName == null || templateName.trim().isEmpty) {
+          _setLoading(false);
           return;
         }
 
-        // Create template
-        final template = await TemplateService.instance.createTemplateFromPDF(
-          filePath,
-          templateName,
-        );
+        final template = await TemplateService.instance.createTemplateFromPDF(filePath, templateName.trim());
+        _setLoading(false);
 
+        if (!mounted) return;
         if (template != null) {
+          final appState = context.read<AppStateProvider>();
+          await appState.addExistingPDFTemplateToList(template); // This adds to memory, not DB again
+
           setState(() {
-            _currentTemplate = template;
-            _isLoading = false;
+            _currentTemplate = template; // Use the instance returned by createTemplateFromPDF
+            _loadTemplateDetails();
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('PDF template uploaded successfully!'),
-              backgroundColor: Colors.green,
+                content: Text('Template created!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2)
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Failed to create template.'),
+                backgroundColor: Colors.red
             ),
           );
         }
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      _setLoading(false);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error uploading PDF: $e'),
-          backgroundColor: Colors.red,
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red
         ),
       );
+      if (kDebugMode) print("Error uploading/creating template: $e");
     }
   }
 
-  void _addFieldToCanvas(String fieldType) {
-    if (_currentTemplate == null) return;
 
-    final newField = FieldMapping(
-      fieldType: fieldType,
-      x: 0.1, // Default position
-      y: 0.1,
-      width: 0.3, // Default size
-      height: 0.05,
-      placeholder: PDFTemplate.getFieldDisplayName(fieldType),
-    );
-
-    setState(() {
-      _currentTemplate!.addField(newField);
-      _selectedField = newField;
-    });
-  }
-
-  void _selectField(FieldMapping field) {
-    setState(() {
-      _selectedField = field;
-    });
-  }
-
-  void _moveField(FieldMapping field, DragUpdateDetails details) {
-    // Convert screen coordinates to relative coordinates
-    final RenderBox? renderBox = _pdfViewKey.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox != null) {
-      final newX = (field.x * 400 + details.delta.dx) / 400;
-      final newY = (field.y * 500 + details.delta.dy) / 500;
-
-      // Clamp to canvas bounds
-      final clampedX = newX.clamp(0.0, 1.0 - field.width);
-      final clampedY = newY.clamp(0.0, 1.0 - field.height);
-
-      setState(() {
-        field.x = clampedX;
-        field.y = clampedY;
-      });
-
-      // Update in template
-      _currentTemplate?.updateField(field);
+  void _saveTemplate() async {
+    if (_currentTemplate == null) {
+      if (kDebugMode) print('❌ No template to save');
+      return;
     }
-  }
+    if (!mounted) return;
 
-  void _updateFieldProperty(String property, dynamic value) {
-    if (_selectedField == null) return;
-
-    setState(() {
-      switch (property) {
-        case 'fontSize':
-          _selectedField!.fontSize = value as double;
-          break;
-        case 'alignment':
-          _selectedField!.alignment = value as String;
-          break;
-        case 'isBold':
-          _selectedField!.isBold = value as bool;
-          break;
-        case 'isItalic':
-          _selectedField!.isItalic = value as bool;
-          break;
-        case 'placeholder':
-          _selectedField!.placeholder = value as String?;
-          break;
+    if (kDebugMode) {
+      print('💾 Starting save for template: ${_currentTemplate!.templateName}');
+      print('📍 Template ID: ${_currentTemplate!.id}');
+      print('📍 Field mappings: ${_currentTemplate!.fieldMappings.length}');
+      for(var fm in _currentTemplate!.fieldMappings) {
+        print('   - ${fm.appDataType}: PDF=${fm.pdfFormFieldName}, OverrideEnabled=${fm.overrideValueEnabled}, OverrideVal=${fm.defaultValue}');
       }
-    });
+    }
 
-    // Update in template
-    _currentTemplate?.updateField(_selectedField!);
-  }
 
-  void _deleteSelectedField() {
-    if (_selectedField == null || _currentTemplate == null) return;
+    try {
+      _currentTemplate!.updatedAt = DateTime.now();
+      final appState = context.read<AppStateProvider>();
+      await appState.updatePDFTemplate(_currentTemplate!); // This saves to DB
 
-    setState(() {
-      _currentTemplate!.removeField(_selectedField!.fieldId);
-      _selectedField = null;
-    });
-  }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Template saved!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 1),
+        ),
+      );
+      Navigator.pop(context);
 
-  void _clearAllFields() {
-    if (_currentTemplate == null) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear All Fields'),
-        content: const Text('Are you sure you want to remove all fields from this template?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _currentTemplate!.fieldMappings.clear();
-                _selectedField = null;
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Clear All'),
-          ),
-        ],
-      ),
-    );
+    } catch (e) {
+      if (kDebugMode) print('❌ Error saving template: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   void _previewTemplate() async {
     if (_currentTemplate == null) return;
-
-    setState(() => _isLoading = true);
-
+    _setLoading(true, 'Generating preview...');
     try {
       final previewPath = await TemplateService.instance.generateTemplatePreview(_currentTemplate!);
-
-      setState(() => _isLoading = false);
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Preview generated: $previewPath'),
-          action: SnackBarAction(
-            label: 'Open',
-            onPressed: () {
-              // TODO: Open PDF with default app
-            },
-          ),
+          content: Text('Preview PDF generated: ${previewPath.split('/').last}'),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(label: 'Open', onPressed: () => OpenFilex.open(previewPath)),
         ),
       );
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error generating preview: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Error generating preview: $e'), backgroundColor: Colors.red),
       );
+    } finally {
+      if (!mounted) return;
+      _setLoading(false);
     }
   }
 
-  void _saveTemplate() {
-    if (_currentTemplate == null) return;
-
-    // Template is automatically saved due to Hive integration
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Template saved successfully!'),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    // Update app state
-    context.read<AppStateProvider>().loadAllData();
-  }
-
   Future<String?> _showTemplateNameDialog(String defaultName) {
-    final controller = TextEditingController(text: defaultName.replaceAll('.pdf', ''));
-
-    return showDialog<String>(
+    final controller = TextEditingController(text: defaultName);
+    return showDialog<String?>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Template Name'),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('New Template Name'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Enter template name',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Enter template name'),
           autofocus: true,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                Navigator.pop(dialogContext, controller.text.trim());
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Template name cannot be empty."))
+                );
+              }
+            },
             child: const Text('Create'),
           ),
         ],
       ),
     );
-  }
-
-  IconData _getFieldIcon(String fieldType) {
-    switch (fieldType) {
-      case 'customerName':
-      case 'customerAddress':
-      case 'customerPhone':
-      case 'customerEmail':
-        return Icons.person;
-      case 'companyName':
-      case 'companyAddress':
-      case 'companyPhone':
-      case 'companyEmail':
-        return Icons.business;
-      case 'quoteNumber':
-      case 'quoteDate':
-      case 'validUntil':
-      case 'quoteStatus':
-        return Icons.receipt;
-      case 'levelName':
-      case 'levelPrice':
-        return Icons.layers;
-      case 'itemName':
-      case 'itemQuantity':
-      case 'itemUnitPrice':
-      case 'itemTotal':
-        return Icons.inventory_2;
-      case 'subtotal':
-      case 'taxRate':
-      case 'taxAmount':
-      case 'discount':
-      case 'grandTotal':
-        return Icons.calculate;
-      case 'notes':
-      case 'terms':
-        return Icons.notes;
-      default:
-        return Icons.text_fields;
-    }
   }
 }

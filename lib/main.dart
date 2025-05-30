@@ -1,9 +1,9 @@
-// lib/main.dart - UPDATED WITH NEW ADAPTERS + ENUM ADAPTER
+// lib/main.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-
+import 'services/tax_service.dart';
 // Your Core Models
 import 'models/customer.dart';
 import 'models/product.dart';
@@ -11,8 +11,10 @@ import 'models/quote.dart'; // Contains QuoteItem
 import 'models/roof_scope_data.dart';
 import 'models/project_media.dart';
 import 'models/app_settings.dart';
-import 'models/simplified_quote.dart'; // NEW primary quote model with discounts
-import 'models/pdf_template.dart';
+import 'models/simplified_quote.dart';
+import 'models/pdf_template.dart'; // Crucial: Import this to get PdfFormFieldTypeAdapter etc.
+import 'models/custom_app_data.dart';
+
 // Your Services and Providers
 import 'providers/app_state_provider.dart';
 import 'services/database_service.dart';
@@ -23,29 +25,28 @@ import 'screens/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive
   await Hive.initFlutter();
 
-  // Register Hive adapters - UPDATED WITH NEW ADAPTERS
   Hive.registerAdapter(CustomerAdapter());
   Hive.registerAdapter(ProductAdapter());
-  Hive.registerAdapter(ProductLevelPriceAdapter()); // NEW - Enhanced level pricing
-  Hive.registerAdapter(ProductPricingTypeAdapter()); // NEW - Enum adapter
+  Hive.registerAdapter(ProductLevelPriceAdapter());
+  Hive.registerAdapter(ProductPricingTypeAdapter()); // Your manual adapter for the enum
   Hive.registerAdapter(QuoteItemAdapter());
   Hive.registerAdapter(RoofScopeDataAdapter());
   Hive.registerAdapter(ProjectMediaAdapter());
   Hive.registerAdapter(AppSettingsAdapter());
-  Hive.registerAdapter(FieldMappingAdapter()); // NEW - typeId: 20
-  Hive.registerAdapter(PDFTemplateAdapter());  // NEW - typeId: 21
-  // NEW Adapters for the Enhanced Quote System with Discounts
-  Hive.registerAdapter(QuoteDiscountAdapter()); // NEW - Discount/Voucher support
+  Hive.registerAdapter(QuoteDiscountAdapter());
   Hive.registerAdapter(QuoteLevelAdapter());
   Hive.registerAdapter(SimplifiedMultiLevelQuoteAdapter());
+  Hive.registerAdapter(CustomAppDataFieldAdapter());
+  // PDF Template related adapters
+  Hive.registerAdapter(PdfFormFieldTypeAdapter()); // REGISTER THE NEW ENUM ADAPTER
+  Hive.registerAdapter(FieldMappingAdapter());     // From pdf_template.g.dart (or will be)
+  Hive.registerAdapter(PDFTemplateAdapter());     // From pdf_template.g.dart (or will be)
 
-  // Initialize database service (this will open the boxes)
+
   await DatabaseService.instance.init();
-
-  // Initialize AppStateProvider with data loading
+  await TaxService.initializeTaxDatabase();
   final appStateProvider = AppStateProvider();
   await appStateProvider.initializeApp();
 
@@ -100,22 +101,5 @@ class RufkoApp extends StatelessWidget {
       ),
       home: const HomeScreen(),
     );
-  }
-}
-
-// Manual Hive Adapter for ProductPricingType enum (since build_runner might not generate it automatically)
-class ProductPricingTypeAdapter extends TypeAdapter<ProductPricingType> {
-  @override
-  final int typeId = 19; // Make sure this is unique
-
-  @override
-  ProductPricingType read(BinaryReader reader) {
-    final index = reader.readByte();
-    return ProductPricingType.values[index];
-  }
-
-  @override
-  void write(BinaryWriter writer, ProductPricingType obj) {
-    writer.writeByte(obj.index);
   }
 }

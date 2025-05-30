@@ -7,6 +7,8 @@ import '../models/simplified_quote.dart';
 import '../models/customer.dart';
 import '../providers/app_state_provider.dart';
 import '../models/pdf_template.dart';
+import 'pdf_preview_screen.dart';
+
 class SimplifiedQuoteDetailScreen extends StatefulWidget {
   final SimplifiedMultiLevelQuote quote;
   final Customer customer;
@@ -30,6 +32,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
     super.initState();
     _selectedLevelId = widget.quote.levels.isNotEmpty ? widget.quote.levels.first.id : null;
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -152,9 +155,11 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
                     children: [
                       Text('Customer: ${widget.customer.name}',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                      if (widget.customer.address != null)
-                        Text(widget.customer.address!, style: Theme.of(context).textTheme.bodyMedium),
-                      const SizedBox(height: 8),
+                      if (widget.customer.fullDisplayAddress.isNotEmpty && widget.customer.fullDisplayAddress != 'No address provided')
+                        Padding( // Optional: Add some padding for the address
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(widget.customer.fullDisplayAddress, style: Theme.of(context).textTheme.bodyMedium),
+                        ),
                       Text('Quote ID: ${widget.quote.id}', style: Theme.of(context).textTheme.bodySmall),
                       Text('Created: ${DateFormat('MMM dd, yyyy').format(widget.quote.createdAt)}'),
                       Text('Valid Until: ${DateFormat('MMM dd, yyyy').format(widget.quote.validUntil)}'),
@@ -475,13 +480,31 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
   Widget _buildTotalSection() {
     if (_selectedLevelId == null) return const SizedBox.shrink();
 
-    final total = widget.quote.getDisplayTotalForLevel(_selectedLevelId!);
     final level = widget.quote.levels.firstWhere((l) => l.id == _selectedLevelId!);
-    final subtotal = level.subtotal + widget.quote.addons.fold(0.0, (sum, addon) => sum + addon.totalPrice);
+    final levelSubtotal = level.subtotal;
+    final addonSubtotal = widget.quote.addons.fold(0.0, (sum, addon) => sum + addon.totalPrice);
+    final combinedSubtotal = levelSubtotal + addonSubtotal;
+
+    // Get discount information
     final discountSummary = widget.quote.getDiscountSummary(_selectedLevelId!);
     final totalDiscount = discountSummary['totalDiscount'] as double;
-    final discountedSubtotal = subtotal - totalDiscount;
-    final tax = discountedSubtotal * (widget.quote.taxRate / 100);
+    final subtotalAfterDiscount = combinedSubtotal - totalDiscount;
+
+    // 🔧 FIX: Ensure tax rate is properly retrieved and calculated
+    final taxRate = widget.quote.taxRate;
+    final taxAmount = subtotalAfterDiscount * (taxRate / 100);
+    final finalTotal = subtotalAfterDiscount + taxAmount;
+
+    // 🐛 DEBUG: Print values to console
+    print('🧮 TAX CALCULATION DEBUG:');
+    print('   Level Subtotal: \$${levelSubtotal.toStringAsFixed(2)}');
+    print('   Addon Subtotal: \$${addonSubtotal.toStringAsFixed(2)}');
+    print('   Combined Subtotal: \$${combinedSubtotal.toStringAsFixed(2)}');
+    print('   Total Discount: \$${totalDiscount.toStringAsFixed(2)}');
+    print('   Subtotal After Discount: \$${subtotalAfterDiscount.toStringAsFixed(2)}');
+    print('   Tax Rate: ${taxRate.toStringAsFixed(2)}%');
+    print('   Tax Amount: \$${taxAmount.toStringAsFixed(2)}');
+    print('   Final Total: \$${finalTotal.toStringAsFixed(2)}');
 
     return Card(
       color: Theme.of(context).primaryColor.withOpacity(0.05),
@@ -489,37 +512,72 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // Subtotal row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Subtotal:'),
-                Text(_currencyFormat.format(subtotal)),
+                const Text('Subtotal:', style: TextStyle(fontSize: 16)),
+                Text(
+                  _currencyFormat.format(combinedSubtotal),
+                  style: const TextStyle(fontSize: 16),
+                ),
               ],
             ),
-            if (totalDiscount > 0)
+
+            // Discount row (only show if discount > 0)
+            if (totalDiscount > 0) ...[
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Discount:', style: TextStyle(color: Colors.green)),
-                  Text('-${_currencyFormat.format(totalDiscount)}', style: const TextStyle(color: Colors.green)),
-                ],
-              ),
-            if (widget.quote.taxRate > 0) ...[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Tax (${widget.quote.taxRate.toStringAsFixed(1)}%):'),
-                  Text(_currencyFormat.format(tax)),
+                  const Text('Discount:', style: TextStyle(color: Colors.green, fontSize: 16)),
+                  Text(
+                    '-${_currencyFormat.format(totalDiscount)}',
+                    style: const TextStyle(color: Colors.green, fontSize: 16),
+                  ),
                 ],
               ),
             ],
-            const Divider(),
+
+            // Tax row (only show if tax rate > 0)
+            if (taxRate > 0) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Tax (${taxRate.toStringAsFixed(1)}%):',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  Text(
+                    _currencyFormat.format(taxAmount),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 12),
+            const Divider(thickness: 1.5),
+            const SizedBox(height: 8),
+
+            // Final Total row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total:', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                Text(_currencyFormat.format(total),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                Text(
+                  'Total:',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  _currencyFormat.format(finalTotal),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
               ],
             ),
           ],
@@ -599,22 +657,25 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
   // Add this to your existing lib/screens/simplified_quote_detail_screen.dart
 
 // Update the _generatePdf method to include template selection:
+  // In lib/screens/simplified_quote_detail_screen.dart
+// REPLACE the _generatePdf method with this fixed version:
 
   void _generatePdf() async {
     try {
       final appState = context.read<AppStateProvider>();
 
-      // Check if there are any available templates
+      // Show template selection dialog
       final availableTemplates = appState.activePDFTemplates
           .where((t) => t.templateType == 'quote')
           .toList();
 
-      String? selectedTemplateId;
+      print('🔍 Found ${availableTemplates.length} available templates');
 
-      // If templates are available, show selection dialog
-      if (availableTemplates.isNotEmpty) {
-        selectedTemplateId = await _showTemplateSelectionDialog(availableTemplates);
-        if (selectedTemplateId == 'cancelled') return; // User cancelled
+      final selectedOption = await _showTemplateSelectionDialog(availableTemplates);
+
+      if (selectedOption == 'cancelled') {
+        print('👤 User cancelled PDF generation');
+        return;
       }
 
       // Show loading dialog
@@ -633,17 +694,34 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
       );
 
       String pdfPath;
+      String? templateId;
+      Map<String, String>? customData;
 
-      if (selectedTemplateId != null) {
-        // Generate using template
+      if (selectedOption != null && selectedOption != 'standard') {
+        // Generate using selected template
+        print('📄 Generating PDF using template: $selectedOption');
+        templateId = selectedOption;
+        customData = {
+          'generated_from': 'template',
+          'template_id': selectedOption,
+          'generation_date': DateTime.now().toIso8601String(),
+        };
+
         pdfPath = await appState.generatePDFFromTemplate(
-          templateId: selectedTemplateId,
+          templateId: selectedOption,
           quote: widget.quote,
           customer: widget.customer,
           selectedLevelId: _selectedLevelId,
+          customData: customData,
         );
       } else {
         // Generate using standard method
+        print('📄 Generating PDF using standard method');
+        customData = {
+          'generated_from': 'standard',
+          'generation_date': DateTime.now().toIso8601String(),
+        };
+
         pdfPath = await appState.generateSimplifiedQuotePdf(
           widget.quote,
           widget.customer,
@@ -653,92 +731,189 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
 
       Navigator.pop(context); // Close loading dialog
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('PDF generated: ${pdfPath.split('/').last}'),
-          action: SnackBarAction(
-            label: 'Open',
-            onPressed: () {
-              // TODO: Open PDF with default app
-            },
+      // 🚀 NEW: Navigate to PDF Preview Screen
+      final result = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfPreviewScreen(
+            pdfPath: pdfPath,
+            suggestedFileName: _generateSuggestedFileName(),
+            quote: widget.quote,
+            customer: widget.customer,
+            templateId: templateId,
+            selectedLevelId: _selectedLevelId,
+            originalCustomData: customData,
           ),
         ),
       );
+
+      // Handle result from preview screen
+      if (result == true) {
+        // PDF was saved successfully
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('PDF saved successfully!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      } else if (result == false) {
+        // PDF was discarded
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.info, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text('PDF was discarded'),
+              ],
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      // If result is null, user just navigated back without action
+
     } catch (e) {
+      print('❌ Error generating PDF: $e');
       Navigator.pop(context); // Close loading dialog if open
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error generating PDF: $e'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
         ),
       );
     }
   }
 
-// Add this new method to show template selection dialog:
+// ADD this helper method to generate suggested filename
+  String _generateSuggestedFileName() {
+    final quoteNumber = widget.quote.quoteNumber.replaceAll(RegExp(r'[^\w\s-]'), '');
+    final customerName = widget.customer.name
+        .replaceAll(RegExp(r'[^\w\s-]'), '')
+        .replaceAll(' ', '_');
+    final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    return 'Quote_${quoteNumber}_${customerName}_$dateStr.pdf';
+  }
+
+// REPLACE the _showTemplateSelectionDialog method with this improved version:
 
   Future<String?> _showTemplateSelectionDialog(List<PDFTemplate> templates) async {
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Choose PDF Template'),
+        title: const Text('Choose PDF Generation Method'),
         content: SizedBox(
           width: double.maxFinite,
-          height: 300,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Select a template for your PDF, or use the standard format.',
+                'How would you like to generate the PDF?',
                 style: TextStyle(fontSize: 14),
               ),
               const SizedBox(height: 16),
-              Expanded(
-                child: ListView(
-                  children: [
-                    // Standard PDF option
-                    Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.description),
-                        title: const Text('Standard PDF'),
-                        subtitle: const Text('Use the built-in PDF format'),
-                        onTap: () => Navigator.pop(context, null), // null = standard
-                      ),
-                    ),
 
-                    const SizedBox(height: 8),
+              // 📋 Standard PDF option (ALWAYS available)
+              Card(
+                color: Colors.blue.shade50,
+                child: ListTile(
+                  leading: const Icon(Icons.description, color: Colors.blue),
+                  title: const Text('Standard PDF'),
+                  subtitle: const Text('Use the built-in PDF format'),
+                  trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () => Navigator.pop(context, 'standard'),
+                ),
+              ),
 
-                    // Template options
-                    ...templates.map((template) => Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.picture_as_pdf),
-                        title: Text(template.templateName),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (template.description.isNotEmpty)
-                              Text(template.description),
-                            Text(
-                              '${template.fieldMappings.length} mapped fields',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
+              if (templates.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                Text(
+                  'Custom Templates (${templates.length})',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // 📄 Template options
+                ...templates.map((template) => Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                    title: Text(template.templateName),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (template.description.isNotEmpty)
+                          Text(template.description),
+                        Text(
+                          '${template.fieldMappings.length} mapped fields',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
                         ),
-                        isThreeLine: template.description.isNotEmpty,
-                        trailing: IconButton(
-                          icon: const Icon(Icons.preview),
+                      ],
+                    ),
+                    isThreeLine: template.description.isNotEmpty,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.preview, size: 20),
                           onPressed: () => _previewTemplateInDialog(template),
                           tooltip: 'Preview template',
                         ),
-                        onTap: () => Navigator.pop(context, template.id),
+                        const Icon(Icons.arrow_forward_ios),
+                      ],
+                    ),
+                    onTap: () => Navigator.pop(context, template.id),
+                  ),
+                )),
+              ] else ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange.shade200),
+                  ),
+                  child: Column(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange.shade700),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No custom templates available',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange.shade800,
+                        ),
                       ),
-                    )),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'Create templates in Settings → PDF Templates',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -747,18 +922,17 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
             onPressed: () => Navigator.pop(context, 'cancelled'),
             child: const Text('Cancel'),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context, null); // Use standard PDF
-            },
-            child: const Text('Use Standard'),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, 'standard'),
+            child: const Text('Use Standard PDF'),
           ),
         ],
       ),
     );
   }
 
-// Add this method for template preview in dialog:
+// Add this new method to show template selection dialog:
+
 
   void _previewTemplateInDialog(PDFTemplate template) async {
     try {

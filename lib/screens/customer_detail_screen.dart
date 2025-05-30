@@ -858,7 +858,13 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> with Ticker
                   const SizedBox(height: 12),
                   _buildInfoRow(Icons.email_outlined, 'Email', widget.customer.email ?? 'Not provided'),
                   const SizedBox(height: 12),
-                  _buildInfoRow(Icons.location_on_outlined, 'Address', widget.customer.address ?? 'Not provided'),
+                  _buildInfoRow(
+                      Icons.location_on_outlined,
+                      'Address',
+                      widget.customer.fullDisplayAddress.isNotEmpty && widget.customer.fullDisplayAddress != 'No address provided'
+                          ? widget.customer.fullDisplayAddress
+                          : 'Not provided'
+                  ),
                   if (widget.customer.notes != null && widget.customer.notes!.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     _buildInfoRow(Icons.note_outlined, 'Notes', widget.customer.notes!),
@@ -3831,7 +3837,10 @@ class _CustomerEditDialogState extends State<_CustomerEditDialog> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
-  final _addressController = TextEditingController();
+  final _streetAddressController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _zipController = TextEditingController();
   final _notesController = TextEditingController();
 
   @override
@@ -3840,7 +3849,10 @@ class _CustomerEditDialogState extends State<_CustomerEditDialog> {
     _nameController.text = widget.customer.name;
     _phoneController.text = widget.customer.phone ?? '';
     _emailController.text = widget.customer.email ?? '';
-    _addressController.text = widget.customer.address ?? '';
+    _streetAddressController.text = widget.customer.streetAddress ?? '';
+    _cityController.text = widget.customer.city ?? '';
+    _stateController.text = widget.customer.stateAbbreviation ?? '';
+    _zipController.text = widget.customer.zipCode ?? '';
     _notesController.text = widget.customer.notes ?? '';
   }
 
@@ -3849,7 +3861,10 @@ class _CustomerEditDialogState extends State<_CustomerEditDialog> {
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
-    _addressController.dispose();
+    _streetAddressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _zipController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -3915,13 +3930,22 @@ class _CustomerEditDialogState extends State<_CustomerEditDialog> {
                         },
                       ),
                       const SizedBox(height: 16),
-                      _buildTextField(
-                        controller: _addressController,
-                        label: 'Address',
-                        icon: Icons.location_on,
-                        maxLines: 2,
+                      const SizedBox(height: 20),
+                      Text("Address Details:", style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.grey[700])),
+                      const Divider(height: 10),
+                      const SizedBox(height: 10),
+                      _buildTextField(controller: _streetAddressController, label: 'Street Address', icon: Icons.home_outlined, hint: "e.g., 123 Main St"),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(child: _buildTextField(controller: _cityController, label: 'City', icon: Icons.location_city)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _buildTextField(controller: _stateController, label: 'State', icon: Icons.map_outlined, hint: "e.g., WA")),
+                        ],
                       ),
                       const SizedBox(height: 16),
+                      _buildTextField(controller: _zipController, label: 'Zip Code', icon: Icons.markunread_mailbox_outlined, keyboardType: TextInputType.number, hint: "e.g., 98001"),
+                      const SizedBox(height: 20),
                       _buildTextField(
                         controller: _notesController,
                         label: 'Notes',
@@ -3994,7 +4018,10 @@ class _CustomerEditDialogState extends State<_CustomerEditDialog> {
       name: _nameController.text.trim(),
       phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
       email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-      address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+      streetAddress: _streetAddressController.text.trim().isEmpty ? null : _streetAddressController.text.trim(),
+      city: _cityController.text.trim().isEmpty ? null : _cityController.text.trim(),
+      stateAbbreviation: _stateController.text.trim().isEmpty ? null : _stateController.text.trim(),
+      zipCode: _zipController.text.trim().isEmpty ? null : _zipController.text.trim(),
       notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
     );
 

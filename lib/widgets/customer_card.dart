@@ -2,11 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/customer.dart';
+import '../models/customer.dart'; // Ensure this uses the updated Customer model
 
 class CustomerCard extends StatelessWidget {
   final Customer customer;
-  final int quoteCount; // Added quoteCount parameter
+  final int quoteCount;
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
@@ -14,7 +14,7 @@ class CustomerCard extends StatelessWidget {
   const CustomerCard({
     super.key,
     required this.customer,
-    required this.quoteCount, // Make it required in the constructor
+    required this.quoteCount,
     this.onTap,
     this.onEdit,
     this.onDelete,
@@ -29,11 +29,13 @@ class CustomerCard extends StatelessWidget {
     final greyColor500 = Colors.grey[500];
     final greyColor400 = Colors.grey[400];
 
+    // Use the new getter for a combined address display
+    final String displayAddress = customer.fullDisplayAddress;
 
     return Card(
-      elevation: 2, // Added a bit of elevation
+      elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), // Consistent rounding
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -45,11 +47,11 @@ class CustomerCard extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 48, // Slightly larger
+                    width: 48,
                     height: 48,
                     decoration: BoxDecoration(
                       color: primaryColor.withOpacity(0.1),
-                      shape: BoxShape.circle, // Make it a circle
+                      shape: BoxShape.circle,
                     ),
                     child: Icon(Icons.person_outline, color: primaryColor, size: 28),
                   ),
@@ -74,7 +76,7 @@ class CustomerCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (onEdit != null || onDelete != null) // Only show if actions are provided
+                  if (onEdit != null || onDelete != null)
                     PopupMenuButton<String>(
                       icon: Icon(Icons.more_vert, color: greyColor600),
                       onSelected: (value) {
@@ -91,16 +93,17 @@ class CustomerCard extends StatelessWidget {
                 ],
               ),
 
-              if (customer.address != null && customer.address!.isNotEmpty) ...[
+              // UPDATED: Displaying the full address using the new getter
+              if (displayAddress.isNotEmpty && displayAddress != 'No address provided') ...[
                 const SizedBox(height: 12),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start, // Align icon with text
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(Icons.location_on_outlined, size: 16, color: greyColor600),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        customer.address!,
+                        displayAddress, // Use the new combined address
                         style: textTheme.bodySmall?.copyWith(color: greyColor600),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -110,7 +113,6 @@ class CustomerCard extends StatelessWidget {
                 ),
               ],
 
-              // Display Quote Count
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -122,10 +124,6 @@ class CustomerCard extends StatelessWidget {
                   ),
                 ],
               ),
-
-
-              // Removed notes from summary card, better for detail view
-              // if (customer.notes != null && customer.notes!.isNotEmpty) ...[ ... ]
 
               const SizedBox(height: 12),
               const Divider(height: 1),

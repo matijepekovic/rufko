@@ -322,7 +322,7 @@ class SimplifiedMultiLevelQuote extends HiveObject {
 
     if (level.id.isEmpty) return 0.0;
 
-    // Calculate discounted subtotal
+    // Calculate discounted subtotal for this level
     double discountedSubtotal = level.calculateDiscountedSubtotal(discounts, nonDiscountableProductIds);
 
     // Add discountable addons
@@ -344,9 +344,12 @@ class SimplifiedMultiLevelQuote extends HiveObject {
     }
 
     double finalSubtotal = discountedSubtotal + (addonTotal - addonDiscountAmount) + nonDiscountableAddonTotal;
-    double taxAmount = finalSubtotal * (taxRate / 100);
 
-    return finalSubtotal + taxAmount;
+    // 🔧 FIX: Apply tax to the final subtotal
+    double taxAmount = finalSubtotal * (taxRate / 100);
+    double totalWithTax = finalSubtotal + taxAmount;
+
+    return totalWithTax;
   }
 
   // NEW: Get discount summary
