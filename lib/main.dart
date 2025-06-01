@@ -14,14 +14,14 @@ import 'models/app_settings.dart';
 import 'models/simplified_quote.dart';
 import 'models/pdf_template.dart'; // Crucial: Import this to get PdfFormFieldTypeAdapter etc.
 import 'models/custom_app_data.dart';
-
+import 'models/message_template.dart';
 // Your Services and Providers
 import 'providers/app_state_provider.dart';
 import 'services/database_service.dart';
-
+import 'models/email_template.dart';
 // Your Screens
 import 'screens/home_screen.dart';
-
+import 'models/template_category.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -43,8 +43,9 @@ void main() async {
   Hive.registerAdapter(PdfFormFieldTypeAdapter()); // REGISTER THE NEW ENUM ADAPTER
   Hive.registerAdapter(FieldMappingAdapter());     // From pdf_template.g.dart (or will be)
   Hive.registerAdapter(PDFTemplateAdapter());     // From pdf_template.g.dart (or will be)
-
-
+  Hive.registerAdapter(MessageTemplateAdapter());
+  Hive.registerAdapter(EmailTemplateAdapter());
+  Hive.registerAdapter(TemplateCategoryAdapter());
   await DatabaseService.instance.init();
   await TaxService.initializeTaxDatabase();
   final appStateProvider = AppStateProvider();
@@ -85,7 +86,7 @@ class RufkoApp extends StatelessWidget {
             ),
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 2,
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           shape: RoundedRectangleBorder(

@@ -15,12 +15,14 @@ import '../services/tax_service.dart';
 class SimplifiedQuoteScreen extends StatefulWidget {
   final Customer customer;
   final RoofScopeData? roofScopeData;
+  final SimplifiedMultiLevelQuote? existingQuote; // NEW: For editing mode
 
   const SimplifiedQuoteScreen({
-    Key? key,
+    super.key,
     required this.customer,
     this.roofScopeData,
-  }) : super(key: key);
+    this.existingQuote, // NEW: Pass existing quote for editing
+  });
 
   @override
   State<SimplifiedQuoteScreen> createState() => _SimplifiedQuoteScreenState();
@@ -37,15 +39,24 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
   bool _isLoading = false;
 
+  // NEW: Edit mode detection
+  bool get _isEditMode => widget.existingQuote != null;
+  SimplifiedMultiLevelQuote? get _editingQuote => widget.existingQuote;
+
   @override
   void initState() {
     super.initState();
-    // Initialize tax rate from customer address
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _autoDetectTaxRate(context.read<AppStateProvider>());
-    });
-  }
 
+    // NEW: Load existing quote data if in edit mode
+    if (_isEditMode) {
+      _loadExistingQuoteData();
+    } else {
+      // Initialize tax rate from customer address for new quotes
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _autoDetectTaxRate(context.read<AppStateProvider>());
+      });
+    }
+  }
   @override
   void dispose() {
     _quantityController.dispose();
@@ -82,7 +93,9 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                   ),
                 ),
               ),
-              title: Text('New Quote: ${widget.customer.name}'),
+              title: Text(_isEditMode
+                  ? 'Edit Quote: ${_editingQuote!.quoteNumber}'
+                  : 'New Quote: ${widget.customer.name}'),
               actions: [
                 if (_isLoading)
                   const Padding(
@@ -480,6 +493,8 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     );
   }
 
+
+
   Widget _buildTaxRateSection() {
     return Card(
       elevation: 2,
@@ -776,8 +791,8 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
     return ElevatedButton.icon(
       onPressed: _generateQuote,
-      icon: const Icon(Icons.rocket_launch),
-      label: const Text('Generate Quote'),
+      icon: Icon(_isEditMode ? Icons.save : Icons.rocket_launch),
+      label: Text(_isEditMode ? 'Update Quote' : 'Generate Quote'),
       style: ElevatedButton.styleFrom(
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
@@ -1026,6 +1041,49 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     );
   }
 
+// NEW: Load existing quote data for editing
+  void _loadExistingQuoteData() {
+    if (_editingQuote == null) return;
+
+    final appState = context.read<AppStateProvider>();
+
+    // Load basic quote data
+    _taxRate = _editingQuote!.taxRate;
+
+    // Find the main product
+    if (_editingQuote!.baseProductId != null) {
+      _mainProduct = appState.products.firstWhere(
+            (p) => p.id == _editingQuote!.baseProductId,
+        orElse: () => throw Exception('Main product not found'),
+      );
+    }
+
+    // Load quote levels (these contain the main product quantity and additional items)
+    _quoteLevels.clear();
+    _quoteLevels.addAll(_editingQuote!.levels);
+
+    // Get main quantity from first level
+    if (_quoteLevels.isNotEmpty) {
+      _mainQuantity = _quoteLevels.first.baseQuantity;
+      _quantityController.text = _mainQuantity.toStringAsFixed(1);
+    }
+
+    // Load additional products from the first level (they should be the same across all levels)
+    _addedProducts.clear();
+    if (_quoteLevels.isNotEmpty) {
+      _addedProducts.addAll(_quoteLevels.first.includedItems);
+    }
+
+    setState(() {});
+
+    print('📝 Loaded existing quote data:');
+    print('   Tax Rate: $_taxRate%');
+    print('   Main Product: ${_mainProduct?.name}');
+    print('   Main Quantity: $_mainQuantity');
+    print('   Quote Levels: ${_quoteLevels.length}');
+    print('   Additional Products: ${_addedProducts.length}');
+  }
+
   void _showAddProductDialog() {
     showDialog(
       context: context,
@@ -1050,8 +1108,8 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   void _generateQuote() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fix errors before generating quote'),
+        SnackBar(
+          content: Text(_isEditMode ? 'Please fix errors before updating quote' : 'Please fix errors before generating quote'),
           backgroundColor: Colors.red,
         ),
       );
@@ -1073,45 +1131,82 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     try {
       final appState = context.read<AppStateProvider>();
 
-      final newQuote = SimplifiedMultiLevelQuote(
-        customerId: widget.customer.id,
-        roofScopeDataId: widget.roofScopeData?.id,
-        levels: _quoteLevels.map((level) {
+      if (_isEditMode) {
+        // UPDATE existing quote
+        final updatedQuote = _editingQuote!;
+        updatedQuote.levels = _quoteLevels.map((level) {
           level.calculateSubtotal();
           return level;
-        }).toList(),
-        addons: [],
-        taxRate: _taxRate, // 🔧 FIX: Use the quote-specific tax rate instead of global setting
-        baseProductId: _mainProduct!.id,
-        baseProductName: _mainProduct!.name,
-        baseProductUnit: _mainProduct!.unit,
-      );
+        }).toList();
+        updatedQuote.taxRate = _taxRate;
+        updatedQuote.baseProductId = _mainProduct!.id;
+        updatedQuote.baseProductName = _mainProduct!.name;
+        updatedQuote.baseProductUnit = _mainProduct!.unit;
+        updatedQuote.roofScopeDataId = widget.roofScopeData?.id;
+        updatedQuote.updatedAt = DateTime.now();
 
-      await appState.addSimplifiedQuote(newQuote);
+        await appState.updateSimplifiedQuote(updatedQuote);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Quote ${newQuote.quoteNumber} generated with ${_taxRate.toStringAsFixed(2)}% tax!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SimplifiedQuoteDetailScreen(
-              quote: newQuote,
-              customer: widget.customer,
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Quote ${updatedQuote.quoteNumber} updated with ${_taxRate.toStringAsFixed(2)}% tax!'),
+              backgroundColor: Colors.green,
             ),
-          ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SimplifiedQuoteDetailScreen(
+                quote: updatedQuote,
+                customer: widget.customer,
+              ),
+            ),
+          );
+        }
+      } else {
+        // CREATE new quote
+        final newQuote = SimplifiedMultiLevelQuote(
+          customerId: widget.customer.id,
+          roofScopeDataId: widget.roofScopeData?.id,
+          levels: _quoteLevels.map((level) {
+            level.calculateSubtotal();
+            return level;
+          }).toList(),
+          addons: [],
+          taxRate: _taxRate,
+          baseProductId: _mainProduct!.id,
+          baseProductName: _mainProduct!.name,
+          baseProductUnit: _mainProduct!.unit,
         );
+
+        await appState.addSimplifiedQuote(newQuote);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Quote ${newQuote.quoteNumber} generated with ${_taxRate.toStringAsFixed(2)}% tax!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SimplifiedQuoteDetailScreen(
+                quote: newQuote,
+                customer: widget.customer,
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error generating quote: $e'),
+            content: Text(_isEditMode ? 'Error updating quote: $e' : 'Error generating quote: $e'),
             backgroundColor: Colors.red,
           ),
         );

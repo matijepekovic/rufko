@@ -143,12 +143,10 @@ class TaxService {
 
   /// Manually set tax rate for a ZIP code
   static Future<void> setZipCodeRate(String zipCode, double taxRate) async {
-    if (_taxDatabase == null) {
-      _taxDatabase = {
+    _taxDatabase ??= {
         'zipCodes': <String, dynamic>{},
         'states': <String, dynamic>{},
       };
-    }
 
     // Ensure zipCodes is the right type
     if (_taxDatabase!['zipCodes'] == null) {
@@ -164,12 +162,10 @@ class TaxService {
 
   /// Manually set tax rate for a state
   static Future<void> setStateRate(String stateAbbreviation, double taxRate) async {
-    if (_taxDatabase == null) {
-      _taxDatabase = {
+    _taxDatabase ??= {
         'zipCodes': <String, dynamic>{},
         'states': <String, dynamic>{},
       };
-    }
 
     // Ensure states is the right type
     if (_taxDatabase!['states'] == null) {

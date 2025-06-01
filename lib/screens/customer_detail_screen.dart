@@ -8,7 +8,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as path;
-import 'package:flutter/services.dart';
 import 'dart:math' as math;
 
 import '../models/customer.dart';
@@ -3027,10 +3026,9 @@ class _EnhancedCommunicationDialog extends StatefulWidget {
   final VoidCallback? onCommunicationAdded;
 
   const _EnhancedCommunicationDialog({
-    Key? key,
     required this.customer,
     this.onCommunicationAdded,
-  }) : super(key: key);
+  });
 
   @override
   State<_EnhancedCommunicationDialog> createState() => _EnhancedCommunicationDialogState();
@@ -3254,38 +3252,37 @@ class _EnhancedCommunicationDialogState extends State<_EnhancedCommunicationDial
 
 
 
-
-
 // MEDIA DETAILS DIALOG
 class _MediaDetailsDialog extends StatefulWidget {
   final File? file;
   final String? fileName;
   final String? fileType;
   final int? fileSize;
-  final String customerId;
+  final String customerId; // Non-nullable
   final ProjectMedia? mediaItem;
   final Function(ProjectMedia)? onSave;
 
+  // Default constructor (can remain const if customerId is the only varying part among final fields)
   const _MediaDetailsDialog({
-    Key? key,
+    super.key,
     this.file,
     this.fileName,
     this.fileType,
     this.fileSize,
     required this.customerId,
-    this.mediaItem,
-    this.onSave,
-  }) : super(key: key);
+  })  : mediaItem = null,
+        onSave = null;
 
-  const _MediaDetailsDialog.edit({
-    Key? key,
-    required ProjectMedia this.mediaItem,
-    required Function(ProjectMedia) this.onSave,
-  }) : file = null,
+  // Edit constructor - REMOVE CONST HERE
+  _MediaDetailsDialog.edit({ // <<<< REMOVED 'const'
+    super.key,
+    required this.mediaItem,
+    required this.onSave,
+  })  : file = null,
         fileName = null,
         fileType = null,
         fileSize = null,
-        customerId = '';
+        customerId = mediaItem!.customerId; // This is now valid in a non-const constructor
 
   @override
   State<_MediaDetailsDialog> createState() => _MediaDetailsDialogState();
@@ -3642,9 +3639,8 @@ class _FullScreenImageViewer extends StatelessWidget {
   final ProjectMedia mediaItem;
 
   const _FullScreenImageViewer({
-    Key? key,
     required this.mediaItem,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3698,11 +3694,10 @@ class _CategoryMediaScreen extends StatelessWidget {
   final String customerName;
 
   const _CategoryMediaScreen({
-    Key? key,
     required this.category,
     required this.mediaItems,
     required this.customerName,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3823,10 +3818,9 @@ class _CustomerEditDialog extends StatefulWidget {
   final Customer customer;
   final VoidCallback? onCustomerUpdated;
   const _CustomerEditDialog({
-    Key? key,
     required this.customer,
     this.onCustomerUpdated,
-  }) : super(key: key);
+  });
 
   @override
   State<_CustomerEditDialog> createState() => _CustomerEditDialogState();

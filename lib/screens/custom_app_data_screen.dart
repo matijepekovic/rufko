@@ -6,10 +6,9 @@ import '../models/custom_app_data.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/add_custom_field_dialog.dart';
 import '../widgets/edit_custom_field_dialog.dart';
-import '../models/app_settings.dart';
 
 class CustomAppDataScreen extends StatefulWidget {
-  const CustomAppDataScreen({Key? key}) : super(key: key);
+  const CustomAppDataScreen({super.key});
 
   @override
   State<CustomAppDataScreen> createState() => _CustomAppDataScreenState();
@@ -21,6 +20,9 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
   String _searchQuery = '';
   String _selectedCategory = 'all';
   final TextEditingController _newCategoryController = TextEditingController();
+
+  bool _isFieldSelectionMode = false;
+  Set<String> _selectedFieldIds = <String>{};
 
   final List<String> _categories = [
     'all',
@@ -64,6 +66,15 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Check if we're embedded in Templates screen (no Scaffold needed)
+    final bool isEmbedded = ModalRoute.of(context)?.settings.name != '/custom_app_data';
+
+    if (isEmbedded) {
+      // Return just the content without Scaffold/AppBar when embedded
+      return _buildManageFieldsTab();
+    }
+
+    // Full screen version with AppBar and tabs (when accessed directly)
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -87,7 +98,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
             onPressed: _showAddFieldDialog,
             tooltip: 'Add New Field',
           ),
-
         ],
       ),
       body: TabBarView(
@@ -105,6 +115,96 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
     );
   }
 
+  // Field Selection Mode Methods
+  void _enterFieldSelectionMode() {
+    setState(() {
+      _isFieldSelectionMode = true;
+      _selectedFieldIds.clear();
+    });
+  }
+
+  void _exitFieldSelectionMode() {
+    setState(() {
+      _isFieldSelectionMode = false;
+      _selectedFieldIds.clear();
+    });
+  }
+
+  void _toggleFieldSelection(String fieldId) {
+    setState(() {
+      if (_selectedFieldIds.contains(fieldId)) {
+        _selectedFieldIds.remove(fieldId);
+      } else {
+        _selectedFieldIds.add(fieldId);
+      }
+    });
+  }
+
+  void _selectAllFields() {
+    final appState = context.read<AppStateProvider>();
+    final fields = _filterFields(appState.customAppDataFields);
+
+    setState(() {
+      if (_selectedFieldIds.length == fields.length) {
+        _selectedFieldIds.clear();
+      } else {
+        _selectedFieldIds = fields.map((f) => f.id).toSet();
+      }
+    });
+  }
+
+  void _deleteSelectedFields() {
+    if (_selectedFieldIds.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete ${_selectedFieldIds.length} field${_selectedFieldIds.length == 1 ? '' : 's'}'),
+        content: Text(
+            _selectedFieldIds.length == 1
+                ? 'Are you sure you want to delete this custom field?'
+                : 'Are you sure you want to delete these ${_selectedFieldIds.length} custom fields?'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              try {
+                final appState = context.read<AppStateProvider>();
+
+                for (final fieldId in _selectedFieldIds) {
+                  await appState.deleteCustomAppDataField(fieldId);
+                }
+
+                _exitFieldSelectionMode();
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Deleted ${_selectedFieldIds.length} field${_selectedFieldIds.length == 1 ? '' : 's'}'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (e) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error deleting fields: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildManageFieldsTab() {
     return Consumer<AppStateProvider>(
       builder: (context, appState, child) {
@@ -114,7 +214,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
 
         return Column(
           children: [
-            // Search and Filter Bar
+            // Search and Filter Bar (ALWAYS SHOWN)
             Container(
               padding: const EdgeInsets.all(16),
               color: Colors.white,
@@ -123,7 +223,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
                   // Search Bar
                   TextField(
                     decoration: InputDecoration(
-                      hintText: 'Search fields...',
+                      hintText: 'Search custom fields...',
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -135,48 +235,131 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
                     },
                   ),
                   const SizedBox(height: 12),
-                  // Category Filter
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: _categories.map((category) {
-                        final isSelected = _selectedCategory == category;
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _categoryIcons[category],
-                                  size: 16,
-                                  color: isSelected ? Colors.white : Colors.grey[600],
+                  // Category Filter Chips + Actions
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: _categories.map((category) {
+                              final isSelected = _selectedCategory == category;
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: FilterChip(
+                                  label: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        _categoryIcons[category],
+                                        size: 16,
+                                        color: isSelected ? Colors.white : Colors.grey[600],
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(_categoryNames[category] ?? category),
+                                    ],
+                                  ),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      _selectedCategory = selected ? category : 'all';
+                                    });
+                                  },
+                                  selectedColor: const Color(0xFF2E86AB),
+                                  labelStyle: TextStyle(
+                                    color: isSelected ? Colors.white : Colors.grey[700],
+                                    fontSize: 12,
+                                  ),
                                 ),
-                                const SizedBox(width: 4),
-                                Text(_categoryNames[category] ?? category),
-                              ],
-                            ),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                _selectedCategory = selected ? category : 'all';
-                              });
-                            },
-                            selectedColor: const Color(0xFF2E86AB),
-                            labelStyle: TextStyle(
-                              color: isSelected ? Colors.white : Colors.grey[700],
-                              fontSize: 12,
-                            ),
+                              );
+                            }).toList(),
                           ),
-                        );
-                      }).toList(),
-                    ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Select Button
+                      if (!_isFieldSelectionMode)
+                        ElevatedButton.icon(
+                          onPressed: _enterFieldSelectionMode,
+                          icon: const Icon(Icons.checklist, size: 18),
+                          label: const Text('Select'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2E86AB),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            TextButton.icon(
+                              onPressed: _selectAllFields,
+                              icon: const Icon(Icons.select_all, size: 18),
+                              label: Text(
+                                _selectedFieldIds.length == filteredFields.length
+                                    ? 'Deselect All'
+                                    : 'Select All',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _exitFieldSelectionMode,
+                              icon: const Icon(Icons.close, size: 18),
+                              label: const Text('Cancel'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
                 ],
               ),
             ),
 
-            // Fields List
+            // Selection mode info
+            if (_isFieldSelectionMode) ...[
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                color: Colors.blue.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _selectedFieldIds.isEmpty
+                              ? 'Tap custom fields to select them'
+                              : '${_selectedFieldIds.length} of ${filteredFields.length} fields selected',
+                          style: TextStyle(
+                            color: Colors.blue.shade800,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (_selectedFieldIds.isNotEmpty)
+                        ElevatedButton.icon(
+                          onPressed: _deleteSelectedFields,
+                          icon: const Icon(Icons.delete, size: 16),
+                          label: const Text('Delete'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Fields content or empty state
             Expanded(
               child: filteredFields.isEmpty
                   ? _buildEmptyState()
@@ -196,8 +379,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
       },
     );
   }
-
-
 
   Widget _buildCategorySection(String category, List<CustomAppDataField> fields) {
     return Card(
@@ -242,75 +423,140 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
             ),
           ),
           // Fields List
-          ...fields.map((field) => _buildFieldTile(field)).toList(),
+          ...fields.map((field) => _buildFieldTile(field)),
         ],
       ),
     );
   }
 
   Widget _buildFieldTile(CustomAppDataField field) {
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: _getFieldTypeColor(field.fieldType),
-        child: Icon(
-          _getFieldTypeIcon(field.fieldType),
-          color: Colors.white,
-          size: 18,
-        ),
-      ),
-      title: Text(
-        field.displayName,
-        style: const TextStyle(fontWeight: FontWeight.w500),
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final isSelected = _selectedFieldIds.contains(field.id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Stack(
         children: [
-          Text(
-            'Field: ${field.fieldName} • Type: ${field.fieldType}',
-            style: TextStyle(color: Colors.grey[600], fontSize: 12),
-          ),
-          if (field.currentValue.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'Value: ${field.currentValue}',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+          Card(
+            elevation: isSelected ? 3 : 1,
+            color: isSelected ? const Color(0xFF2E86AB).withOpacity(0.1) : null,
+            child: InkWell(
+              onTap: _isFieldSelectionMode
+                  ? () => _toggleFieldSelection(field.id)
+                  : () => _showEditFieldDialog(field),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                decoration: isSelected
+                    ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF2E86AB), width: 2),
+                )
+                    : null,
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: _getFieldTypeColor(field.fieldType),
+                    child: Icon(
+                      _getFieldTypeIcon(field.fieldType),
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                  title: Text(
+                    field.displayName,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: isSelected ? const Color(0xFF2E86AB) : null,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Field: ${field.fieldName} • Type: ${field.fieldType}',
+                        style: TextStyle(
+                          color: isSelected
+                              ? const Color(0xFF2E86AB).withOpacity(0.7)
+                              : Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                      if (field.currentValue.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFF2E86AB).withOpacity(0.2)
+                                : Colors.grey[200],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Value: ${field.currentValue}',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  trailing: _isFieldSelectionMode
+                      ? null
+                      : PopupMenuButton<String>(
+                    onSelected: (action) => _handleFieldAction(action, field),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, size: 16),
+                            SizedBox(width: 8),
+                            Text('Edit Field'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 16, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Delete', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
+          ),
+
+          // Selection checkbox
+          if (_isFieldSelectionMode)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Checkbox(
+                  value: isSelected,
+                  onChanged: (bool? value) => _toggleFieldSelection(field.id),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  activeColor: const Color(0xFF2E86AB),
+                ),
+              ),
+            ),
         ],
       ),
-      trailing: PopupMenuButton<String>(
-        onSelected: (action) => _handleFieldAction(action, field),
-        itemBuilder: (context) => [
-          const PopupMenuItem(
-            value: 'edit',
-            child: Row(
-              children: [
-                Icon(Icons.edit, size: 16),
-                SizedBox(width: 8),
-                Text('Edit Field'),
-              ],
-            ),
-          ),
-          const PopupMenuItem(
-            value: 'delete',
-            child: Row(
-              children: [
-                Icon(Icons.delete, size: 16, color: Colors.red),
-                SizedBox(width: 8),
-                Text('Delete', style: TextStyle(color: Colors.red)),
-              ],
-            ),
-          ),
-        ],
-      ),
-      onTap: () => _showEditFieldDialog(field),
     );
   }
 
@@ -621,7 +867,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
         );
       },
     ).then((returnedValue) {
-      if (returnedValue != null && returnedValue is CustomAppDataField) {
+      if (returnedValue != null) {
         final appState = Provider.of<AppStateProvider>(context, listen: false);
         appState.addCustomAppDataField(returnedValue);
 

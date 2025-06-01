@@ -1,7 +1,7 @@
 // lib/services/template_service.dart
 
 import 'dart:io';
-import 'dart:typed_data'; // For Uint8List - Keep this, it's used for bytes.
+// For Uint8List - Keep this, it's used for bytes.
 import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +15,6 @@ import '../models/customer.dart';
 import '../models/simplified_quote.dart';
 import '../models/quote.dart' as legacy_quote_model;
 import 'database_service.dart';
-import '../models/app_settings.dart';
 
 class TemplateService {
   static final TemplateService _instance = TemplateService._internal();
@@ -179,82 +178,29 @@ class TemplateService {
     Map<String, String>? customData,
   }) async {
     try {
-      if (kDebugMode) {
-        print('🔄 Generating PDF by filling form fields for template: ${template.templateName}');
-        print('🔍 DEBUG: generatePDFFromTemplate method called');
-      }
-
       final templateFile = File(template.pdfFilePath);
       if (!await templateFile.exists()) {
         throw Exception('Template PDF file not found: ${template.pdfFilePath}');
       }
+
       final templateBytes = await templateFile.readAsBytes();
       final syncfusion.PdfDocument document = syncfusion.PdfDocument(inputBytes: templateBytes);
       final customAppDataFields = await DatabaseService.instance.getAllCustomAppDataFields();
       final dataMap = await _prepareDataMap(quote, customer, selectedLevelId, customData, customAppDataFields);
 
-      // FIX: Simplified null check
+      // Fill PDF form fields with data
       if (document.form.fields.count > 0) {
         for (final FieldMapping mapping in template.fieldMappings) {
           final pdfFieldName = mapping.pdfFormFieldName;
-          if (pdfFieldName.isEmpty) { // Check if pdfFieldName is empty
-            if (kDebugMode) print('   ⚠️ Skipping AppData "${mapping.appDataType}" as its pdfFormFieldName is empty.');
-            continue; // Skip this mapping if no PDF field is associated
-          }
+          if (pdfFieldName.isEmpty) continue;
 
-          String valueToFill;
-          if (kDebugMode) {
-            print('🔍 FIELD MAPPING DEBUG:');
-            print('   appDataType: "${mapping.appDataType}"');
-            print('   pdfFormFieldName: "${pdfFieldName}"');
-            print('   overrideEnabled: ${mapping.overrideValueEnabled}');
-            print('   defaultValue: "${mapping.defaultValue ?? 'null'}"');
-
-            // Check if the key exists in dataMap
-            if (dataMap.containsKey(mapping.appDataType)) {
-              print('   ✅ Found in dataMap: "${dataMap[mapping.appDataType]}"');
-            } else {
-              print('   ❌ NOT found in dataMap');
-              print('   📋 Available dataMap keys:');
-              for (final key in dataMap.keys.take(10)) { // Show first 10 keys
-                print('      - "$key"');
-              }
-            }
-          }
-
-          if (mapping.overrideValueEnabled && mapping.defaultValue != null && mapping.defaultValue!.isNotEmpty) {
-            valueToFill = mapping.defaultValue!;
-            if (kDebugMode) {
-              print('   📎 Using OVERRIDE for ${mapping.appDataType} (PDF: $pdfFieldName): "$valueToFill"');
-            }
-          } else {
-            valueToFill = dataMap[mapping.appDataType] ?? '';
-            if (kDebugMode) {
-              print('   ⚙️ Using RESOLVED data for ${mapping.appDataType} (PDF: $pdfFieldName): "$valueToFill" (from dataMap, fallback to empty)');
-            }
-          }
-          // ------------ CORE FIX START ------------
-          if (mapping.overrideValueEnabled && mapping.defaultValue != null && mapping.defaultValue!.isNotEmpty) {
-            valueToFill = mapping.defaultValue!; // Use the stored override value
-            if (kDebugMode) {
-              print('   📎 Using OVERRIDE for ${mapping.appDataType} (PDF: $pdfFieldName): "$valueToFill"');
-            }
-          } else {
-            // Override not enabled or is empty, so use the value from dataMap,
-            // or an empty string if not found in dataMap.
-            valueToFill = dataMap[mapping.appDataType] ?? ''; // Get from _prepareDataMap result, default to empty
-            if (kDebugMode) {
-              print('   ⚙️ Using RESOLVED data for ${mapping.appDataType} (PDF: $pdfFieldName): "$valueToFill" (from dataMap, fallback to empty)');
-            }
-          }
-
-          final appDataValue = valueToFill;
+          // Simple: just get value from dataMap
+          final valueToFill = dataMap[mapping.appDataType] ?? '';
 
           try {
             syncfusion.PdfField? fieldToUpdate;
-            // FIX: Removed '!'
-            for(int i=0; i < document.form.fields.count; i++){
-              if(document.form.fields[i].name == pdfFieldName){
+            for (int i = 0; i < document.form.fields.count; i++) {
+              if (document.form.fields[i].name == pdfFieldName) {
                 fieldToUpdate = document.form.fields[i];
                 break;
               }
@@ -262,69 +208,63 @@ class TemplateService {
 
             if (fieldToUpdate != null) {
               if (fieldToUpdate is syncfusion.PdfTextBoxField) {
-                fieldToUpdate.text = appDataValue;
+                fieldToUpdate.text = valueToFill;
               } else if (fieldToUpdate is syncfusion.PdfCheckBoxField) {
-                bool isChecked = appDataValue.toLowerCase() == 'true' ||
-                    appDataValue == '1' ||
-                    appDataValue.toLowerCase() == 'yes' ||
-                    appDataValue.toLowerCase() == 'on';
+                bool isChecked = valueToFill.toLowerCase() == 'true' ||
+                    valueToFill == '1' ||
+                    valueToFill.toLowerCase() == 'yes' ||
+                    valueToFill.toLowerCase() == 'on';
                 fieldToUpdate.isChecked = isChecked;
               } else if (fieldToUpdate is syncfusion.PdfRadioButtonListField) {
-                // For radio button lists, set the selected index or value on the parent field
                 int selectedIdx = -1;
                 for (int j = 0; j < fieldToUpdate.items.count; j++) {
                   final item = fieldToUpdate.items[j];
-                  // Compare against the item's value (or potentially item.text if that's how you've mapped it)
-                  if (item.value == appDataValue) {
+                  if (item.value == valueToFill) {
                     selectedIdx = j;
                     break;
                   }
                 }
                 if (selectedIdx != -1) {
                   fieldToUpdate.selectedIndex = selectedIdx;
-                  // Alternatively, if your appDataValue directly matches one of the radio button values:
-                  // fieldToUpdate.selectedValue = appDataValue;
-                  // Using selectedIndex is often safer if values might not be exact string matches.
-                } else {
-                  if (kDebugMode) print('   ⚠️ Radio button value "$appDataValue" not found in options for field "$pdfFieldName".');
                 }
               } else if (fieldToUpdate is syncfusion.PdfComboBoxField) {
-                fieldToUpdate.selectedValue = appDataValue;
+                fieldToUpdate.selectedValue = valueToFill;
               }
-              if (kDebugMode) print('   -> Populated PDF field "$pdfFieldName" with value for "${mapping.appDataType}"');
-            } else {
-              if (kDebugMode) print('   ⚠️ PDF field "$pdfFieldName" (for app data "${mapping.appDataType}") not found in template.');
             }
           } catch (e) {
-            if (kDebugMode) print('   ❌ Error setting value for PDF field "$pdfFieldName": $e');
+            if (kDebugMode) print('Error setting PDF field "$pdfFieldName": $e');
           }
         }
-      } else {
-        if (kDebugMode) print('   ⚠️ Template PDF has no detectable form or fields to populate.');
       }
 
       final List<int> populatedPdfBytes = document.saveSync();
       document.dispose();
 
       final directory = await getApplicationDocumentsDirectory();
-      // FIX: Removed unnecessary braces
       final outputFileName = 'populated_${template.templateName.replaceAll(RegExp(r'[^\w\s-]'), '')}_${quote.quoteNumber.replaceAll(RegExp(r'[^\w\s-]'), '')}.pdf';
       final outputFile = File('${directory.path}/$outputFileName');
       await outputFile.writeAsBytes(populatedPdfBytes);
 
-      if (kDebugMode) print('✅ Populated PDF saved to: ${outputFile.path}');
       return outputFile.path;
 
     } catch (e) {
-      if (kDebugMode) print('❌ Error in generatePDFFromTemplate (form filling): $e');
+      if (kDebugMode) print('Error in generatePDFFromTemplate: $e');
       rethrow;
     }
   }
 
   Future<String> generateTemplatePreview(PDFTemplate template) async {
+    if (kDebugMode) {
+      print('🎬 PREVIEW DEBUG START');
+      print('   Template: ${template.templateName}');
+      print('   Template mappings: ${template.fieldMappings.length}');
+      for (final mapping in template.fieldMappings) {
+        print('      - ${mapping.appDataType} → ${mapping.pdfFormFieldName}');
+      }
+    }
+
     final sampleCustomer = Customer(
       name: '[Customer Name]',
-      // Provide sample structured address
       streetAddress: '[123 Sample St]',
       city: '[Sampleville]',
       stateAbbreviation: '[ST]',
@@ -337,7 +277,9 @@ class TemplateService {
       customerId: 'sample_customer_id',
       quoteNumber: '[Quote Number]',
       levels: [
-        QuoteLevel(id: 'level1', name: '[Level 1 Name]', levelNumber: 1, basePrice: 1234.56, baseQuantity: 1.0)
+        QuoteLevel(id: 'level1', name: '[Builder Grade]', levelNumber: 1, basePrice: 1234.56, baseQuantity: 1.0),
+        QuoteLevel(id: 'level2', name: '[Homeowner Grade]', levelNumber: 2, basePrice: 2468.99, baseQuantity: 1.0),
+        QuoteLevel(id: 'level3', name: '[Platinum Preferred]', levelNumber: 3, basePrice: 3702.45, baseQuantity: 1.0),
       ],
       addons: [
         legacy_quote_model.QuoteItem(productId: 'addon1', productName: '[Addon Item Name]', quantity: 2, unitPrice: 50.0, unit: 'each')
@@ -347,6 +289,7 @@ class TemplateService {
       validUntil: DateTime.now().add(const Duration(days: 30)),
       status: 'DRAFT',
     );
+
     if (sampleQuote.levels.isNotEmpty) {
       sampleQuote.levels.first.calculateSubtotal();
     }
@@ -356,7 +299,16 @@ class TemplateService {
       'watermark_text': 'TEMPLATE PREVIEW',
     };
 
-    if (kDebugMode) print('👁️ Generating preview for template: ${template.templateName}');
+    if (kDebugMode) {
+      print('📋 SAMPLE DATA DEBUG:');
+      print('   Customer name: ${sampleCustomer.name}');
+      print('   Quote number: ${sampleQuote.quoteNumber}');
+      print('   Level 1 name: ${sampleQuote.levels.first.name}');
+      print('   Level 1 base price: ${sampleQuote.levels.first.basePrice}');
+      print('   Custom data: $customData');
+      print('👁️ Generating preview for template: ${template.templateName}');
+    }
+
     return generatePDFFromTemplate(
       template: template,
       quote: sampleQuote,
@@ -375,6 +327,15 @@ class TemplateService {
       ) async {
     final map = <String, String>{};
 
+    if (kDebugMode) {
+      print('🗺️ PREPARE DATA MAP DEBUG START:');
+      print('   Quote: ${quote.quoteNumber}');
+      print('   Customer: ${customer.name}');
+      print('   Selected Level ID: $selectedLevelId');
+      print('   Custom Data Overrides: $customDataOverrides');
+      print('   Custom App Data Fields: ${customAppDataFields?.length ?? 0}');
+    }
+
     // 🔧 GET APP SETTINGS FOR COMPANY INFO
     final appSettings = await DatabaseService.instance.getAppSettings();
 
@@ -384,6 +345,7 @@ class TemplateService {
       print('   Company Address: "${appSettings?.companyAddress ?? 'NULL'}"');
       print('   Company Phone: "${appSettings?.companyPhone ?? 'NULL'}"');
       print('   Company Email: "${appSettings?.companyEmail ?? 'NULL'}"');
+      print('   Preview mode: ${customDataOverrides?['preview_mode']}');
     }
 
     // === CUSTOMER INFORMATION ===
@@ -616,27 +578,103 @@ class TemplateService {
       }
     }
     // =======================================
+    String _generateSampleValueForField(String fieldType) {
+      // Handle specific field patterns
+      if (fieldType.contains('Name') && !fieldType.contains('company') && !fieldType.contains('customer')) {
+        return '[Sample Product Name]';
+      }
+      if (fieldType.contains('Qty')) {
+        return '5';
+      }
+      if (fieldType.contains('UnitPrice')) {
+        return '\$25.00';
+      }
+      if (fieldType.contains('Total') && !fieldType.contains('grand')) {
+        return '\$125.00';
+      }
+      if (fieldType.contains('Tax') && fieldType.contains('Rate')) {
+        return '8.5%';
+      }
+      if (fieldType.contains('Tax') && fieldType.contains('Amount')) {
+        return '\$85.20';
+      }
+      if (fieldType.contains('Date')) {
+        return _dateFormat.format(DateTime.now());
+      }
+      if (fieldType.contains('Phone')) {
+        return '(555) 123-4567';
+      }
+      if (fieldType.contains('Email')) {
+        return 'sample@company.com';
+      }
+      if (fieldType.contains('Address')) {
+        return '123 Sample Street, Sample City, ST 12345';
+      }
+      if (fieldType.contains('Boolean') || fieldType.contains('checkbox')) {
+        return 'true';
+      }
+      if (fieldType.contains('Number') || fieldType.contains('Numeric')) {
+        return '42';
+      }
 
+      // Specific field mappings
+      switch (fieldType) {
+        case 'subtotal':
+          return '\$1,234.56';
+        case 'discount':
+          return '\$100.00';
+        case 'grandTotal':
+          return '\$1,219.76';
+        case 'quoteNumber':
+          return 'Q-2025-001';
+        case 'quoteStatus':
+          return 'DRAFT';
+        case 'notes':
+          return 'Sample project notes and scope of work details...';
+        case 'terms':
+          return 'Standard terms and conditions apply to this estimate.';
+        case 'upgradeQuoteText':
+          return 'Optional upgrades available - contact us for details.';
+        case 'customText1':
+        case 'customText2':
+        case 'customText3':
+          return '[Custom Text Field]';
+        case 'customNumeric1':
+        case 'customNumeric2':
+          return '100';
+        case 'customDate1':
+        case 'customDate2':
+          return _dateFormat.format(DateTime.now().add(const Duration(days: 30)));
+        default:
+        // Generic fallback
+          return '[${PDFTemplate.getFieldDisplayName(fieldType)}]';
+      }
+    }
     // === ENSURE ALL FIELD TYPES HAVE VALUES ===
+    final isPreviewMode = customDataOverrides?['preview_mode'] == 'true';
+
     for (final fieldTypeKey in PDFTemplate.getQuoteFieldTypes()) {
       final existingValue = map[fieldTypeKey];
-      final defaultValue = customDataOverrides?['preview_mode'] == 'true' ? '[${PDFTemplate.getFieldDisplayName(fieldTypeKey)}]' : '';
 
-      // ============= CRITICAL FIX =============
+      // Generate better sample data for preview mode
+      String sampleValue = '';
+      if (isPreviewMode) {
+        sampleValue = _generateSampleValueForField(fieldTypeKey);
+      }
+
+      final defaultValue = isPreviewMode ? sampleValue : '';
+
       // Don't override company fields with empty defaults if they have app settings values
       final isCompanyField = companyFieldsBackup.containsKey(fieldTypeKey);
       final hasAppSettingsValue = isCompanyField && companyFieldsBackup[fieldTypeKey]?.isNotEmpty == true;
 
       if (hasAppSettingsValue && (existingValue?.isEmpty ?? true)) {
-        // Use app settings value instead of empty default
+        // Keep app settings value for company fields
         map[fieldTypeKey] = companyFieldsBackup[fieldTypeKey]!;
-        if (kDebugMode) {
-          print('🔧 ENSURED $fieldTypeKey has app settings value: "${map[fieldTypeKey]}"');
-        }
-      } else {
-        map.putIfAbsent(fieldTypeKey, () => defaultValue);
+      } else if (existingValue?.isEmpty ?? true) {
+        // Use sample data for empty fields
+        map[fieldTypeKey] = defaultValue;
       }
-      // =======================================
     }
 
     if (kDebugMode) {

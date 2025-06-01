@@ -63,9 +63,9 @@ class Customer extends HiveObject {
     this.city,
     this.stateAbbreviation,
     this.zipCode,
-  })  : this.communicationHistory = communicationHistory ?? [],
-        this.createdAt = createdAt ?? DateTime.now(),
-        this.updatedAt = updatedAt ?? DateTime.now() {
+  })  : communicationHistory = communicationHistory ?? [],
+        createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? DateTime.now() {
     this.id = id ?? const Uuid().v4();
   }
 
@@ -85,7 +85,7 @@ class Customer extends HiveObject {
     final timestamp = DateTime.now().toIso8601String();
     final typePrefix = _getTypePrefix(type);
     communicationHistory.add('$timestamp: $typePrefix$entry');
-    this.updatedAt = DateTime.now();
+    updatedAt = DateTime.now();
     if (isInBox) { save(); }
   }
 
@@ -100,7 +100,7 @@ class Customer extends HiveObject {
     final urgentFlag = urgent ? '[URGENT] ' : '';
     final subjectPart = subject != null ? '[$subject] ' : '';
     communicationHistory.add('$timestamp: $typePrefix$urgentFlag$subjectPart$content');
-    this.updatedAt = DateTime.now();
+    updatedAt = DateTime.now();
     if (isInBox) { save(); }
   }
 
@@ -113,7 +113,7 @@ class Customer extends HiveObject {
     final followUpFormatted = followUpDate.toIso8601String().split('T')[0];
     final priorityFlag = priority == 'high' ? '[HIGH PRIORITY] ' : '';
     communicationHistory.add('$timestamp: 📅 FOLLOW-UP ($followUpFormatted): $priorityFlag$content');
-    this.updatedAt = DateTime.now();
+    updatedAt = DateTime.now();
     if (isInBox) { save(); }
   }
 
@@ -211,8 +211,9 @@ class Customer extends HiveObject {
       'calls': 0, 'emails': 0, 'meetings': 0, 'site_visits': 0, 'notes': 0, 'follow_ups': 0,
     };
     for (final comm in communicationHistory) {
-      if (comm.contains('📞')) stats['calls'] = stats['calls']! + 1;
-      else if (comm.contains('📧')) stats['emails'] = stats['emails']! + 1;
+      if (comm.contains('📞')) {
+        stats['calls'] = stats['calls']! + 1;
+      } else if (comm.contains('📧')) stats['emails'] = stats['emails']! + 1;
       // ... (other stats increments)
       else if (comm.contains('📝')) stats['notes'] = stats['notes']! + 1;
       if (comm.contains('📅 FOLLOW-UP')) stats['follow_ups'] = stats['follow_ups']! + 1;
@@ -240,7 +241,7 @@ class Customer extends HiveObject {
     if (stateAbbreviation != null) this.stateAbbreviation = stateAbbreviation.trim().isEmpty ? null : stateAbbreviation.trim();
     if (zipCode != null) this.zipCode = zipCode.trim().isEmpty ? null : zipCode.trim();
 
-    this.updatedAt = DateTime.now();
+    updatedAt = DateTime.now();
     if (isInBox) { save(); }
   }
 

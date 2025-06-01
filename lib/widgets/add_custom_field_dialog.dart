@@ -10,10 +10,10 @@ class AddCustomFieldDialog extends StatefulWidget {
   final Map<String, String> categoryNames;
 
   const AddCustomFieldDialog({
-    Key? key,
+    super.key,
     required this.categories,
     required this.categoryNames,
-  }) : super(key: key);
+  });
 
   @override
   State<AddCustomFieldDialog> createState() => _AddCustomFieldDialogState();
@@ -44,6 +44,9 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // Get unique categories and filter out 'all'
+    final availableCategories = widget.categories.where((c) => c != 'all').toSet().toList();
+
     return AlertDialog(
       title: const Text('Add Custom Data Field'),
       content: Form(
@@ -54,9 +57,11 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               DropdownButtonFormField<String>(
-                value: _selectedFieldCategory,
+                value: availableCategories.contains(_selectedFieldCategory)
+                    ? _selectedFieldCategory
+                    : (availableCategories.isNotEmpty ? availableCategories.first : 'custom'),
                 decoration: const InputDecoration(labelText: 'Category *'),
-                items: widget.categories.where((c) => c != 'all').map((String categoryValue) {
+                items: availableCategories.map((String categoryValue) {
                   return DropdownMenuItem<String>(
                     value: categoryValue,
                     child: Text(widget.categoryNames[categoryValue] ?? categoryValue),
@@ -112,8 +117,8 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog> {
           onPressed: () => Navigator.of(context).pop(null),
         ),
         ElevatedButton(
-          child: const Text('Add Field'),
           onPressed: _handleAddField,
+          child: const Text('Add Field'),
         ),
       ],
     );

@@ -1,5 +1,7 @@
 // lib/screens/simplified_quote_detail_screen.dart - ENHANCED WITH DISCOUNTS
 
+
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -8,16 +10,17 @@ import '../models/customer.dart';
 import '../providers/app_state_provider.dart';
 import '../models/pdf_template.dart';
 import 'pdf_preview_screen.dart';
+import 'simplified_quote_screen.dart';
 
 class SimplifiedQuoteDetailScreen extends StatefulWidget {
   final SimplifiedMultiLevelQuote quote;
   final Customer customer;
 
   const SimplifiedQuoteDetailScreen({
-    Key? key,
+    super.key,
     required this.quote,
     required this.customer,
-  }) : super(key: key);
+  });
 
   @override
   State<SimplifiedQuoteDetailScreen> createState() => _SimplifiedQuoteDetailScreenState();
@@ -65,9 +68,16 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
               title: Text('Quote ${widget.quote.quoteNumber}'),
               actions: [
                 IconButton(
+                  icon: const Icon(Icons.preview),
+                  onPressed: _previewPdf,
+                  color: Colors.white,
+                  tooltip: 'Preview PDF',
+                ),
+                IconButton(
                   icon: const Icon(Icons.edit),
                   onPressed: _editQuote,
                   color: Colors.white,
+                  tooltip: 'Edit Quote',
                 ),
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, color: Colors.white),
@@ -130,12 +140,6 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
             ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addDiscount,
-        icon: const Icon(Icons.local_offer),
-        label: const Text('Add Discount'),
-        backgroundColor: Colors.green,
       ),
     );
   }
@@ -585,7 +589,68 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
       ),
     );
   }
+  void _previewPdf() async {
+    try {
+      final appState = context.read<AppStateProvider>();
 
+      // Find existing PDF for this quote
+      final existingPdf = appState.projectMedia.where((media) =>
+      media.customerId == widget.customer.id &&
+          media.quoteId == widget.quote.id &&
+          media.isPdf &&
+          media.tags.contains('quote')
+      ).toList();
+
+      if (existingPdf.isEmpty) {
+        // No existing PDF found
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No saved PDF found. Use "Generate PDF" to create one first.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Use the most recent PDF
+      final latestPdf = existingPdf.last;
+
+      // Check if file still exists
+      final file = File(latestPdf.filePath);
+      if (!await file.exists()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF file not found: ${latestPdf.fileName}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Open existing PDF in preview screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfPreviewScreen(
+            pdfPath: latestPdf.filePath,
+            suggestedFileName: latestPdf.fileName,
+            quote: widget.quote,
+            customer: widget.customer,
+            title: 'Saved PDF Preview',
+            isPreview: true,
+          ),
+        ),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error opening PDF: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
   Widget _buildActionButtons() {
     return Row(
       children: [
@@ -649,8 +714,19 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
   }
 
   void _editQuote() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edit quote functionality coming soon')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SimplifiedQuoteScreen(
+          customer: widget.customer,
+          existingQuote: widget.quote, // Pass the quote to edit
+          roofScopeData: widget.quote.roofScopeDataId != null
+              ? context.read<AppStateProvider>().roofScopeDataList
+              .where((rs) => rs.id == widget.quote.roofScopeDataId)
+              .firstOrNull
+              : null,
+        ),
+      ),
     );
   }
 
@@ -1079,90 +1155,256 @@ class _DiscountDialogState extends State<_DiscountDialog> {
   bool _applyToAddons = true;
   DateTime? _expiryDate;
 
+
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Add Discount'),
-      content: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: _type,
-                decoration: const InputDecoration(labelText: 'Discount Type'),
-                items: const [
-                  DropdownMenuItem(value: 'percentage', child: Text('Percentage')),
-                  DropdownMenuItem(value: 'fixed_amount', child: Text('Fixed Amount')),
-                  DropdownMenuItem(value: 'voucher', child: Text('Voucher Code')),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        constraints: const BoxConstraints(maxHeight: 600),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Clean Header - matching your blue theme
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Color(0xFF2E86AB),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.local_offer, color: Colors.white, size: 24),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Add Discount',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    padding: EdgeInsets.zero,
+                  ),
                 ],
-                onChanged: (value) => setState(() => _type = value!),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _valueController,
-                decoration: InputDecoration(
-                  labelText: _type == 'percentage' ? 'Percentage (%)' : 'Amount (\$)',
-                  prefixText: _type == 'fixed_amount' ? '\$ ' : null,
-                  suffixText: _type == 'percentage' ? '%' : null,
+            ),
+
+            // Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Discount Type Selection
+                      DropdownButtonFormField<String>(
+                        value: _type,
+                        decoration: const InputDecoration(
+                          labelText: 'Discount Type',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.category),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'percentage', child: Text('Percentage Discount')),
+                          DropdownMenuItem(value: 'fixed_amount', child: Text('Fixed Amount Discount')),
+                          DropdownMenuItem(value: 'voucher', child: Text('Voucher Code')),
+                        ],
+                        onChanged: (value) => setState(() => _type = value!),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Value Input
+                      TextFormField(
+                        controller: _valueController,
+                        decoration: InputDecoration(
+                          labelText: _type == 'percentage' ? 'Percentage (%)' : 'Amount (\$)',
+                          border: const OutlineInputBorder(),
+                          prefixIcon: Icon(_type == 'percentage' ? Icons.percent : Icons.attach_money),
+                          suffixText: _type == 'percentage' ? '%' : null,
+                          prefixText: _type == 'fixed_amount' ? '\$ ' : null,
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        autofocus: true,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return 'Required';
+                          final num = double.tryParse(value);
+                          if (num == null || num <= 0) return 'Enter valid positive number';
+                          if (_type == 'percentage' && num > 100) return 'Cannot exceed 100%';
+                          return null;
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Description
+                      TextFormField(
+                        controller: _descriptionController,
+                        decoration: const InputDecoration(
+                          labelText: 'Description (Optional)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.description),
+                        ),
+                        maxLines: 2,
+                      ),
+
+                      // Voucher Code (conditional)
+                      if (_type == 'voucher') ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _codeController,
+                          decoration: const InputDecoration(
+                            labelText: 'Voucher Code',
+                            border: OutlineInputBorder(),
+                            prefixIcon: Icon(Icons.confirmation_number),
+                          ),
+                          textCapitalization: TextCapitalization.characters,
+                          validator: (value) => value == null || value.isEmpty ? 'Code required for vouchers' : null,
+                        ),
+                      ],
+
+                      const SizedBox(height: 20),
+
+                      // Options
+                      Card(
+                        elevation: 0,
+                        color: Colors.grey[50],
+                        child: Column(
+                          children: [
+                            SwitchListTile(
+                              title: const Text('Apply to Add-ons'),
+                              subtitle: const Text('Include add-on products in discount'),
+                              value: _applyToAddons,
+                              onChanged: (value) => setState(() => _applyToAddons = value),
+                            ),
+                            ListTile(
+                              leading: const Icon(Icons.calendar_today),
+                              title: const Text('Expiry Date'),
+                              subtitle: Text(
+                                _expiryDate != null
+                                    ? DateFormat('MMM dd, yyyy').format(_expiryDate!)
+                                    : 'No expiry date set',
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () async {
+                                final date = await showDatePicker(
+                                  context: context,
+                                  initialDate: DateTime.now().add(const Duration(days: 30)),
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                                );
+                                if (date != null) setState(() => _expiryDate = date);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return 'Required';
-                  final num = double.tryParse(value);
-                  if (num == null || num <= 0) return 'Enter valid positive number';
-                  if (_type == 'percentage' && num > 100) return 'Percentage cannot exceed 100%';
-                  return null;
-                },
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(labelText: 'Description (Optional)'),
-              ),
-              if (_type == 'voucher') ...[
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _codeController,
-                  decoration: const InputDecoration(labelText: 'Voucher Code'),
-                  validator: (value) => _type == 'voucher' && (value == null || value.isEmpty) ? 'Code required for vouchers' : null,
+            ),
+
+            // Action Buttons
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
                 ),
-              ],
-              const SizedBox(height: 16),
-              SwitchListTile(
-                title: const Text('Apply to Add-ons'),
-                value: _applyToAddons,
-                onChanged: (value) => setState(() => _applyToAddons = value),
               ),
-              ListTile(
-                title: const Text('Expiry Date (Optional)'),
-                subtitle: Text(_expiryDate != null ? DateFormat('MMM dd, yyyy').format(_expiryDate!) : 'No expiry'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now().add(const Duration(days: 30)),
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (date != null) setState(() => _expiryDate = date);
-                },
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: _addDiscount,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E86AB),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('Add Discount'),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        ElevatedButton(
-          onPressed: _addDiscount,
-          child: const Text('Add Discount'),
-        ),
-      ],
     );
   }
+  Widget _buildTypeCard(String value, String label, IconData icon) {
+    final isSelected = _type == value;
 
+    return GestureDetector(
+      onTap: () => setState(() => _type = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.green.shade600 : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.green.shade600 : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: Colors.green.shade200,
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ] : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey.shade600,
+              size: 24,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey.shade700,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   void _addDiscount() {
     if (!_formKey.currentState!.validate()) return;
 

@@ -11,11 +11,11 @@ class EditCustomFieldDialog extends StatefulWidget {
   final Map<String, String> categoryNames;
 
   const EditCustomFieldDialog({
-    Key? key,
+    super.key,
     required this.field,
     required this.categories,
     required this.categoryNames,
-  }) : super(key: key);
+  });
 
   @override
   State<EditCustomFieldDialog> createState() => _EditCustomFieldDialogState();
@@ -61,7 +61,13 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
     _valueTextController = TextEditingController(text: widget.field.currentValue);
     _placeholderController = TextEditingController(text: widget.field.placeholder ?? '');
     _descriptionController = TextEditingController(text: widget.field.description ?? '');
-    _selectedFieldCategory = widget.field.category;
+
+    // Ensure the field category exists in available categories
+    final availableCategories = widget.categories.where((c) => c != 'all').toSet().toList();
+    _selectedFieldCategory = availableCategories.contains(widget.field.category)
+        ? widget.field.category
+        : (availableCategories.isNotEmpty ? availableCategories.first : 'custom');
+
     _selectedFieldType = widget.field.fieldType;
     _isRequired = widget.field.isRequired;
   }
@@ -78,6 +84,9 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // Get unique categories and filter out 'all'
+    final availableCategories = widget.categories.where((c) => c != 'all').toSet().toList();
+
     return AlertDialog(
       title: Text('Edit Field: ${widget.field.displayName}'),
       content: Form(
@@ -91,7 +100,7 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
               DropdownButtonFormField<String>(
                 value: _selectedFieldCategory,
                 decoration: const InputDecoration(labelText: 'Category *'),
-                items: widget.categories.where((c) => c != 'all').map((String categoryValue) {
+                items: availableCategories.map((String categoryValue) {
                   return DropdownMenuItem<String>(
                     value: categoryValue,
                     child: Text(widget.categoryNames[categoryValue] ?? categoryValue),
@@ -228,8 +237,8 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
           onPressed: () => Navigator.of(context).pop(null),
         ),
         ElevatedButton(
-          child: const Text('Save Changes'),
           onPressed: _handleSaveChanges,
+          child: const Text('Save Changes'),
         ),
       ],
     );

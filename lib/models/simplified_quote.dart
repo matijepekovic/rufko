@@ -253,6 +253,16 @@ class SimplifiedMultiLevelQuote extends HiveObject {
   @HiveField(17)
   List<String> nonDiscountableProductIds; // Products excluded from discounts
 
+  // NEW: Store generated PDF path
+  @HiveField(18)
+  String? pdfPath; // Path to the last generated PDF
+
+  @HiveField(19)
+  String? pdfTemplateId; // ID of template used for last PDF generation
+
+  @HiveField(20)
+  DateTime? pdfGeneratedAt; // When the PDF was last generated
+
   SimplifiedMultiLevelQuote({
     String? id,
     required this.customerId,
@@ -272,6 +282,9 @@ class SimplifiedMultiLevelQuote extends HiveObject {
     this.baseProductUnit,
     List<QuoteDiscount>? discounts, // NEW
     List<String>? nonDiscountableProductIds, // NEW
+    this.pdfPath, // NEW
+    this.pdfTemplateId, // NEW
+    this.pdfGeneratedAt, // NEW
   })  : levels = levels ?? [],
         addons = addons ?? [],
         discounts = discounts ?? [], // NEW

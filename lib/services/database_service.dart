@@ -1,4 +1,4 @@
-// lib/services/database_service.dart - UPDATED FOR ENHANCED MODELS
+// lib/services/database_service.dart - UPDATED FOR ENHANCED MODELS & CATEGORY FIX
 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:io';
@@ -13,11 +13,17 @@ import 'package:flutter/foundation.dart';
 import '../models/pdf_template.dart';
 import '../models/custom_app_data.dart';
 import 'package:path_provider/path_provider.dart';
+import '../models/message_template.dart';
+import '../models/email_template.dart';
+import '../models/template_category.dart'; // Ensure this is imported
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
+
   factory DatabaseService() => _instance;
+
   DatabaseService._internal();
+
   static DatabaseService get instance => _instance;
 
   // Hive boxes
@@ -29,6 +35,9 @@ class DatabaseService {
   late Box<ProjectMedia> _mediaBox;
   late Box<AppSettings> _settingsBox;
   late Box<PDFTemplate> _pdfTemplateBox;
+  late Box<MessageTemplate> _messageTemplateBox;
+  late Box<EmailTemplate> _emailTemplateBox;
+  late Box<TemplateCategory> _categoriesBox; // Should store TemplateCategory objects
   bool _isInitialized = false;
 
   Future<void> init() async {
@@ -37,12 +46,19 @@ class DatabaseService {
     try {
       _customerBox = await Hive.openBox<Customer>('customers');
       _productBox = await Hive.openBox<Product>('products');
-      _simplifiedQuoteBox = await Hive.openBox<SimplifiedMultiLevelQuote>('simplified_quotes_v3'); // Updated version for enhanced features
+      _simplifiedQuoteBox = await Hive.openBox<SimplifiedMultiLevelQuote>(
+          'simplified_quotes_v3'); // Updated version for enhanced features
       _roofScopeBox = await Hive.openBox<RoofScopeData>('roofscope_data');
       _mediaBox = await Hive.openBox<ProjectMedia>('project_media');
       _settingsBox = await Hive.openBox<AppSettings>('app_settings');
       _pdfTemplateBox = await Hive.openBox<PDFTemplate>('pdf_templates');
-      _customAppDataFieldBox = await Hive.openBox<CustomAppDataField>('custom_app_data_fields');
+      _customAppDataFieldBox =
+      await Hive.openBox<CustomAppDataField>('custom_app_data_fields');
+      _messageTemplateBox =
+      await Hive.openBox<MessageTemplate>('message_templates');
+      _emailTemplateBox = await Hive.openBox<EmailTemplate>('email_templates');
+      // Explicitly tell Hive to use TemplateCategoryAdapter for this box
+      _categoriesBox = await Hive.openBox<TemplateCategory>('template_categories');
       _isInitialized = true;
       if (kDebugMode) {
         print('Database initialized successfully with enhanced models');
@@ -53,6 +69,7 @@ class DatabaseService {
         print('- Media Files: ${_mediaBox.length}');
         print('- Settings: ${_settingsBox.length}');
         print('- PDF Templates: ${_pdfTemplateBox.length}');
+        print('- Template Categories: ${_categoriesBox.length}'); // Log category box length
       }
     } catch (e) {
       if (kDebugMode) {
@@ -113,7 +130,8 @@ class DatabaseService {
   Future<List<Product>> getProductsByCategory(String category) async {
     _ensureInitialized();
     return _productBox.values
-        .where((product) => product.category.toLowerCase() == category.toLowerCase())
+        .where((product) =>
+    product.category.toLowerCase() == category.toLowerCase())
         .toList();
   }
 
@@ -134,13 +152,16 @@ class DatabaseService {
 
   Future<List<PDFTemplate>> getActivePDFTemplates() async {
     _ensureInitialized();
-    return _pdfTemplateBox.values.where((template) => template.isActive).toList();
+    return _pdfTemplateBox.values
+        .where((template) => template.isActive)
+        .toList();
   }
 
   Future<List<PDFTemplate>> getPDFTemplatesByType(String templateType) async {
     _ensureInitialized();
     return _pdfTemplateBox.values
-        .where((template) => template.templateType.toLowerCase() == templateType.toLowerCase())
+        .where((template) =>
+    template.templateType.toLowerCase() == templateType.toLowerCase())
         .toList();
   }
 
@@ -149,14 +170,140 @@ class DatabaseService {
     await _pdfTemplateBox.delete(id);
   }
 
+  // --- Message Template Operations ---
+  Future<void> saveMessageTemplate(MessageTemplate template) async {
+    _ensureInitialized();
+    await _messageTemplateBox.put(template.id, template);
+  }
+
+  Future<MessageTemplate?> getMessageTemplate(String id) async {
+    _ensureInitialized();
+    return _messageTemplateBox.get(id);
+  }
+
+  Future<List<MessageTemplate>> getAllMessageTemplates() async {
+    _ensureInitialized();
+    return _messageTemplateBox.values.toList();
+  }
+
+  Future<List<MessageTemplate>> getActiveMessageTemplates() async {
+    _ensureInitialized();
+    return _messageTemplateBox.values
+        .where((template) => template.isActive)
+        .toList();
+  }
+
+  Future<List<MessageTemplate>> getMessageTemplatesByCategory(
+      String category) async {
+    _ensureInitialized();
+    return _messageTemplateBox.values
+        .where((template) =>
+    template.category.toLowerCase() == category.toLowerCase())
+        .toList();
+  }
+
+  Future<void> deleteMessageTemplate(String id) async {
+    _ensureInitialized();
+    await _messageTemplateBox.delete(id);
+  }
+
+  Future<void> toggleMessageTemplateActive(String templateId) async {
+    _ensureInitialized();
+    final template = _messageTemplateBox.get(templateId);
+    if (template != null) {
+      final updatedTemplate = template.copyWith(
+        isActive: !template.isActive,
+        updatedAt: DateTime.now(),
+      );
+      await _messageTemplateBox.put(templateId, updatedTemplate);
+    }
+  }
+
+  Future<List<MessageTemplate>> searchMessageTemplates(String query) async {
+    _ensureInitialized();
+    if (query.isEmpty) return await getAllMessageTemplates();
+
+    final lowerQuery = query.toLowerCase();
+    return _messageTemplateBox.values.where((template) =>
+    template.templateName.toLowerCase().contains(lowerQuery) ||
+        template.description.toLowerCase().contains(lowerQuery) ||
+        template.category.toLowerCase().contains(lowerQuery) ||
+        template.messageContent.toLowerCase().contains(lowerQuery)
+    ).toList();
+  }
+
+
   Future<void> toggleTemplateActive(String templateId) async {
     _ensureInitialized();
     final template = _pdfTemplateBox.get(templateId);
     if (template != null) {
       template.isActive = !template.isActive;
       template.updatedAt = DateTime.now();
-      await template.save();
+      await template.save(); // HiveObject's save method
     }
+  }
+
+// --- Email Template Operations ---
+  Future<void> saveEmailTemplate(EmailTemplate template) async {
+    _ensureInitialized();
+    await _emailTemplateBox.put(template.id, template);
+  }
+
+  Future<EmailTemplate?> getEmailTemplate(String id) async {
+    _ensureInitialized();
+    return _emailTemplateBox.get(id);
+  }
+
+  Future<List<EmailTemplate>> getAllEmailTemplates() async {
+    _ensureInitialized();
+    return _emailTemplateBox.values.toList();
+  }
+
+  Future<List<EmailTemplate>> getActiveEmailTemplates() async {
+    _ensureInitialized();
+    return _emailTemplateBox.values
+        .where((template) => template.isActive)
+        .toList();
+  }
+
+  Future<List<EmailTemplate>> getEmailTemplatesByCategory(
+      String category) async {
+    _ensureInitialized();
+    return _emailTemplateBox.values
+        .where((template) =>
+    template.category.toLowerCase() == category.toLowerCase())
+        .toList();
+  }
+
+  Future<void> deleteEmailTemplate(String id) async {
+    _ensureInitialized();
+    await _emailTemplateBox.delete(id);
+  }
+
+  Future<void> toggleEmailTemplateActive(String templateId) async {
+    _ensureInitialized();
+    final template = _emailTemplateBox.get(templateId);
+    if (template != null) {
+      final updatedTemplate = template.copyWith(
+        isActive: !template.isActive,
+        updatedAt: DateTime.now(),
+      );
+      await _emailTemplateBox.put(templateId, updatedTemplate);
+    }
+  }
+
+  Future<List<EmailTemplate>> searchEmailTemplates(String query) async {
+    _ensureInitialized();
+    if (query.isEmpty) return await getAllEmailTemplates();
+
+    final lowerQuery = query.toLowerCase();
+    return _emailTemplateBox.values.where((template) =>
+    template.templateName.toLowerCase().contains(lowerQuery) ||
+        template.description.toLowerCase().contains(lowerQuery) ||
+        template.category.toLowerCase().contains(lowerQuery) ||
+        template.subject.toLowerCase().contains(lowerQuery) ||
+        template.emailContent.toLowerCase().contains(lowerQuery)
+    ).toList();
   }
 
   // --- Custom App Data Field Operations ---
@@ -180,7 +327,8 @@ class DatabaseService {
     await _customAppDataFieldBox.delete(fieldId);
   }
 
-  Future<List<CustomAppDataField>> getCustomAppDataFieldsByCategory(String category) async {
+  Future<List<CustomAppDataField>> getCustomAppDataFieldsByCategory(
+      String category) async {
     _ensureInitialized();
     return _customAppDataFieldBox.values
         .where((field) => field.category == category)
@@ -188,7 +336,8 @@ class DatabaseService {
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
-  Future<void> saveMultipleCustomAppDataFields(List<CustomAppDataField> fields) async {
+  Future<void> saveMultipleCustomAppDataFields(
+      List<CustomAppDataField> fields) async {
     _ensureInitialized();
     final Map<String, CustomAppDataField> fieldsMap = {
       for (var field in fields) field.id: field
@@ -200,6 +349,7 @@ class DatabaseService {
     _ensureInitialized();
     await _customAppDataFieldBox.clear();
   }
+
   // --- END OF Custom App Data Field Operations ---
 
 
@@ -218,7 +368,9 @@ class DatabaseService {
 
   Future<List<Product>> getDiscountableProducts() async {
     _ensureInitialized();
-    return _productBox.values.where((product) => product.isDiscountable).toList();
+    return _productBox.values
+        .where((product) => product.isDiscountable)
+        .toList();
   }
 
   Future<List<Product>> getAddonProducts() async {
@@ -238,6 +390,7 @@ class DatabaseService {
       final product = _productBox.get(entry.key);
       if (product != null) {
         product.updateInfo(unitPrice: entry.value);
+        // No need to call product.save() if updateInfo handles it and it's in a box.
       }
     }
   }
@@ -247,33 +400,39 @@ class DatabaseService {
     final product = _productBox.get(productId);
     if (product != null) {
       product.updateInfo(isDiscountable: !product.isDiscountable);
+      // No need to call product.save() if updateInfo handles it.
     }
   }
 
   // --- Enhanced SimplifiedMultiLevelQuote Operations ---
-  Future<void> saveSimplifiedMultiLevelQuote(SimplifiedMultiLevelQuote quote) async {
+  Future<void> saveSimplifiedMultiLevelQuote(
+      SimplifiedMultiLevelQuote quote) async {
     _ensureInitialized();
     await _simplifiedQuoteBox.put(quote.id, quote);
   }
 
-  Future<SimplifiedMultiLevelQuote?> getSimplifiedMultiLevelQuote(String id) async {
+  Future<SimplifiedMultiLevelQuote?> getSimplifiedMultiLevelQuote(
+      String id) async {
     _ensureInitialized();
     return _simplifiedQuoteBox.get(id);
   }
 
-  Future<List<SimplifiedMultiLevelQuote>> getAllSimplifiedMultiLevelQuotes() async {
+  Future<List<
+      SimplifiedMultiLevelQuote>> getAllSimplifiedMultiLevelQuotes() async {
     _ensureInitialized();
     return _simplifiedQuoteBox.values.toList();
   }
 
-  Future<List<SimplifiedMultiLevelQuote>> getQuotesByStatus(String status) async {
+  Future<List<SimplifiedMultiLevelQuote>> getQuotesByStatus(
+      String status) async {
     _ensureInitialized();
     return _simplifiedQuoteBox.values
         .where((quote) => quote.status.toLowerCase() == status.toLowerCase())
         .toList();
   }
 
-  Future<List<SimplifiedMultiLevelQuote>> getQuotesByCustomer(String customerId) async {
+  Future<List<SimplifiedMultiLevelQuote>> getQuotesByCustomer(
+      String customerId) async {
     _ensureInitialized();
     return _simplifiedQuoteBox.values
         .where((quote) => quote.customerId == customerId)
@@ -282,7 +441,9 @@ class DatabaseService {
 
   Future<List<SimplifiedMultiLevelQuote>> getExpiredQuotes() async {
     _ensureInitialized();
-    return _simplifiedQuoteBox.values.where((quote) => quote.isExpired).toList();
+    return _simplifiedQuoteBox.values
+        .where((quote) => quote.isExpired)
+        .toList();
   }
 
   Future<List<SimplifiedMultiLevelQuote>> getQuotesWithDiscounts() async {
@@ -335,7 +496,9 @@ class DatabaseService {
       'statusCounts': statusCounts,
       'totalDiscountsApplied': totalDiscountsApplied,
       'totalDiscountAmount': totalDiscountAmount,
-      'averageQuoteValue': quotes.isNotEmpty ? totalRevenue / quotes.length : 0.0,
+      'averageQuoteValue': quotes.isNotEmpty
+          ? totalRevenue / quotes.length
+          : 0.0,
     };
   }
 
@@ -355,7 +518,8 @@ class DatabaseService {
     return _roofScopeBox.values.toList();
   }
 
-  Future<List<RoofScopeData>> getRoofScopeDataByCustomer(String customerId) async {
+  Future<List<RoofScopeData>> getRoofScopeDataByCustomer(
+      String customerId) async {
     _ensureInitialized();
     return _roofScopeBox.values
         .where((data) => data.customerId == customerId)
@@ -383,7 +547,8 @@ class DatabaseService {
     return _mediaBox.values.toList();
   }
 
-  Future<List<ProjectMedia>> getProjectMediaByCustomer(String customerId) async {
+  Future<List<ProjectMedia>> getProjectMediaByCustomer(
+      String customerId) async {
     _ensureInitialized();
     return _mediaBox.values
         .where((media) => media.customerId == customerId)
@@ -406,7 +571,7 @@ class DatabaseService {
     _ensureInitialized();
     final keysToDelete = _mediaBox.values
         .where((media) => media.quoteId == quoteId)
-        .map((media) => media.key as String)
+        .map((media) => media.key as String) // HiveObject's key
         .toList();
     await _mediaBox.deleteAll(keysToDelete);
   }
@@ -418,8 +583,24 @@ class DatabaseService {
       // Create and save default enhanced settings
       final defaultSettings = AppSettings(
         id: 'singleton_app_settings',
-        productCategories: ['Materials', 'Roofing', 'Gutters', 'Flashing', 'Labor', 'Other'],
-        productUnits: ['sq ft', 'lin ft', 'each', 'hour', 'day', 'bundle', 'roll', 'sheet'],
+        productCategories: [
+          'Materials',
+          'Roofing',
+          'Gutters',
+          'Flashing',
+          'Labor',
+          'Other'
+        ],
+        productUnits: [
+          'sq ft',
+          'lin ft',
+          'each',
+          'hour',
+          'day',
+          'bundle',
+          'roll',
+          'sheet'
+        ],
         defaultUnit: 'sq ft',
         defaultQuoteLevelNames: ['Basic', 'Standard', 'Premium'],
         taxRate: 0.0,
@@ -457,14 +638,20 @@ class DatabaseService {
         if (await file.exists()) {
           final bytes = await file.readAsBytes();
           templateMap['pdfFileContent'] = base64Encode(bytes);
-          templateMap['originalFileName'] = file.path.split('/').last;
-          if (kDebugMode) print('📦 Exported PDF file: ${template.templateName} (${(bytes.length / 1024).toStringAsFixed(1)} KB)');
+          templateMap['originalFileName'] = file.path
+              .split('/')
+              .last;
+          if (kDebugMode) print(
+              '📦 Exported PDF file: ${template.templateName} (${(bytes.length /
+                  1024).toStringAsFixed(1)} KB)');
         } else {
-          if (kDebugMode) print('⚠️ PDF file not found for template: ${template.templateName}');
+          if (kDebugMode) print(
+              '⚠️ PDF file not found for template: ${template.templateName}');
           templateMap['pdfFileContent'] = null;
         }
       } catch (e) {
-        if (kDebugMode) print('❌ Error reading PDF file for ${template.templateName}: $e');
+        if (kDebugMode) print(
+            '❌ Error reading PDF file for ${template.templateName}: $e');
         templateMap['pdfFileContent'] = null;
       }
       pdfTemplatesWithFiles.add(templateMap);
@@ -473,11 +660,17 @@ class DatabaseService {
     return {
       'customers': (await getAllCustomers()).map((c) => c.toMap()).toList(),
       'products': (await getAllProducts()).map((p) => p.toMap()).toList(),
-      'simplified_quotes': (await getAllSimplifiedMultiLevelQuotes()).map((q) => q.toMap()).toList(),
-      'roofScopeData': (await getAllRoofScopeData()).map((r) => r.toMap()).toList(),
-      'projectMedia': (await getAllProjectMedia()).map((m) => m.toMap()).toList(),
+      'simplified_quotes': (await getAllSimplifiedMultiLevelQuotes()).map((q) =>
+          q.toMap()).toList(),
+      'roofScopeData': (await getAllRoofScopeData())
+          .map((r) => r.toMap())
+          .toList(),
+      'projectMedia': (await getAllProjectMedia())
+          .map((m) => m.toMap())
+          .toList(),
       'pdfTemplates': pdfTemplatesWithFiles, // Now includes actual PDF files
-      'customAppDataFields': (await getAllCustomAppDataFields()).map((f) => f.toMap()).toList(), // ADDED
+      'customAppDataFields': (await getAllCustomAppDataFields()).map((f) =>
+          f.toMap()).toList(), // ADDED
       'appSettings': (await getAppSettings())?.toMap(),
       'analytics': await getQuoteAnalytics(),
       'exportDate': DateTime.now().toIso8601String(),
@@ -497,6 +690,10 @@ class DatabaseService {
       await _settingsBox.clear();
       await _pdfTemplateBox.clear();
       await _customAppDataFieldBox.clear(); // ADDED: Clear custom fields
+      await _categoriesBox.clear(); // Clear template categories
+      await _messageTemplateBox.clear();
+      await _emailTemplateBox.clear();
+
 
       // Import customers
       if (data['customers'] != null) {
@@ -515,7 +712,8 @@ class DatabaseService {
       // Import enhanced quotes
       if (data['simplified_quotes'] != null) {
         for (final itemData in data['simplified_quotes']) {
-          await saveSimplifiedMultiLevelQuote(SimplifiedMultiLevelQuote.fromMap(itemData));
+          await saveSimplifiedMultiLevelQuote(
+              SimplifiedMultiLevelQuote.fromMap(itemData));
         }
       }
 
@@ -541,7 +739,8 @@ class DatabaseService {
         for (final itemData in data['customAppDataFields']) {
           await saveCustomAppDataField(CustomAppDataField.fromMap(itemData));
         }
-        if (kDebugMode) print('✅ Imported ${data['customAppDataFields'].length} custom app data fields');
+        if (kDebugMode) print('✅ Imported ${data['customAppDataFields']
+            .length} custom app data fields');
       }
 
       // ENHANCED: Import PDF templates with actual files
@@ -563,8 +762,11 @@ class DatabaseService {
               final fileBytes = base64Decode(base64Content);
 
               // Generate new filename
-              final originalFileName = itemData['originalFileName'] ?? 'imported_template.pdf';
-              final newFileName = '${DateTime.now().millisecondsSinceEpoch}_$originalFileName';
+              final originalFileName = itemData['originalFileName'] ??
+                  'imported_template.pdf';
+              final newFileName = '${DateTime
+                  .now()
+                  .millisecondsSinceEpoch}_$originalFileName';
               final newPath = '${templatesDir.path}/$newFileName';
 
               // Write file to disk
@@ -575,9 +777,12 @@ class DatabaseService {
               template.pdfFilePath = newPath;
               template.updatedAt = DateTime.now();
 
-              if (kDebugMode) print('📄 Restored PDF file: ${template.templateName} to $newPath');
+              if (kDebugMode) print(
+                  '📄 Restored PDF file: ${template.templateName} to $newPath');
             } else {
-              if (kDebugMode) print('⚠️ No PDF file content for template: ${template.templateName}');
+              if (kDebugMode) print(
+                  '⚠️ No PDF file content for template: ${template
+                      .templateName}');
             }
 
             await savePDFTemplate(template);
@@ -585,14 +790,39 @@ class DatabaseService {
             if (kDebugMode) print('❌ Error importing PDF template: $e');
           }
         }
-        if (kDebugMode) print('✅ Imported ${data['pdfTemplates'].length} PDF templates');
+        if (kDebugMode) print(
+            '✅ Imported ${data['pdfTemplates'].length} PDF templates');
       }
+
+      // Import Message Templates
+      if (data['message_templates'] != null) {
+        for (final itemData in data['message_templates']) {
+          await saveMessageTemplate(MessageTemplate.fromJson(itemData));
+        }
+        if (kDebugMode) print('✅ Imported ${data['message_templates'].length} Message templates');
+      }
+
+      // Import Email Templates
+      if (data['email_templates'] != null) {
+        for (final itemData in data['email_templates']) {
+          await saveEmailTemplate(EmailTemplate.fromJson(itemData));
+        }
+        if (kDebugMode) print('✅ Imported ${data['email_templates'].length} Email templates');
+      }
+
+      // Import Template Categories
+      if (data['template_categories'] != null) {
+        for (final itemData in data['template_categories']) {
+          await _categoriesBox.add(TemplateCategory.fromMap(itemData));
+        }
+        if (kDebugMode) print('✅ Imported ${data['template_categories'].length} Template Categories');
+      }
+
 
       if (kDebugMode) {
         print('🎉 COMPLETE data import finished successfully');
         print('Imported version: ${data['version'] ?? 'legacy'}');
       }
-
     } catch (e) {
       if (kDebugMode) {
         print('Error importing complete data: $e');
@@ -612,7 +842,8 @@ class DatabaseService {
         product.category.toLowerCase().contains(lowerQuery) ||
         (product.description?.toLowerCase().contains(lowerQuery) ?? false) ||
         (product.sku?.toLowerCase().contains(lowerQuery) ?? false) ||
-        product.activeLevels.any((level) => level.levelName.toLowerCase().contains(lowerQuery))
+        product.activeLevels.any((level) =>
+            level.levelName.toLowerCase().contains(lowerQuery))
     ).toList();
   }
 
@@ -625,7 +856,8 @@ class DatabaseService {
     quote.quoteNumber.toLowerCase().contains(lowerQuery) ||
         quote.status.toLowerCase().contains(lowerQuery) ||
         (quote.notes?.toLowerCase().contains(lowerQuery) ?? false) ||
-        quote.levels.any((level) => level.name.toLowerCase().contains(lowerQuery))
+        quote.levels.any((level) =>
+            level.name.toLowerCase().contains(lowerQuery))
     ).toList();
   }
 
@@ -639,7 +871,10 @@ class DatabaseService {
       await _roofScopeBox.compact();
       await _mediaBox.compact();
       await _settingsBox.compact();
-      await _pdfTemplateBox.compact(); // NEW
+      await _pdfTemplateBox.compact();
+      await _messageTemplateBox.compact();
+      await _emailTemplateBox.compact();
+      await _categoriesBox.compact();
 
       if (kDebugMode) {
         print('Database compaction completed');
@@ -659,9 +894,127 @@ class DatabaseService {
       'quotes': _simplifiedQuoteBox.length,
       'roofScopeData': _roofScopeBox.length,
       'projectMedia': _mediaBox.length,
-      'pdfTemplates': _pdfTemplateBox.length, // NEW
+      'pdfTemplates': _pdfTemplateBox.length,
+      'messageTemplates': _messageTemplateBox.length,
+      'emailTemplates': _emailTemplateBox.length,
+      'templateCategories': _categoriesBox.length,
       'settings': _settingsBox.length,
     };
+  }
+
+  // --- Template Category Management ---
+  // UPDATED getAllTemplateCategories to correctly handle potential Map data from Hive
+  Future<Map<String, List<Map<String, dynamic>>>> getAllTemplateCategories() async {
+    _ensureInitialized();
+
+    final List<dynamic> rawCategoriesData = _categoriesBox.values.toList();
+    final List<TemplateCategory> typedCategories = [];
+
+    for (var item in rawCategoriesData) {
+      if (item is TemplateCategory) {
+        typedCategories.add(item);
+      } else if (item is Map) {
+        try {
+          typedCategories.add(TemplateCategory.fromMap(Map<String, dynamic>.from(item)));
+        } catch (e) {
+          if (kDebugMode) {
+            print("Error converting map to TemplateCategory in getAllTemplateCategories: $e. Map: $item");
+          }
+        }
+      } else {
+        if (kDebugMode) {
+          print("Skipping unexpected data type in _categoriesBox: ${item.runtimeType}");
+        }
+      }
+    }
+
+    final result = <String, List<Map<String, dynamic>>>{
+      'pdf_templates': [],
+      'message_templates': [],
+      'email_templates': [],
+      'custom_fields': [
+        {'key': 'company', 'name': 'Company Information', 'id': 'default_company'},
+        {'key': 'contact', 'name': 'Contact Information', 'id': 'default_contact'},
+        {'key': 'legal', 'name': 'Legal Information', 'id': 'default_legal'},
+        {'key': 'pricing', 'name': 'Pricing Information', 'id': 'default_pricing'},
+        {'key': 'custom', 'name': 'Custom Fields', 'id': 'default_custom'},
+      ]
+    };
+
+    for (final category in typedCategories) {
+      final String typeKey = category.templateType;
+      if (!result.containsKey(typeKey)) {
+        result[typeKey] = [];
+      }
+      result[typeKey]!.add({
+        'id': category.id, // Add the ID for uniqueness
+        'key': category.key,
+        'name': category.name,
+      });
+    }
+    return result;
+  }
+
+
+  Future<void> addTemplateCategory(String templateType, String categoryKey, String categoryName) async {
+    _ensureInitialized();
+    final category = TemplateCategory(
+      key: categoryKey,
+      name: categoryName,
+      templateType: templateType,
+    );
+    await _categoriesBox.put(category.id, category); // Use put with a key, preferably category.id
+  }
+
+  Future<void> updateTemplateCategory(String categoryId, String newName) async {
+    _ensureInitialized();
+    final category = _categoriesBox.get(categoryId);
+    if (category != null) {
+      final updatedCategory = category.copyWith(name: newName, updatedAt: DateTime.now());
+      await _categoriesBox.put(categoryId, updatedCategory);
+    }
+  }
+
+  Future<void> deleteTemplateCategory(String categoryId) async {
+    _ensureInitialized();
+    await _categoriesBox.delete(categoryId);
+  }
+
+
+  Future<int> getCategoryUsageCount(String templateType, String categoryKey) async {
+    _ensureInitialized();
+
+    String typeToMatch = templateType;
+    // Normalize templateType to match keys used in TemplateCategory.templateType
+    if (templateType == "PDF Templates") typeToMatch = "pdf_templates";
+    if (templateType == "Message Templates") typeToMatch = "message_templates";
+    if (templateType == "Email Templates") typeToMatch = "email_templates";
+    if (templateType == "Custom Fields") typeToMatch = "custom_fields";
+
+
+    switch (typeToMatch) {
+      case 'pdf_templates': // This should match the `templateType` stored in TemplateCategory
+        return _pdfTemplateBox.values
+            .where((t) => t.templateType == categoryKey) // Assuming PDFTemplate has a category-like field or this is a typo
+            .length;
+      case 'message_templates':
+        return _messageTemplateBox.values
+            .where((t) => t.category == categoryKey)
+            .length;
+      case 'email_templates':
+        return _emailTemplateBox.values
+            .where((t) => t.category == categoryKey)
+            .length;
+      case 'custom_fields':
+        return _customAppDataFieldBox.values
+            .where((f) => f.category == categoryKey)
+            .length;
+      default:
+        if (kDebugMode) {
+          print("Warning: Unhandled templateType in getCategoryUsageCount: $templateType");
+        }
+        return 0;
+    }
   }
   Future<void> close() async {
     if (!_isInitialized) return;

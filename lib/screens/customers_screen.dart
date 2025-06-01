@@ -321,7 +321,7 @@ class _CustomersScreenState extends State<CustomersScreen> with TickerProviderSt
 
 class _CustomerFormDialog extends StatefulWidget {
   final Customer? customer;
-  const _CustomerFormDialog({Key? key, this.customer}) : super(key: key);
+  const _CustomerFormDialog({this.customer});
 
   @override
   State<_CustomerFormDialog> createState() => _CustomerFormDialogState();

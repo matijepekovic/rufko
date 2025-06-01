@@ -10,10 +10,12 @@ import '../models/roof_scope_data.dart';
 import '../models/project_media.dart';
 import '../models/app_settings.dart';
 import '../models/pdf_template.dart';
-import '../models/custom_app_data.dart';  // ADD THIS IMPORT
+import '../models/custom_app_data.dart';
 import '../services/database_service.dart';
 import '../services/pdf_service.dart';
 import '../services/template_service.dart';
+import '../models/message_template.dart';
+import '../models/email_template.dart';
 
 class AppStateProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
@@ -26,7 +28,9 @@ class AppStateProvider extends ChangeNotifier {
   List<RoofScopeData> _roofScopeDataList = [];
   List<ProjectMedia> _projectMedia = [];
   List<PDFTemplate> _pdfTemplates = [];
-  List<CustomAppDataField> _customAppDataFields = [];  // ADD THIS LINE
+  List<MessageTemplate> _messageTemplates = [];
+  List<EmailTemplate> _emailTemplates = [];
+  List<CustomAppDataField> _customAppDataFields = [];
 
   bool _isLoading = false;
   String _loadingMessage = '';
@@ -40,7 +44,11 @@ class AppStateProvider extends ChangeNotifier {
   List<ProjectMedia> get projectMedia => _projectMedia;
   List<PDFTemplate> get pdfTemplates => _pdfTemplates;
   List<PDFTemplate> get activePDFTemplates => _pdfTemplates.where((t) => t.isActive).toList();
-  List<CustomAppDataField> get customAppDataFields => _customAppDataFields;  // ADD THIS LINE
+  List<MessageTemplate> get messageTemplates => _messageTemplates;
+  List<MessageTemplate> get activeMessageTemplates => _messageTemplates.where((t) => t.isActive).toList();
+  List<EmailTemplate> get emailTemplates => _emailTemplates;
+  List<EmailTemplate> get activeEmailTemplates => _emailTemplates.where((t) => t.isActive).toList();
+  List<CustomAppDataField> get customAppDataFields => _customAppDataFields;
 
   bool get isLoading => _isLoading;
   String get loadingMessage => _loadingMessage;
@@ -220,6 +228,8 @@ class AppStateProvider extends ChangeNotifier {
         loadRoofScopeData(),
         loadProjectMedia(),
         loadPDFTemplates(),
+        loadMessageTemplates(),
+        loadEmailTemplates(),
         loadCustomAppDataFields(),
       ]);
       notifyListeners();
@@ -280,6 +290,30 @@ class AppStateProvider extends ChangeNotifier {
     } catch (e) {
       if (kDebugMode) {
         print('Error loading PDF templates: $e');
+      }
+    }
+  }
+  Future<void> loadMessageTemplates() async {
+    try {
+      _messageTemplates = await _db.getAllMessageTemplates();
+      if (kDebugMode) {
+        print('💬 Loaded ${_messageTemplates.length} message templates');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading message templates: $e');
+      }
+    }
+  }
+  Future<void> loadEmailTemplates() async {
+    try {
+      _emailTemplates = await _db.getAllEmailTemplates();
+      if (kDebugMode) {
+        print('📧 Loaded ${_emailTemplates.length} email templates');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading email templates: $e');
       }
     }
   }
@@ -1179,7 +1213,185 @@ class AppStateProvider extends ChangeNotifier {
       rethrow;
     }
   }
+  Future<void> addMessageTemplate(MessageTemplate template) async {
+    try {
+      await _db.saveMessageTemplate(template);
+      _messageTemplates.add(template);
+      notifyListeners();
+      if (kDebugMode) {
+        print('➕ Added message template: ${template.templateName}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error adding message template: $e');
+      }
+      rethrow;
+    }
+  }
+  Future<void> updateMessageTemplate(MessageTemplate template) async {
+    try {
+      await _db.saveMessageTemplate(template);
+      final index = _messageTemplates.indexWhere((t) => t.id == template.id);
+      if (index != -1) {
+        _messageTemplates[index] = template;
+        notifyListeners();
+        if (kDebugMode) {
+          print('📝 Updated message template: ${template.templateName}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating message template: $e');
+      }
+      rethrow;
+    }
+  }
 
+  Future<void> deleteMessageTemplate(String templateId) async {
+    try {
+      await _db.deleteMessageTemplate(templateId);
+      _messageTemplates.removeWhere((t) => t.id == templateId);
+      notifyListeners();
+      if (kDebugMode) {
+        print('🗑️ Deleted message template: $templateId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error deleting message template: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> toggleMessageTemplateActive(String templateId) async {
+    try {
+      await _db.toggleMessageTemplateActive(templateId);
+      final index = _messageTemplates.indexWhere((t) => t.id == templateId);
+      if (index != -1) {
+        final template = _messageTemplates[index];
+        final updatedTemplate = template.copyWith(
+          isActive: !template.isActive,
+          updatedAt: DateTime.now(),
+        );
+        _messageTemplates[index] = updatedTemplate;
+        notifyListeners();
+        if (kDebugMode) {
+          print('🔄 Toggled message template active: ${updatedTemplate.templateName} -> ${updatedTemplate.isActive}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling message template active: $e');
+      }
+      rethrow;
+    }
+  }
+
+  List<MessageTemplate> getMessageTemplatesByCategory(String category) {
+    return _messageTemplates.where((t) => t.category == category).toList();
+  }
+
+  List<MessageTemplate> searchMessageTemplates(String query) {
+    if (query.isEmpty) return _messageTemplates;
+    final lowerQuery = query.toLowerCase();
+    return _messageTemplates.where((template) =>
+    template.templateName.toLowerCase().contains(lowerQuery) ||
+        template.description.toLowerCase().contains(lowerQuery) ||
+        template.category.toLowerCase().contains(lowerQuery) ||
+        template.messageContent.toLowerCase().contains(lowerQuery)
+    ).toList();
+  }
+// --- Email Template Operations ---
+  Future<void> addEmailTemplate(EmailTemplate template) async {
+    try {
+      await _db.saveEmailTemplate(template);
+      _emailTemplates.add(template);
+      notifyListeners();
+      if (kDebugMode) {
+        print('➕ Added email template: ${template.templateName}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error adding email template: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> updateEmailTemplate(EmailTemplate template) async {
+    try {
+      await _db.saveEmailTemplate(template);
+      final index = _emailTemplates.indexWhere((t) => t.id == template.id);
+      if (index != -1) {
+        _emailTemplates[index] = template;
+        notifyListeners();
+        if (kDebugMode) {
+          print('📝 Updated email template: ${template.templateName}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error updating email template: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> deleteEmailTemplate(String templateId) async {
+    try {
+      await _db.deleteEmailTemplate(templateId);
+      _emailTemplates.removeWhere((t) => t.id == templateId);
+      notifyListeners();
+      if (kDebugMode) {
+        print('🗑️ Deleted email template: $templateId');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error deleting email template: $e');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> toggleEmailTemplateActive(String templateId) async {
+    try {
+      await _db.toggleEmailTemplateActive(templateId);
+      final index = _emailTemplates.indexWhere((t) => t.id == templateId);
+      if (index != -1) {
+        final template = _emailTemplates[index];
+        final updatedTemplate = template.copyWith(
+          isActive: !template.isActive,
+          updatedAt: DateTime.now(),
+        );
+        _emailTemplates[index] = updatedTemplate;
+        notifyListeners();
+        if (kDebugMode) {
+          print('🔄 Toggled email template active: ${updatedTemplate.templateName} -> ${updatedTemplate.isActive}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error toggling email template active: $e');
+      }
+      rethrow;
+    }
+  }
+
+  List<EmailTemplate> getEmailTemplatesByCategory(String category) {
+    return _emailTemplates.where((t) => t.category == category).toList();
+  }
+
+  List<EmailTemplate> searchEmailTemplates(String query) {
+    if (query.isEmpty) return _emailTemplates;
+    final lowerQuery = query.toLowerCase();
+    return _emailTemplates.where((template) =>
+    template.templateName.toLowerCase().contains(lowerQuery) ||
+        template.description.toLowerCase().contains(lowerQuery) ||
+        template.category.toLowerCase().contains(lowerQuery) ||
+        template.subject.toLowerCase().contains(lowerQuery) ||
+        template.emailContent.toLowerCase().contains(lowerQuery)
+    ).toList();
+  }
   // --- Custom App Data Field Operations ---
   Future<void> addCustomAppDataField(CustomAppDataField field) async {
     try {
@@ -1343,7 +1555,29 @@ class AppStateProvider extends ChangeNotifier {
       setLoading(false);
     }
   }
+// --- Template Category Management ---
+  Future<Map<String, List<Map<String, dynamic>>>> getAllTemplateCategories() async {
+    return await _db.getAllTemplateCategories();
+  }
 
+  Future<void> addTemplateCategory(String templateType, String categoryKey, String categoryName) async {
+    await _db.addTemplateCategory(templateType, categoryKey, categoryName);
+    notifyListeners();
+  }
+
+  Future<void> updateTemplateCategory(String templateType, String categoryKey, String newName) async {
+    await _db.updateTemplateCategory(templateType, categoryKey, newName);
+    notifyListeners();
+  }
+
+  Future<void> deleteTemplateCategory(String templateType, String categoryKey) async {
+    await _db.deleteTemplateCategory(templateType, categoryKey);
+    notifyListeners();
+  }
+
+  Future<int> getCategoryUsageCount(String templateType, String categoryKey) async {
+    return await _db.getCategoryUsageCount(templateType, categoryKey);
+  }
   // --- Search Operations ---
   List<Customer> searchCustomers(String query) {
     if (query.isEmpty) return _customers;

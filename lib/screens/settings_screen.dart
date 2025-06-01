@@ -165,19 +165,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 subtitle: 'Current: ${settings.taxRate.toStringAsFixed(2)}%',
                 onTap: _showTaxRateDialog,
               ),
-              _buildDivider(), // <<< ADDED THIS DIVIDER
-              _buildSettingsTile( // <<< ADDED THIS SETTINGS TILE
-                icon: Icons.data_object,
-                iconColor: Colors.teal.shade600,
-                title: 'Custom App Data Fields',
-                subtitle: 'Configure app-wide custom data values',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CustomAppDataScreen()),
-                  );
-                },
-              ),
             ],
           ),
         );

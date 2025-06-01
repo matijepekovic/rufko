@@ -146,13 +146,16 @@ class SimplifiedMultiLevelQuoteAdapter
       baseProductUnit: fields[15] as String?,
       discounts: (fields[16] as List?)?.cast<QuoteDiscount>(),
       nonDiscountableProductIds: (fields[17] as List?)?.cast<String>(),
+      pdfPath: fields[18] as String?,
+      pdfTemplateId: fields[19] as String?,
+      pdfGeneratedAt: fields[20] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, SimplifiedMultiLevelQuote obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -188,7 +191,13 @@ class SimplifiedMultiLevelQuoteAdapter
       ..writeByte(16)
       ..write(obj.discounts)
       ..writeByte(17)
-      ..write(obj.nonDiscountableProductIds);
+      ..write(obj.nonDiscountableProductIds)
+      ..writeByte(18)
+      ..write(obj.pdfPath)
+      ..writeByte(19)
+      ..write(obj.pdfTemplateId)
+      ..writeByte(20)
+      ..write(obj.pdfGeneratedAt);
   }
 
   @override

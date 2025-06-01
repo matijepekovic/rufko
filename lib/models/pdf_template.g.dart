@@ -100,7 +100,6 @@ class FieldMappingAdapter extends TypeAdapter<FieldMapping> {
       fontSizeOverride: fields[10] as double?,
       fontColorOverride: fields[11] as String?,
       alignmentOverride: fields[12] as String?,
-      defaultValue: fields[13] as String?,
       additionalProperties: (fields[14] as Map?)?.cast<String, dynamic>(),
     );
   }
@@ -108,7 +107,7 @@ class FieldMappingAdapter extends TypeAdapter<FieldMapping> {
   @override
   void write(BinaryWriter writer, FieldMapping obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.fieldId)
       ..writeByte(1)
@@ -135,8 +134,6 @@ class FieldMappingAdapter extends TypeAdapter<FieldMapping> {
       ..write(obj.fontColorOverride)
       ..writeByte(12)
       ..write(obj.alignmentOverride)
-      ..writeByte(13)
-      ..write(obj.defaultValue)
       ..writeByte(14)
       ..write(obj.additionalProperties);
   }

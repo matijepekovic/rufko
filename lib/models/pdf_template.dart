@@ -365,11 +365,10 @@ class PDFTemplate extends HiveObject {
 
 // Helper method to format category names nicely
   static String _formatCategoryName(String categoryKey) {
-    return categoryKey
+    return '${categoryKey
         .split('_')
         .map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : '')
-        .join(' ')
-        + ' Fields';
+        .join(' ')} Fields';
   }
 
   // 🚀 UPDATED: Enhanced getFieldDisplayName method to handle dynamic product names
@@ -529,15 +528,15 @@ class PDFTemplate extends HiveObject {
   // 🔧 FIXED: Clone method with no (Copy) suffix
   PDFTemplate clone({bool preserveId = false}) {
     return PDFTemplate(
-      id: preserveId ? this.id : Uuid().v4(),
-      templateName: this.templateName, // 🔧 Remove the (Copy) addition
-      description: this.description,
-      pdfFilePath: this.pdfFilePath,
-      templateType: this.templateType,
-      pageWidth: this.pageWidth,
-      pageHeight: this.pageHeight,
-      totalPages: this.totalPages,
-      fieldMappings: this.fieldMappings.map((fm) => FieldMapping(
+      id: preserveId ? id : Uuid().v4(),
+      templateName: templateName, // 🔧 Remove the (Copy) addition
+      description: description,
+      pdfFilePath: pdfFilePath,
+      templateType: templateType,
+      pageWidth: pageWidth,
+      pageHeight: pageHeight,
+      totalPages: totalPages,
+      fieldMappings: fieldMappings.map((fm) => FieldMapping(
         appDataType: fm.appDataType,
         pdfFormFieldName: fm.pdfFormFieldName,
         detectedPdfFieldType: fm.detectedPdfFieldType,
@@ -550,14 +549,14 @@ class PDFTemplate extends HiveObject {
         fontSizeOverride: fm.fontSizeOverride,
         fontColorOverride: fm.fontColorOverride,
         alignmentOverride: fm.alignmentOverride,
-        defaultValue: fm.defaultValue,
-        overrideValueEnabled: fm.overrideValueEnabled, // Clone this new field
+        //defaultValue: fm.defaultValue,
+        //overrideValueEnabled: fm.overrideValueEnabled, // Clone this new field
         additionalProperties: Map<String, dynamic>.from(fm.additionalProperties),
       )).toList(),
-      isActive: this.isActive,
-      createdAt: this.createdAt,
+      isActive: isActive,
+      createdAt: createdAt,
       updatedAt: DateTime.now(),
-      metadata: Map<String, dynamic>.from(this.metadata),
+      metadata: Map<String, dynamic>.from(metadata),
     );
   }
 
@@ -595,12 +594,12 @@ class FieldMapping extends HiveObject {
   String? fontColorOverride;
   @HiveField(12)
   String? alignmentOverride;
-  @HiveField(13)
-  String? defaultValue; // This will store the "override value"
+  //@HiveField(13)
+  //String? defaultValue; // This will store the "override value"
   @HiveField(14)
   late Map<String, dynamic> additionalProperties;
-  @HiveField(15) // New field for the override toggle
-  late bool overrideValueEnabled;
+  //@HiveField(15) // New field for the override toggle
+  //late bool overrideValueEnabled;
 
   FieldMapping({
     String? fieldId,
@@ -616,13 +615,13 @@ class FieldMapping extends HiveObject {
     this.fontSizeOverride,
     this.fontColorOverride,
     this.alignmentOverride,
-    this.defaultValue,
+    //this.defaultValue,
     Map<String, dynamic>? additionalProperties,
-    bool? overrideValueEnabled, // New constructor parameter
+    //bool? overrideValueEnabled, // New constructor parameter
   }) {
     this.fieldId = fieldId ?? const Uuid().v4();
     this.additionalProperties = additionalProperties ?? {};
-    this.overrideValueEnabled = overrideValueEnabled ?? false; // Default to false
+    //this.overrideValueEnabled = overrideValueEnabled ?? false; // Default to false
   }
 
   Map<String, dynamic> toMap() {
@@ -640,9 +639,9 @@ class FieldMapping extends HiveObject {
       'fontSizeOverride': fontSizeOverride,
       'fontColorOverride': fontColorOverride,
       'alignmentOverride': alignmentOverride,
-      'defaultValue': defaultValue,
+      //'defaultValue': defaultValue,
       'additionalProperties': additionalProperties,
-      'overrideValueEnabled': overrideValueEnabled, // Add to map
+      //'overrideValueEnabled': overrideValueEnabled, // Add to map
     };
   }
 
@@ -667,15 +666,15 @@ class FieldMapping extends HiveObject {
       fontSizeOverride: map['fontSizeOverride']?.toDouble() ?? map['fontSize']?.toDouble(),
       fontColorOverride: map['fontColorOverride'] ?? map['fontColor'],
       alignmentOverride: map['alignmentOverride'] ?? map['alignment'],
-      defaultValue: map['defaultValue'] ?? map['placeholder'],
+      //defaultValue: map['defaultValue'] ?? map['placeholder'],
       additionalProperties: Map<String, dynamic>.from(map['additionalProperties'] ?? {}),
-      overrideValueEnabled: map['overrideValueEnabled'] as bool? ?? false, // Parse from map, default to false
+      //overrideValueEnabled: map['overrideValueEnabled'] as bool? ?? false, // Parse from map, default to false
     );
   }
 
   @override
   String toString() {
-    return 'FieldMapping(id: $fieldId, appData: $appDataType, pdfField: $pdfFormFieldName, type: $detectedPdfFieldType, overrideEnabled: $overrideValueEnabled, overrideValue: $defaultValue)';
+    return 'FieldMapping(id: $fieldId, appData: $appDataType, pdfField: $pdfFormFieldName, type: $detectedPdfFieldType)';
   }
 }
 

@@ -113,8 +113,10 @@ class PdfService {
       if (kDebugMode) print('Generated PDF: ${file.path}');
       return file.path;
     } catch (e) {
-      if (kDebugMode) print(
+      if (kDebugMode) {
+        print(
           'Error generating SimplifiedMultiLevelQuote PDF: $e');
+      }
       rethrow;
     }
   }

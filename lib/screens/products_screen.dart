@@ -858,7 +858,7 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
 // Enhanced Product Form Dialog with 3-Tier System (keeping the existing implementation)
 class _ModernProductFormDialog extends StatefulWidget {
   final Product? product;
-  const _ModernProductFormDialog({Key? key, this.product}) : super(key: key);
+  const _ModernProductFormDialog({this.product});
 
   @override
   State<_ModernProductFormDialog> createState() => _ModernProductFormDialogState();

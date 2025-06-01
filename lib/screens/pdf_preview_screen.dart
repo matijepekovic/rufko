@@ -1,11 +1,9 @@
 // lib/screens/pdf_preview_screen.dart - ENHANCED PDF EDITOR
 
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
@@ -13,9 +11,9 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as sf_pdf;
 import 'package:share_plus/share_plus.dart';
 import '../providers/app_state_provider.dart';
-import '../models/project_media.dart';
 import '../models/simplified_quote.dart';
 import '../models/customer.dart';
+import '../models/project_media.dart';
 import 'package:intl/intl.dart';
 
 // Model for form fields
@@ -88,9 +86,11 @@ class PdfPreviewScreen extends StatefulWidget {
   final String? templateId;
   final String? selectedLevelId;
   final Map<String, String>? originalCustomData;
+  final String? title;
+  final bool isPreview;
 
   const PdfPreviewScreen({
-    Key? key,
+    super.key,
     required this.pdfPath,
     required this.suggestedFileName,
     this.quote,
@@ -98,7 +98,9 @@ class PdfPreviewScreen extends StatefulWidget {
     this.templateId,
     this.selectedLevelId,
     this.originalCustomData,
-  }) : super(key: key);
+    this.title,
+    this.isPreview = false,
+  });
 
   @override
   State<PdfPreviewScreen> createState() => _PdfPreviewScreenState();
@@ -114,13 +116,13 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
   bool _hasEdits = false;
 
   // Enhanced editing features
-  Map<String, String> _editedValues = {};
+  final Map<String, String> _editedValues = {};
   List<PDFFormField> _formFields = [];
   bool _showFieldOverlays = false;
   bool _isLoadingFields = false;
 
   // Undo/Redo system
-  List<EditAction> _editHistory = [];
+  final List<EditAction> _editHistory = [];
   int _currentHistoryIndex = -1;
 
   // Visual editing
@@ -130,7 +132,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
   // Form field interaction
   PDFFormField? _selectedField;
-  GlobalKey _pdfViewerContainerKey = GlobalKey();
+  final GlobalKey _pdfViewerContainerKey = GlobalKey();
 
   @override
   void initState() {
@@ -1329,16 +1331,23 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
       File pdfToSave;
 
-      // If we have form field edits, use the SAME approach as template system
+      // If we have form field edits, apply them first
       if (_editedValues.isNotEmpty && _formFields.isNotEmpty) {
-        print('🔧 Using template-style field mapping approach...');
+        print('🔧 Applying edits using template-style field mapping approach...');
         pdfToSave = await _applyEditsUsingTemplateApproach();
       } else {
-        print('📄 No edits, using original file');
+        print('📄 Using original file (no edits to apply)');
         pdfToSave = File(_currentPdfPath);
       }
 
+      // Ensure the file exists before proceeding
+      if (!await pdfToSave.exists()) {
+        throw Exception('PDF file not found: ${pdfToSave.path}');
+      }
+
       // Save to final location
+      // Save to final location AND add to customer media
+      // Save to final location AND add to customer media
       Directory? saveDir = await getApplicationDocumentsDirectory();
 
       String finalFileName = widget.suggestedFileName;
@@ -1358,10 +1367,46 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
       await pdfToSave.copy(targetFile.path);
 
+      // 🚀 NEW: Add PDF to customer media using ProjectMedia
+      if (widget.customer != null && mounted) {
+        try {
+          final appState = context.read<AppStateProvider>();
+
+          // Get file size
+          final fileSize = await targetFile.length();
+
+          // Create ProjectMedia object
+          final projectMedia = ProjectMedia(
+            customerId: widget.customer!.id,
+            quoteId: widget.quote?.id, // Link to quote if available
+            filePath: targetFile.path,
+            fileName: finalFileName,
+            fileType: 'pdf',
+            description: widget.quote != null
+                ? 'Quote PDF: ${widget.quote!.quoteNumber}${_editedValues.isNotEmpty ? ' (edited)' : ''}'
+                : 'Generated PDF${_editedValues.isNotEmpty ? ' (edited)' : ''}',
+            tags: [
+              'quote',
+              'pdf',
+              if (_editedValues.isNotEmpty) 'edited',
+              if (widget.templateId != null) 'template',
+            ],
+            category: 'document',
+            fileSizeBytes: fileSize,
+          );
+
+          await appState.addProjectMedia(projectMedia);
+          print('✅ PDF added to customer media: ${widget.customer!.name}');
+        } catch (e) {
+          print('⚠️ Failed to add PDF to customer media: $e');
+          // Don't fail the save operation if media addition fails
+        }
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ PDF saved with ${_editedValues.length} edits!'),
+            content: Text('✅ PDF saved${widget.customer != null ? ' and added to customer media' : ''}!'),
             backgroundColor: Colors.green,
             action: SnackBarAction(
               label: 'Open',
@@ -1679,7 +1724,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                   children: [
                     Text('Type: ${field.type}'),
                     Text(
-                      'Value: "${displayValue}"',
+                      'Value: "$displayValue"',
                       style: TextStyle(
                         color: hasEdit ? Colors.green : Colors.grey,
                         fontWeight: hasEdit ? FontWeight.bold : FontWeight.normal,
