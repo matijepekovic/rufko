@@ -16,6 +16,7 @@ import '../services/pdf_service.dart';
 import '../services/template_service.dart';
 import '../models/message_template.dart';
 import '../models/email_template.dart';
+import '../models/template_category.dart';
 
 class AppStateProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
@@ -31,6 +32,7 @@ class AppStateProvider extends ChangeNotifier {
   List<MessageTemplate> _messageTemplates = [];
   List<EmailTemplate> _emailTemplates = [];
   List<CustomAppDataField> _customAppDataFields = [];
+  List<TemplateCategory> _templateCategories = [];
 
   bool _isLoading = false;
   String _loadingMessage = '';
@@ -49,6 +51,7 @@ class AppStateProvider extends ChangeNotifier {
   List<EmailTemplate> get emailTemplates => _emailTemplates;
   List<EmailTemplate> get activeEmailTemplates => _emailTemplates.where((t) => t.isActive).toList();
   List<CustomAppDataField> get customAppDataFields => _customAppDataFields;
+  List<TemplateCategory> get templateCategories => _templateCategories;
 
   bool get isLoading => _isLoading;
   String get loadingMessage => _loadingMessage;
@@ -231,8 +234,9 @@ class AppStateProvider extends ChangeNotifier {
         loadMessageTemplates(),
         loadEmailTemplates(),
         loadCustomAppDataFields(),
+        loadTemplateCategories(), // <--- ENSURE THIS LINE IS PRESENT AND CORRECT
       ]);
-      notifyListeners();
+      // notifyListeners(); // This is handled by setLoading(false)
     } catch (e) {
       if (kDebugMode) print('Error loading all data: $e');
     } finally {
@@ -359,7 +363,40 @@ class AppStateProvider extends ChangeNotifier {
     _customers.removeWhere((c) => c.id == customerId);
     notifyListeners();
   }
-
+  Future<void> loadTemplateCategories() async {
+    try {
+      // This uses the getRawCategoriesBoxValues() method from DatabaseService
+      // which you should have added in the previous step for database_service.dart
+      final List<dynamic> rawData = _db.getRawCategoriesBoxValues();
+      _templateCategories.clear(); // Clear before loading
+      for (var item in rawData) {
+        if (item is TemplateCategory) {
+          _templateCategories.add(item);
+        } else if (item is Map) {
+          try {
+            _templateCategories.add(TemplateCategory.fromMap(Map<String, dynamic>.from(item)));
+          } catch(e) {
+            if (kDebugMode) {
+              print("Error converting map to TemplateCategory in AppStateProvider.loadTemplateCategories: $e. Map: $item");
+            }
+          }
+        } else {
+          if (kDebugMode) {
+            print("Skipping unexpected data type while loading template categories in AppStateProvider: ${item.runtimeType}");
+          }
+        }
+      }
+      if (kDebugMode) {
+        print('📚 Loaded ${_templateCategories.length} template categories into AppStateProvider');
+      }
+      // No notifyListeners() needed here if called as part of loadAllData(),
+      // as loadAllData's finally block will call it.
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error loading template categories into AppStateProvider: $e');
+      }
+    }
+  }
   // --- Product Operations ---
   Future<void> addProduct(Product product) async {
     await _db.saveProduct(product);
@@ -1560,19 +1597,87 @@ class AppStateProvider extends ChangeNotifier {
     return await _db.getAllTemplateCategories();
   }
 
-  Future<void> addTemplateCategory(String templateType, String categoryKey, String categoryName) async {
-    await _db.addTemplateCategory(templateType, categoryKey, categoryName);
-    notifyListeners();
+  Future<void> addTemplateCategory(String templateTypeKey, String categoryUserKey, String categoryDisplayName) async {
+    try {
+      final newCategory = TemplateCategory(
+        key: categoryUserKey,        // e.g., "residential_roofing"
+        name: categoryDisplayName, // e.g., "Residential Roofing"
+        templateType: templateTypeKey, // e.g., "pdf_templates"
+        // This should match keys used in DatabaseService.getAllTemplateCategories like 'pdf_templates', 'message_templates' etc.
+      );
+      // This now calls 'saveTemplateCategory' on the database service, which expects a TemplateCategory object.
+      // Make sure 'saveTemplateCategory' exists in your DatabaseService and accepts a TemplateCategory.
+      await _db.saveTemplateCategory(newCategory);
+
+      // Also update the local list if you're maintaining one
+      _templateCategories.add(newCategory);
+      notifyListeners();
+      if (kDebugMode) print('➕ Added template category in AppState: $categoryDisplayName for $templateTypeKey (key: $categoryUserKey)');
+    } catch (e) {
+      if (kDebugMode) print('Error adding template category in AppState: $e');
+      rethrow;
+    }
   }
 
-  Future<void> updateTemplateCategory(String templateType, String categoryKey, String newName) async {
-    await _db.updateTemplateCategory(templateType, categoryKey, newName);
-    notifyListeners();
+  Future<void> updateTemplateCategory(String templateTypeKey, String categoryUserKey, String newDisplayName) async {
+    TemplateCategory? categoryToUpdate;
+    int foundIndex = -1;
+
+    // Find the category in the local _templateCategories list
+    for(int i=0; i < _templateCategories.length; i++){
+      if(_templateCategories[i].templateType == templateTypeKey && _templateCategories[i].key == categoryUserKey){
+        categoryToUpdate = _templateCategories[i];
+        foundIndex = i;
+        break;
+      }
+    }
+
+    if (categoryToUpdate != null && foundIndex != -1) {
+      try {
+        // DatabaseService.updateTemplateCategory expects the category's unique ID and the new name.
+        await _db.updateTemplateCategory(categoryToUpdate.id, newDisplayName);
+
+        // Update the object in the local list
+        _templateCategories[foundIndex] = categoryToUpdate.copyWith(name: newDisplayName, updatedAt: DateTime.now());
+        notifyListeners();
+        if (kDebugMode) print('📝 Updated template category in AppState (Type: $templateTypeKey, Key: $categoryUserKey) to "$newDisplayName"');
+      } catch (e) {
+        if (kDebugMode) print('Error updating template category in AppState: $e');
+        rethrow;
+      }
+    } else {
+      if (kDebugMode) {
+        print("Category not found in AppStateProvider for update: Type='$templateTypeKey', Key='$categoryUserKey'. Available: ${_templateCategories.map((c) => '${c.templateType}-${c.key}(id:${c.id})').join(', ')}");
+      }
+    }
   }
 
-  Future<void> deleteTemplateCategory(String templateType, String categoryKey) async {
-    await _db.deleteTemplateCategory(templateType, categoryKey);
-    notifyListeners();
+  Future<void> deleteTemplateCategory(String templateTypeKey, String categoryUserKey) async {
+    TemplateCategory? categoryToDelete;
+    // Find the category in the local _templateCategories list
+    for(final cat in _templateCategories){
+      if(cat.templateType == templateTypeKey && cat.key == categoryUserKey){
+        categoryToDelete = cat;
+        break;
+      }
+    }
+
+    if (categoryToDelete != null) {
+      try {
+        // DatabaseService.deleteTemplateCategory expects the category's unique ID.
+        await _db.deleteTemplateCategory(categoryToDelete.id);
+        _templateCategories.removeWhere((cat) => cat.id == categoryToDelete!.id); // Remove from local list
+        notifyListeners();
+        if (kDebugMode) print('🗑️ Deleted template category in AppState (Type: $templateTypeKey, Key: $categoryUserKey)');
+      } catch (e) {
+        if (kDebugMode) print('Error deleting template category in AppState: $e');
+        rethrow;
+      }
+    } else {
+      if (kDebugMode) {
+        print("Category not found in AppStateProvider for deletion: Type='$templateTypeKey', Key='$categoryUserKey'. Available: ${_templateCategories.map((c) => '${c.templateType}-${c.key}(id:${c.id})').join(', ')}");
+      }
+    }
   }
 
   Future<int> getCategoryUsageCount(String templateType, String categoryKey) async {

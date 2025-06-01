@@ -902,8 +902,27 @@ class DatabaseService {
     };
   }
 
-  // --- Template Category Management ---
-  // UPDATED getAllTemplateCategories to correctly handle potential Map data from Hive
+  // --- Template Category Management (DatabaseService) ---
+
+  /// Retrieves raw values from the categories box. Used by AppStateProvider for its internal list.
+  List<dynamic> getRawCategoriesBoxValues() {
+    _ensureInitialized();
+    return _categoriesBox.values.toList();
+  }
+
+  /// Saves a TemplateCategory object to the database.
+  Future<void> saveTemplateCategory(TemplateCategory category) async {
+    _ensureInitialized();
+    // Ensure the category object has a valid ID before saving
+    // TemplateCategory constructor now always assigns an ID, so direct put is fine.
+    await _categoriesBox.put(category.id, category);
+    if (kDebugMode) {
+      print("Saved TemplateCategory with ID: ${category.id} and key: ${category.key} to _categoriesBox");
+    }
+  }
+
+  /// Retrieves all template categories, structured for UI display.
+  /// This method is robust against data that might be stored as Maps.
   Future<Map<String, List<Map<String, dynamic>>>> getAllTemplateCategories() async {
     _ensureInitialized();
 
@@ -915,103 +934,113 @@ class DatabaseService {
         typedCategories.add(item);
       } else if (item is Map) {
         try {
+          // Attempt to convert from map if it's not already typed
           typedCategories.add(TemplateCategory.fromMap(Map<String, dynamic>.from(item)));
         } catch (e) {
           if (kDebugMode) {
-            print("Error converting map to TemplateCategory in getAllTemplateCategories: $e. Map: $item");
+            print("Error converting map to TemplateCategory in DatabaseService.getAllTemplateCategories: $e. Map: $item");
           }
         }
       } else {
         if (kDebugMode) {
-          print("Skipping unexpected data type in _categoriesBox: ${item.runtimeType}");
+          print("Skipping unexpected data type in _categoriesBox (DatabaseService): ${item.runtimeType}");
         }
       }
     }
 
+    // This predefined structure is for the UI.
     final result = <String, List<Map<String, dynamic>>>{
       'pdf_templates': [],
       'message_templates': [],
       'email_templates': [],
-      'custom_fields': [
-        {'key': 'company', 'name': 'Company Information', 'id': 'default_company'},
-        {'key': 'contact', 'name': 'Contact Information', 'id': 'default_contact'},
-        {'key': 'legal', 'name': 'Legal Information', 'id': 'default_legal'},
-        {'key': 'pricing', 'name': 'Pricing Information', 'id': 'default_pricing'},
-        {'key': 'custom', 'name': 'Custom Fields', 'id': 'default_custom'},
+      'custom_fields': [ // These are static "super-categories" for the UI, not directly from Hive TemplateCategory objects with templateType 'custom_fields'.
+        {'id': 'static_cat_company', 'key': 'company', 'name': 'Company Information'},
+        {'id': 'static_cat_contact', 'key': 'contact', 'name': 'Contact Information'},
+        {'id': 'static_cat_legal', 'key': 'legal', 'name': 'Legal Information'},
+        {'id': 'static_cat_pricing', 'key': 'pricing', 'name': 'Pricing Information'},
+        {'id': 'static_cat_custom', 'key': 'custom', 'name': 'Custom Fields'},
       ]
     };
 
     for (final category in typedCategories) {
+      // 'category.templateType' from Hive should match keys like 'pdf_templates', 'message_templates' etc.
+      // This 'templateType' stored in TemplateCategory objects indicates what *kind* of templates this category is FOR.
       final String typeKey = category.templateType;
-      if (!result.containsKey(typeKey)) {
-        result[typeKey] = [];
+
+      // Ensure the list for this typeKey exists in the result map.
+      // This means TemplateCategory objects should store templateType as 'pdf_templates', 'message_templates', or 'email_templates'.
+      // If they store something else, they won't be grouped under these predefined keys unless you add more logic.
+      if (result.containsKey(typeKey)) {
+        result[typeKey]!.add({
+          'id': category.id,       // The actual TemplateCategory object's unique ID from Hive
+          'key': category.key,     // The 'slug' or short identifier (e.g., "residential_roofing")
+          'name': category.name,   // The display name (e.g., "Residential Roofing")
+        });
+      } else if (kDebugMode) {
+        print("Warning: TemplateCategory with templateType '${typeKey}' found in Hive, but no matching list in `result` map in `getAllTemplateCategories`. Category name: '${category.name}', key: '${category.key}'.");
       }
-      result[typeKey]!.add({
-        'id': category.id, // Add the ID for uniqueness
-        'key': category.key,
-        'name': category.name,
-      });
     }
     return result;
   }
 
-
-  Future<void> addTemplateCategory(String templateType, String categoryKey, String categoryName) async {
-    _ensureInitialized();
-    final category = TemplateCategory(
-      key: categoryKey,
-      name: categoryName,
-      templateType: templateType,
-    );
-    await _categoriesBox.put(category.id, category); // Use put with a key, preferably category.id
-  }
-
+  /// Updates an existing template category's name using its unique ID.
   Future<void> updateTemplateCategory(String categoryId, String newName) async {
     _ensureInitialized();
     final category = _categoriesBox.get(categoryId);
-    if (category != null) {
+    if (category is TemplateCategory) { // Check type
       final updatedCategory = category.copyWith(name: newName, updatedAt: DateTime.now());
       await _categoriesBox.put(categoryId, updatedCategory);
+    } else {
+      if (kDebugMode) {
+        print("Category with ID $categoryId not found or not a TemplateCategory for update in DatabaseService.");
+      }
     }
   }
 
+  /// Deletes a template category using its unique ID.
   Future<void> deleteTemplateCategory(String categoryId) async {
     _ensureInitialized();
     await _categoriesBox.delete(categoryId);
   }
 
-
-  Future<int> getCategoryUsageCount(String templateType, String categoryKey) async {
+  /// Counts how many items (PDFs, Messages, Emails, CustomAppDataFields) use a specific category key.
+  Future<int> getCategoryUsageCount(String templateTypeScreenName, String categoryKey) async {
     _ensureInitialized();
 
-    String typeToMatch = templateType;
-    // Normalize templateType to match keys used in TemplateCategory.templateType
-    if (templateType == "PDF Templates") typeToMatch = "pdf_templates";
-    if (templateType == "Message Templates") typeToMatch = "message_templates";
-    if (templateType == "Email Templates") typeToMatch = "email_templates";
-    if (templateType == "Custom Fields") typeToMatch = "custom_fields";
+    // This `templateTypeScreenName` comes from the UI (e.g., "PDF Templates", "Message Templates").
+    // We need to match it to how different models store their category information.
+    // For PDFTemplate, MessageTemplate, EmailTemplate, they have a `category` field which should store the `categoryKey`.
+    // For CustomAppDataField, it also has a `category` field.
 
+    // Normalize the screen name to an internal key if necessary, or ensure consistency.
+    // For now, let's assume the `categoryKey` passed is the one used in the models' `category` field.
 
-    switch (typeToMatch) {
-      case 'pdf_templates': // This should match the `templateType` stored in TemplateCategory
+    switch (templateTypeScreenName) { // Using the string passed from UI/AppStateProvider
+      case 'PDF Templates':
+      // This implies PDFTemplate objects have a 'category' field that stores the categoryKey.
+      // If PDFTemplate.templateType is used for categorization, this needs to align.
+      // Let's assume PDFTemplate itself can be categorized by a 'categoryKey' separate from its main 'templateType' (quote/invoice).
+      // This might require adding a 'categoryKey' field to PDFTemplate if it's meant to be user-categorized like messages/emails.
+      // For now, if PDF templates are not categorized by these user-defined categories, this will return 0.
+      // If PDFTemplate.templateType is what we match against categoryKey:
         return _pdfTemplateBox.values
-            .where((t) => t.templateType == categoryKey) // Assuming PDFTemplate has a category-like field or this is a typo
+            .where((t) => t.templateType == categoryKey) // This line might need review based on PDFTemplate model's category field
             .length;
-      case 'message_templates':
+      case 'Message Templates':
         return _messageTemplateBox.values
             .where((t) => t.category == categoryKey)
             .length;
-      case 'email_templates':
+      case 'Email Templates':
         return _emailTemplateBox.values
             .where((t) => t.category == categoryKey)
             .length;
-      case 'custom_fields':
+      case 'Custom Fields': // This refers to the category of CustomAppDataField itself
         return _customAppDataFieldBox.values
             .where((f) => f.category == categoryKey)
             .length;
       default:
         if (kDebugMode) {
-          print("Warning: Unhandled templateType in getCategoryUsageCount: $templateType");
+          print("Warning: Unhandled templateTypeScreenName in getCategoryUsageCount (DatabaseService): $templateTypeScreenName");
         }
         return 0;
     }
