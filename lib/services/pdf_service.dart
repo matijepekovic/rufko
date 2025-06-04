@@ -110,11 +110,11 @@ class PdfService {
           .millisecondsSinceEpoch}.pdf';
       final file = File('${directory.path}/$fileName');
       await file.writeAsBytes(await pdf.save());
-      if (kDebugMode) print('Generated PDF: ${file.path}');
+      if (kDebugMode) debugPrint('Generated PDF: ${file.path}');
       return file.path;
     } catch (e) {
       if (kDebugMode) {
-        print(
+        debugPrint(
           'Error generating SimplifiedMultiLevelQuote PDF: $e');
       }
       rethrow;
@@ -399,7 +399,7 @@ class PdfService {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
-        if (kDebugMode) print('PDF file not found: $filePath');
+        if (kDebugMode) debugPrint('PDF file not found: $filePath');
         return null;
       }
 
@@ -411,10 +411,10 @@ class PdfService {
         document = syncfusion.PdfDocument(inputBytes: bytes);
 
         if (kDebugMode) {
-          print('📄 PDF Document Info:');
-          print('   File: ${file.path.split('/').last}');
-          print('   Size: ${(bytes.length / 1024).toStringAsFixed(1)} KB');
-          print('   Pages: ${document.pages.count}');
+          debugPrint('📄 PDF Document Info:');
+          debugPrint('   File: ${file.path.split('/').last}');
+          debugPrint('   Size: ${(bytes.length / 1024).toStringAsFixed(1)} KB');
+          debugPrint('   Pages: ${document.pages.count}');
         }
 
         // Try multiple extraction strategies for maximum compatibility
@@ -423,9 +423,9 @@ class PdfService {
         try {
           final textExtractor = syncfusion.PdfTextExtractor(document);
           extractedText = textExtractor.extractText();
-          if (kDebugMode) print('Strategy 1 - Full document: ${extractedText.length} chars');
+          if (kDebugMode) debugPrint('Strategy 1 - Full document: ${extractedText.length} chars');
         } catch (e) {
-          if (kDebugMode) print('Strategy 1 failed: $e');
+          if (kDebugMode) debugPrint('Strategy 1 failed: $e');
         }
 
         // Strategy 2: Page-by-page extraction
@@ -436,9 +436,9 @@ class PdfService {
               String pageText = textExtractor.extractText(startPageIndex: i, endPageIndex: i);
               extractedText += '$pageText\n';
             }
-            if (kDebugMode) print('Strategy 2 - Page-by-page: ${extractedText.length} chars');
+            if (kDebugMode) debugPrint('Strategy 2 - Page-by-page: ${extractedText.length} chars');
           } catch (e) {
-            if (kDebugMode) print('Strategy 2 failed: $e');
+            if (kDebugMode) debugPrint('Strategy 2 failed: $e');
           }
         }
 
@@ -453,9 +453,9 @@ class PdfService {
                 extractedText += 'PAGE_${i + 1}: $pageText\n';
               }
             }
-            if (kDebugMode) print('Strategy 3 - Individual pages: ${extractedText.length} chars');
+            if (kDebugMode) debugPrint('Strategy 3 - Individual pages: ${extractedText.length} chars');
           } catch (e) {
-            if (kDebugMode) print('Strategy 3 failed: $e');
+            if (kDebugMode) debugPrint('Strategy 3 failed: $e');
           }
         }
 
@@ -480,14 +480,14 @@ class PdfService {
                 break;
               }
             }
-            if (kDebugMode) print('Strategy 4 - Multiple extractors: ${extractedText.length} chars');
+            if (kDebugMode) debugPrint('Strategy 4 - Multiple extractors: ${extractedText.length} chars');
           } catch (e) {
-            if (kDebugMode) print('Strategy 4 failed: $e');
+            if (kDebugMode) debugPrint('Strategy 4 failed: $e');
           }
         }
 
       } catch (e) {
-        if (kDebugMode) print('❌ PDF document loading failed: $e');
+        if (kDebugMode) debugPrint('❌ PDF document loading failed: $e');
       } finally {
         document?.dispose();
       }
@@ -496,13 +496,13 @@ class PdfService {
       extractedText = extractedText.trim();
 
       if (kDebugMode) {
-        print('=== FINAL EXTRACTION RESULTS ===');
-        print('Total text length: ${extractedText.length}');
+        debugPrint('=== FINAL EXTRACTION RESULTS ===');
+        debugPrint('Total text length: ${extractedText.length}');
 
         if (extractedText.isNotEmpty) {
           // Show relevant portions of text
-          print('Text sample (first 300 chars):');
-          print(extractedText.substring(0, extractedText.length > 300 ? 300 : extractedText.length));
+          debugPrint('Text sample (first 300 chars):');
+          debugPrint(extractedText.substring(0, extractedText.length > 300 ? 300 : extractedText.length));
 
           // Check for key RoofScope indicators
           final indicators = [
@@ -511,17 +511,17 @@ class PdfService {
             'Roof Planes', 'Structures'
           ];
 
-          print('\nKey indicators found:');
+          debugPrint('\nKey indicators found:');
           for (final indicator in indicators) {
             if (extractedText.toUpperCase().contains(indicator.toUpperCase())) {
-              print('✅ $indicator');
+              debugPrint('✅ $indicator');
             }
           }
         } else {
-          print('❌ NO TEXT EXTRACTED');
-          print('💡 This PDF may contain images/graphics only');
+          debugPrint('❌ NO TEXT EXTRACTED');
+          debugPrint('💡 This PDF may contain images/graphics only');
         }
-        print('================================');
+        debugPrint('================================');
       }
 
       // Parse the extracted text regardless of length (even empty text gets processed)
@@ -536,7 +536,7 @@ class PdfService {
       return roofScopeData;
 
     } catch (e) {
-      if (kDebugMode) print('❌ Critical error in extractRoofScopeData: $e');
+      if (kDebugMode) debugPrint('❌ Critical error in extractRoofScopeData: $e');
       return null;
     }
   }
@@ -545,7 +545,7 @@ class PdfService {
   RoofScopeData _parseRoofScopeText(String text, String customerId, String sourceFileName) {
     final data = RoofScopeData(customerId: customerId, sourceFileName: sourceFileName);
 
-    if (kDebugMode) print('🏠 Parsing RoofScope data from: $sourceFileName');
+    if (kDebugMode) debugPrint('🏠 Parsing RoofScope data from: $sourceFileName');
 
     try {
       // Normalize text for better pattern matching
@@ -557,7 +557,7 @@ class PdfService {
           .toLowerCase();
 
       if (cleanText.isEmpty) {
-        if (kDebugMode) print('⚠️ No text to parse - creating empty template');
+        if (kDebugMode) debugPrint('⚠️ No text to parse - creating empty template');
         data.addMeasurement('parse_status', 'empty_text');
         return data;
       }
@@ -588,7 +588,7 @@ class PdfService {
             data.roofArea = area;
             data.numberOfSquares = area; // In roofing, squares = roof area
             foundAnyData = true;
-            if (kDebugMode) print('✅ Total Roof Area: ${data.roofArea} SQ');
+            if (kDebugMode) debugPrint('✅ Total Roof Area: ${data.roofArea} SQ');
             break;
           }
         }
@@ -609,7 +609,7 @@ class PdfService {
           if (planes > 0) {
             data.addMeasurement('roof_planes', planes);
             foundAnyData = true;
-            if (kDebugMode) print('✅ Roof Planes: $planes');
+            if (kDebugMode) debugPrint('✅ Roof Planes: $planes');
             break;
           }
         }
@@ -629,7 +629,7 @@ class PdfService {
           if (structures >= 0) { // 0 is valid for structures
             data.addMeasurement('structures_count', structures);
             foundAnyData = true;
-            if (kDebugMode) print('✅ Structures: $structures');
+            if (kDebugMode) debugPrint('✅ Structures: $structures');
             break;
           }
         }
@@ -651,7 +651,7 @@ class PdfService {
           if (ridge > 0) {
             data.ridgeLength = ridge;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Ridge: ${data.ridgeLength} LF');
+            if (kDebugMode) debugPrint('✅ Ridge: ${data.ridgeLength} LF');
             break;
           }
         }
@@ -671,7 +671,7 @@ class PdfService {
           if (hip > 0) {
             data.hipLength = hip;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Hip: ${data.hipLength} LF');
+            if (kDebugMode) debugPrint('✅ Hip: ${data.hipLength} LF');
             break;
           }
         }
@@ -691,7 +691,7 @@ class PdfService {
           if (valley > 0) {
             data.valleyLength = valley;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Valley: ${data.valleyLength} LF');
+            if (kDebugMode) debugPrint('✅ Valley: ${data.valleyLength} LF');
             break;
           }
         }
@@ -712,7 +712,7 @@ class PdfService {
             data.eaveLength = eave;
             data.gutterLength = eave; // Eave length typically equals gutter length
             foundAnyData = true;
-            if (kDebugMode) print('✅ Eave/Gutter: ${data.eaveLength} LF');
+            if (kDebugMode) debugPrint('✅ Eave/Gutter: ${data.eaveLength} LF');
             break;
           }
         }
@@ -732,7 +732,7 @@ class PdfService {
             data.eaveLength = rake;
             data.gutterLength = rake;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Rake Edge (as Eave): ${data.eaveLength} LF');
+            if (kDebugMode) debugPrint('✅ Rake Edge (as Eave): ${data.eaveLength} LF');
             break;
           }
         }
@@ -752,7 +752,7 @@ class PdfService {
           if (perimeter > 0) {
             data.perimeterLength = perimeter;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Perimeter: ${data.perimeterLength} LF');
+            if (kDebugMode) debugPrint('✅ Perimeter: ${data.perimeterLength} LF');
             break;
           }
         }
@@ -772,7 +772,7 @@ class PdfService {
         if (match != null) {
           final step = double.tryParse(match.group(1) ?? '0') ?? 0.0;
           totalFlashing += step;
-          if (step > 0 && kDebugMode) print('✅ Step Flashing: $step LF');
+          if (step > 0 && kDebugMode) debugPrint('✅ Step Flashing: $step LF');
           break;
         }
       }
@@ -788,7 +788,7 @@ class PdfService {
         if (match != null) {
           final headwall = double.tryParse(match.group(1) ?? '0') ?? 0.0;
           totalFlashing += headwall;
-          if (headwall > 0 && kDebugMode) print('✅ Headwall Flashing: $headwall LF');
+          if (headwall > 0 && kDebugMode) debugPrint('✅ Headwall Flashing: $headwall LF');
           break;
         }
       }
@@ -796,7 +796,7 @@ class PdfService {
       if (totalFlashing > 0) {
         data.flashingLength = totalFlashing;
         foundAnyData = true;
-        if (kDebugMode) print('✅ Total Flashing: ${data.flashingLength} LF');
+        if (kDebugMode) debugPrint('✅ Total Flashing: ${data.flashingLength} LF');
       }
 
       // 6. PITCH/SLOPE INFORMATION
@@ -814,7 +814,7 @@ class PdfService {
           if (pitch > 0) {
             data.pitch = pitch;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Pitch: ${data.pitch}/12');
+            if (kDebugMode) debugPrint('✅ Pitch: ${data.pitch}/12');
             break;
           }
         }
@@ -827,25 +827,25 @@ class PdfService {
       // === FINAL SUMMARY ===
       if (foundAnyData) {
         if (kDebugMode) {
-          print('🎉 RoofScope parsing SUCCESSFUL!');
-          print('📊 Extracted Data Summary:');
-          print('   • Roof Area: ${data.roofArea} SQ');
-          print('   • Ridge: ${data.ridgeLength} LF');
-          print('   • Hip: ${data.hipLength} LF');
-          print('   • Valley: ${data.valleyLength} LF');
-          print('   • Eave/Gutters: ${data.eaveLength} LF');
-          print('   • Perimeter: ${data.perimeterLength} LF');
-          print('   • Flashing: ${data.flashingLength} LF');
-          print('   • Pitch: ${data.pitch}/12');
-          print('   • Planes: ${data.additionalMeasurements['roof_planes'] ?? 'Not found'}');
-          print('   • Structures: ${data.additionalMeasurements['structures_count'] ?? 'Not found'}');
+          debugPrint('🎉 RoofScope parsing SUCCESSFUL!');
+          debugPrint('📊 Extracted Data Summary:');
+          debugPrint('   • Roof Area: ${data.roofArea} SQ');
+          debugPrint('   • Ridge: ${data.ridgeLength} LF');
+          debugPrint('   • Hip: ${data.hipLength} LF');
+          debugPrint('   • Valley: ${data.valleyLength} LF');
+          debugPrint('   • Eave/Gutters: ${data.eaveLength} LF');
+          debugPrint('   • Perimeter: ${data.perimeterLength} LF');
+          debugPrint('   • Flashing: ${data.flashingLength} LF');
+          debugPrint('   • Pitch: ${data.pitch}/12');
+          debugPrint('   • Planes: ${data.additionalMeasurements['roof_planes'] ?? 'Not found'}');
+          debugPrint('   • Structures: ${data.additionalMeasurements['structures_count'] ?? 'Not found'}');
         }
       } else {
         if (kDebugMode) {
-          print('⚠️ No RoofScope data found in text');
-          print('💡 Text length: ${cleanText.length} characters');
+          debugPrint('⚠️ No RoofScope data found in text');
+          debugPrint('💡 Text length: ${cleanText.length} characters');
           if (cleanText.isNotEmpty) {
-            print('💡 Sample text: ${cleanText.substring(0, cleanText.length > 100 ? 100 : cleanText.length)}...');
+            debugPrint('💡 Sample text: ${cleanText.substring(0, cleanText.length > 100 ? 100 : cleanText.length)}...');
           }
         }
         data.addMeasurement('extraction_issue', 'no_patterns_matched');
@@ -854,7 +854,7 @@ class PdfService {
       return data;
 
     } catch (e) {
-      if (kDebugMode) print('❌ Error parsing RoofScope text: $e');
+      if (kDebugMode) debugPrint('❌ Error parsing RoofScope text: $e');
       data.addMeasurement('parse_status', 'error');
       data.addMeasurement('error_message', e.toString());
       return data;
@@ -888,13 +888,13 @@ class PdfService {
       );
 
       if (kDebugMode) {
-        print('📄 Generated template-based PDF: $pdfPath');
+        debugPrint('📄 Generated template-based PDF: $pdfPath');
       }
 
       return pdfPath;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error generating template-based PDF: $e');
+        debugPrint('❌ Error generating template-based PDF: $e');
       }
       rethrow;
     }
@@ -913,7 +913,7 @@ class PdfService {
       // If template ID is provided, use template-based generation
       if (templateId != null) {
         if (kDebugMode) {
-          print('🎨 Using template-based PDF generation with template: $templateId');
+          debugPrint('🎨 Using template-based PDF generation with template: $templateId');
         }
 
         return await generateQuotePdfFromTemplate(
@@ -927,7 +927,7 @@ class PdfService {
 
       // Otherwise, fall back to the existing PDF generation method
       if (kDebugMode) {
-        print('📝 Using standard PDF generation (no template)');
+        debugPrint('📝 Using standard PDF generation (no template)');
       }
 
       return await generateSimplifiedMultiLevelQuotePdf(
@@ -938,7 +938,7 @@ class PdfService {
       );
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error in enhanced PDF generation: $e');
+        debugPrint('❌ Error in enhanced PDF generation: $e');
       }
       rethrow;
     }
@@ -951,7 +951,7 @@ class PdfService {
       return templates.where((t) => t.isActive).toList();
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error getting available quote templates: $e');
+        debugPrint('❌ Error getting available quote templates: $e');
       }
       return [];
     }
@@ -976,13 +976,13 @@ class PdfService {
       final hasEssentialFields = essentialFields.every((field) => templateFields.contains(field));
 
       if (!hasEssentialFields && kDebugMode) {
-        print('⚠️ Template missing essential fields: $templateId');
+        debugPrint('⚠️ Template missing essential fields: $templateId');
       }
 
       return hasEssentialFields;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error validating quote template: $e');
+        debugPrint('❌ Error validating quote template: $e');
       }
       return false;
     }
@@ -1010,7 +1010,7 @@ class PdfService {
       );
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error generating quote template preview: $e');
+        debugPrint('❌ Error generating quote template preview: $e');
       }
       rethrow;
     }
@@ -1034,7 +1034,7 @@ class PdfService {
       };
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error getting template usage stats: $e');
+        debugPrint('❌ Error getting template usage stats: $e');
       }
       return {};
     }

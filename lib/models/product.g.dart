@@ -148,26 +148,26 @@ class ProductPricingTypeAdapter extends TypeAdapter<ProductPricingType> {
   ProductPricingType read(BinaryReader reader) {
     switch (reader.readByte()) {
       case 0:
-        return ProductPricingType.MAIN_DIFFERENTIATOR;
+        return ProductPricingType.mainDifferentiator;
       case 1:
-        return ProductPricingType.SUB_LEVELED;
+        return ProductPricingType.subLeveled;
       case 2:
-        return ProductPricingType.SIMPLE;
+        return ProductPricingType.simple;
       default:
-        return ProductPricingType.MAIN_DIFFERENTIATOR;
+        return ProductPricingType.mainDifferentiator;
     }
   }
 
   @override
   void write(BinaryWriter writer, ProductPricingType obj) {
     switch (obj) {
-      case ProductPricingType.MAIN_DIFFERENTIATOR:
+      case ProductPricingType.mainDifferentiator:
         writer.writeByte(0);
         break;
-      case ProductPricingType.SUB_LEVELED:
+      case ProductPricingType.subLeveled:
         writer.writeByte(1);
         break;
-      case ProductPricingType.SIMPLE:
+      case ProductPricingType.simple:
         writer.writeByte(2);
         break;
     }

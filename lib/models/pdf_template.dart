@@ -9,19 +9,19 @@ part 'pdf_template.g.dart'; // This will be regenerated
 // @HiveType(typeId: 22) // Keep this commented out if using manual adapter
 enum PdfFormFieldType {
   @HiveField(0)
-  UNKNOWN,
+   unknown,
   @HiveField(1)
-  TEXT_BOX,
+  textBox,
   @HiveField(2)
-  CHECK_BOX,
+  checkBox,
   @HiveField(3)
-  RADIO_BUTTON_GROUP,
+  radioButtonGroup,
   @HiveField(4)
-  COMBO_BOX,
+  comboBox,
   @HiveField(5)
-  LIST_BOX,
+  listBox,
   @HiveField(6)
-  SIGNATURE_FIELD,
+  signatureField,
 }
 
 @HiveType(typeId: 21)
@@ -52,6 +52,8 @@ class PDFTemplate extends HiveObject {
   late DateTime updatedAt;
   @HiveField(12)
   late Map<String, dynamic> metadata;
+  @HiveField(13)
+  String? userCategoryKey; // Stores the key of the TemplateCategory
 
   PDFTemplate({
     String? id,
@@ -67,6 +69,7 @@ class PDFTemplate extends HiveObject {
     DateTime? createdAt,
     DateTime? updatedAt,
     Map<String, dynamic>? metadata,
+    this.userCategoryKey, //
   }) {
     this.id = id ?? const Uuid().v4();
     this.fieldMappings = fieldMappings ?? [];
@@ -160,11 +163,6 @@ class PDFTemplate extends HiveObject {
       'terms',
       'upgradeQuoteText',
 
-      // Custom fields
-      'customText1', 'customText2', 'customText3',
-      'customNumeric1', 'customNumeric2',
-      'customDate1', 'customDate2',
-      'customBoolean1_for_checkbox', 'customBoolean2_for_checkbox'
     ];
 
     // 🚀 Generate dynamic product fields
@@ -175,24 +173,17 @@ class PDFTemplate extends HiveObject {
         // Create safe field name from product name
         final safeProductName = _createSafeFieldName(product.name);
 
-        // Generate 4 fields for each product
+        // Generate 5 fields for each product
         productFields.addAll([
           '${safeProductName}Name',
           '${safeProductName}Qty',
           '${safeProductName}UnitPrice',
           '${safeProductName}Total',
+          '${safeProductName}Description',
         ]);
       }
-    } else {
-      // Fallback to legacy product slots if no products provided
-      productFields.addAll([
-        'product1Name', 'product1Qty', 'product1UnitPrice', 'product1Total',
-        'product2Name', 'product2Qty', 'product2UnitPrice', 'product2Total',
-        'product3Name', 'product3Qty', 'product3UnitPrice', 'product3Total',
-        'product4Name', 'product4Qty', 'product4UnitPrice', 'product4Total',
-        'product5Name', 'product5Qty', 'product5UnitPrice', 'product5Total',
-      ]);
     }
+
 
     return [...baseFields, ...productFields];
   }
@@ -501,6 +492,7 @@ class PDFTemplate extends HiveObject {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'metadata': metadata,
+      'userCategoryKey': userCategoryKey,
     };
   }
 
@@ -522,6 +514,7 @@ class PDFTemplate extends HiveObject {
       createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
       metadata: Map<String, dynamic>.from(map['metadata'] ?? {}),
+      userCategoryKey: map['userCategoryKey'] as String?,
     );
   }
 
@@ -557,12 +550,13 @@ class PDFTemplate extends HiveObject {
       createdAt: createdAt,
       updatedAt: DateTime.now(),
       metadata: Map<String, dynamic>.from(metadata),
+      userCategoryKey: userCategoryKey,
     );
   }
 
   @override
   String toString() {
-    return 'PDFTemplate(id: $id, name: $templateName, fields: ${fieldMappings.length})';
+    return 'PDFTemplate(id: $id, name: $templateName, type: $templateType, userCategoryKey: $userCategoryKey, fields: ${fieldMappings.length})';
   }
 }
 
@@ -605,7 +599,7 @@ class FieldMapping extends HiveObject {
     String? fieldId,
     required this.appDataType,
     required this.pdfFormFieldName,
-    this.detectedPdfFieldType = PdfFormFieldType.UNKNOWN,
+    this.detectedPdfFieldType = PdfFormFieldType. unknown,
     this.visualX,
     this.visualY,
     this.visualWidth,
@@ -650,7 +644,7 @@ class FieldMapping extends HiveObject {
     String pdfFormFieldNameValue = map['pdfFormFieldName'] ?? '';
     PdfFormFieldType detectedTypeValue = map['detectedPdfFieldType'] != null
         ? PdfFormFieldType.values[map['detectedPdfFieldType'] as int]
-        : PdfFormFieldType.UNKNOWN;
+        : PdfFormFieldType. unknown;
 
     return FieldMapping(
       fieldId: map['fieldId'],
@@ -688,7 +682,7 @@ class PdfFormFieldTypeAdapter extends TypeAdapter<PdfFormFieldType> {
     if (index >= 0 && index < PdfFormFieldType.values.length) {
       return PdfFormFieldType.values[index];
     }
-    return PdfFormFieldType.UNKNOWN;
+    return PdfFormFieldType. unknown;
   }
 
   @override

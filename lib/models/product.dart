@@ -115,7 +115,7 @@ class Product extends HiveObject {
   bool enableLevelPricing; // Has different prices for different situations
 
   @HiveField(18)
-  ProductPricingType pricingType; // MAIN_DIFFERENTIATOR, SUB_LEVELED, SIMPLE
+  ProductPricingType pricingType; // mainDifferentiator,  subLeveled, simple
 
   Product({
     String? id,
@@ -139,7 +139,7 @@ class Product extends HiveObject {
     DateTime? updatedAt,
   })  : levelPrices = levelPrices ?? {},
         enhancedLevelPrices = enhancedLevelPrices ?? [],
-        pricingType = pricingType ?? ProductPricingType.SIMPLE, // NEW
+        pricingType = pricingType ?? ProductPricingType.simple, // NEW
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now() {
     this.id = id ?? const Uuid().v4();
@@ -151,22 +151,22 @@ class Product extends HiveObject {
   // Auto-determine pricing type
   void _updatePricingType() {
     if (isMainDifferentiator) {
-      pricingType = ProductPricingType.MAIN_DIFFERENTIATOR;
+      pricingType = ProductPricingType.mainDifferentiator;
     } else if (enableLevelPricing && enhancedLevelPrices.isNotEmpty) {
-      pricingType = ProductPricingType.SUB_LEVELED;
+      pricingType = ProductPricingType. subLeveled;
     } else {
-      pricingType = ProductPricingType.SIMPLE;
+      pricingType = ProductPricingType.simple;
     }
   }
 
   // Get display name for product type
   String get pricingTypeDisplay {
     switch (pricingType) {
-      case ProductPricingType.MAIN_DIFFERENTIATOR:
+      case ProductPricingType.mainDifferentiator:
         return 'Main Differentiator';
-      case ProductPricingType.SUB_LEVELED:
+      case ProductPricingType. subLeveled:
         return 'Sub-Leveled Options';
-      case ProductPricingType.SIMPLE:
+      case ProductPricingType.simple:
         return 'Simple Product';
     }
   }
@@ -203,7 +203,7 @@ class Product extends HiveObject {
 
   // Get price for sub-level (mesh/no-mesh, etc.)
   double getPriceForSubLevel(String subLevelId) {
-    if (pricingType != ProductPricingType.SUB_LEVELED) return unitPrice;
+    if (pricingType != ProductPricingType. subLeveled) return unitPrice;
 
     final level = enhancedLevelPrices.where((l) => l.levelId == subLevelId && l.isActive).firstOrNull;
     return level?.price ?? unitPrice;
@@ -211,13 +211,13 @@ class Product extends HiveObject {
 
   // Get all available sub-levels for this product
   List<ProductLevelPrice> get availableSubLevels {
-    if (pricingType != ProductPricingType.SUB_LEVELED) return [];
+    if (pricingType != ProductPricingType. subLeveled) return [];
     return enhancedLevelPrices.where((l) => l.isActive).toList();
   }
 
   // Get all available main levels for this product
   List<ProductLevelPrice> get availableMainLevels {
-    if (pricingType != ProductPricingType.MAIN_DIFFERENTIATOR) return [];
+    if (pricingType != ProductPricingType.mainDifferentiator) return [];
     return enhancedLevelPrices.where((l) => l.isActive).toList();
   }
 
@@ -322,7 +322,7 @@ class Product extends HiveObject {
       enableLevelPricing: map['enableLevelPricing'] ?? false, // NEW
       pricingType: ProductPricingType.values.firstWhere(
             (type) => type.toString() == map['pricingType'],
-        orElse: () => ProductPricingType.SIMPLE,
+        orElse: () => ProductPricingType.simple,
       ), // NEW
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
@@ -339,11 +339,11 @@ class Product extends HiveObject {
 @HiveType(typeId: 19)
 enum ProductPricingType {
   @HiveField(0)
-  MAIN_DIFFERENTIATOR, // Sets quote columns (Shingles: Builder/Homeowner/Platinum)
+  mainDifferentiator, // Sets quote columns (Shingles: Builder/Homeowner/Platinum)
 
   @HiveField(1)
-  SUB_LEVELED,        // Independent options (Gutters: mesh/no-mesh)
+   subLeveled,        // Independent options (Gutters: mesh/no-mesh)
 
   @HiveField(2)
-  SIMPLE              // Same price everywhere (Labor, Nails)
+  simple              // Same price everywhere (Labor, Nails)
 }

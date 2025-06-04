@@ -17,6 +17,7 @@ import '../services/template_service.dart';
 import '../models/message_template.dart';
 import '../models/email_template.dart';
 import '../models/template_category.dart';
+import '../models/inspection_document.dart';
 
 class AppStateProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
@@ -32,7 +33,8 @@ class AppStateProvider extends ChangeNotifier {
   List<MessageTemplate> _messageTemplates = [];
   List<EmailTemplate> _emailTemplates = [];
   List<CustomAppDataField> _customAppDataFields = [];
-  List<TemplateCategory> _templateCategories = [];
+  final List<TemplateCategory> _templateCategories = [];
+  List<InspectionDocument> _inspectionDocuments = [];
 
   bool _isLoading = false;
   String _loadingMessage = '';
@@ -51,6 +53,7 @@ class AppStateProvider extends ChangeNotifier {
   List<EmailTemplate> get emailTemplates => _emailTemplates;
   List<EmailTemplate> get activeEmailTemplates => _emailTemplates.where((t) => t.isActive).toList();
   List<CustomAppDataField> get customAppDataFields => _customAppDataFields;
+  List<InspectionDocument> get inspectionDocuments => List.unmodifiable(_inspectionDocuments);
   List<TemplateCategory> get templateCategories => _templateCategories;
 
   bool get isLoading => _isLoading;
@@ -65,6 +68,7 @@ class AppStateProvider extends ChangeNotifier {
     await _loadAppSettings();
     await loadAllData();
     await initializeDefaultCustomFields();
+    await _ensureInspectionCategoryExists(); // Add this line
     setLoading(false);
   }
 
@@ -108,13 +112,13 @@ class AppStateProvider extends ChangeNotifier {
       );
 
       if (kDebugMode) {
-        print('🔄 Regenerated PDF from template with edits: ${template.templateName}');
+        debugPrint('🔄 Regenerated PDF from template with edits: ${template.templateName}');
       }
 
       return pdfPath;
     } catch (e) {
       if (kDebugMode) {
-        print('Error regenerating PDF from template: $e');
+        debugPrint('Error regenerating PDF from template: $e');
       }
       rethrow;
     }
@@ -164,7 +168,7 @@ class AppStateProvider extends ChangeNotifier {
       };
     } catch (e) {
       if (kDebugMode) {
-        print('Error generating PDF for preview: $e');
+        debugPrint('Error generating PDF for preview: $e');
       }
       rethrow;
     }
@@ -175,13 +179,13 @@ class AppStateProvider extends ChangeNotifier {
     try {
       final file = File(pdfPath);
       if (!await file.exists()) {
-        if (kDebugMode) print('PDF file does not exist: $pdfPath');
+        if (kDebugMode) debugPrint('PDF file does not exist: $pdfPath');
         return false;
       }
 
       final fileSize = await file.length();
       if (fileSize == 0) {
-        if (kDebugMode) print('PDF file is empty: $pdfPath');
+        if (kDebugMode) debugPrint('PDF file is empty: $pdfPath');
         return false;
       }
 
@@ -191,13 +195,13 @@ class AppStateProvider extends ChangeNotifier {
       final header = String.fromCharCodes(firstBytes);
 
       if (!header.startsWith('%PDF')) {
-        if (kDebugMode) print('Invalid PDF header: $pdfPath');
+        if (kDebugMode) debugPrint('Invalid PDF header: $pdfPath');
         return false;
       }
 
       return true;
     } catch (e) {
-      if (kDebugMode) print('Error validating PDF file: $e');
+      if (kDebugMode) debugPrint('Error validating PDF file: $e');
       return false;
     }
   }
@@ -207,7 +211,7 @@ class AppStateProvider extends ChangeNotifier {
       _appSettings = await _db.getAppSettings();
       notifyListeners();
     } catch (e) {
-      if (kDebugMode) print('Error loading app settings: $e');
+      if (kDebugMode) debugPrint('Error loading app settings: $e');
     }
   }
 
@@ -217,7 +221,7 @@ class AppStateProvider extends ChangeNotifier {
       _appSettings = settings;
       notifyListeners();
     } catch (e) {
-      if (kDebugMode) print('Error updating app settings: $e');
+      if (kDebugMode) debugPrint('Error updating app settings: $e');
     }
   }
 
@@ -235,10 +239,11 @@ class AppStateProvider extends ChangeNotifier {
         loadEmailTemplates(),
         loadCustomAppDataFields(),
         loadTemplateCategories(), // <--- ENSURE THIS LINE IS PRESENT AND CORRECT
+        loadInspectionDocuments(),
       ]);
       // notifyListeners(); // This is handled by setLoading(false)
     } catch (e) {
-      if (kDebugMode) print('Error loading all data: $e');
+      if (kDebugMode) debugPrint('Error loading all data: $e');
     } finally {
       setLoading(false);
     }
@@ -249,7 +254,7 @@ class AppStateProvider extends ChangeNotifier {
     try {
       _customers = await _db.getAllCustomers();
     } catch (e) {
-      if (kDebugMode) print('Error loading customers: $e');
+      if (kDebugMode) debugPrint('Error loading customers: $e');
     }
   }
 
@@ -257,7 +262,7 @@ class AppStateProvider extends ChangeNotifier {
     try {
       _products = await _db.getAllProducts();
     } catch (e) {
-      if (kDebugMode) print('Error loading products: $e');
+      if (kDebugMode) debugPrint('Error loading products: $e');
     }
   }
 
@@ -265,7 +270,7 @@ class AppStateProvider extends ChangeNotifier {
     try {
       _simplifiedQuotes = await _db.getAllSimplifiedMultiLevelQuotes();
     } catch (e) {
-      if (kDebugMode) print('Error loading quotes: $e');
+      if (kDebugMode) debugPrint('Error loading quotes: $e');
     }
   }
 
@@ -273,7 +278,7 @@ class AppStateProvider extends ChangeNotifier {
     try {
       _roofScopeDataList = await _db.getAllRoofScopeData();
     } catch (e) {
-      if (kDebugMode) print('Error loading roof scope data: $e');
+      if (kDebugMode) debugPrint('Error loading roof scope data: $e');
     }
   }
 
@@ -281,7 +286,7 @@ class AppStateProvider extends ChangeNotifier {
     try {
       _projectMedia = await _db.getAllProjectMedia();
     } catch (e) {
-      if (kDebugMode) print('Error loading project media: $e');
+      if (kDebugMode) debugPrint('Error loading project media: $e');
     }
   }
 
@@ -289,11 +294,11 @@ class AppStateProvider extends ChangeNotifier {
     try {
       _pdfTemplates = await _db.getAllPDFTemplates();
       if (kDebugMode) {
-        print('📄 Loaded ${_pdfTemplates.length} PDF templates');
+        debugPrint('📄 Loaded ${_pdfTemplates.length} PDF templates');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error loading PDF templates: $e');
+        debugPrint('Error loading PDF templates: $e');
       }
     }
   }
@@ -301,11 +306,11 @@ class AppStateProvider extends ChangeNotifier {
     try {
       _messageTemplates = await _db.getAllMessageTemplates();
       if (kDebugMode) {
-        print('💬 Loaded ${_messageTemplates.length} message templates');
+        debugPrint('💬 Loaded ${_messageTemplates.length} message templates');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error loading message templates: $e');
+        debugPrint('Error loading message templates: $e');
       }
     }
   }
@@ -313,11 +318,11 @@ class AppStateProvider extends ChangeNotifier {
     try {
       _emailTemplates = await _db.getAllEmailTemplates();
       if (kDebugMode) {
-        print('📧 Loaded ${_emailTemplates.length} email templates');
+        debugPrint('📧 Loaded ${_emailTemplates.length} email templates');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error loading email templates: $e');
+        debugPrint('Error loading email templates: $e');
       }
     }
   }
@@ -326,7 +331,16 @@ class AppStateProvider extends ChangeNotifier {
       _customAppDataFields = await _db.getAllCustomAppDataFields(); // Uses DatabaseService
       // notifyListeners(); // Usually called by setLoading in loadAllData or individually if preferred
     } catch (e) {
-      if (kDebugMode) print('Error loading custom app data fields: $e');
+      if (kDebugMode) debugPrint('Error loading custom app data fields: $e');
+    }
+  }
+  Future<void> loadInspectionDocuments() async {
+    try {
+      _inspectionDocuments = await DatabaseService.instance.getAllInspectionDocuments();
+      if (kDebugMode) debugPrint('✅ Loaded ${_inspectionDocuments.length} inspection documents');
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ Error loading inspection documents: $e');
+      _inspectionDocuments = [];
     }
   }
 
@@ -377,23 +391,23 @@ class AppStateProvider extends ChangeNotifier {
             _templateCategories.add(TemplateCategory.fromMap(Map<String, dynamic>.from(item)));
           } catch(e) {
             if (kDebugMode) {
-              print("Error converting map to TemplateCategory in AppStateProvider.loadTemplateCategories: $e. Map: $item");
+              debugPrint("Error converting map to TemplateCategory in AppStateProvider.loadTemplateCategories: $e. Map: $item");
             }
           }
         } else {
           if (kDebugMode) {
-            print("Skipping unexpected data type while loading template categories in AppStateProvider: ${item.runtimeType}");
+            debugPrint("Skipping unexpected data type while loading template categories in AppStateProvider: ${item.runtimeType}");
           }
         }
       }
       if (kDebugMode) {
-        print('📚 Loaded ${_templateCategories.length} template categories into AppStateProvider');
+        debugPrint('📚 Loaded ${_templateCategories.length} template categories into AppStateProvider');
       }
       // No notifyListeners() needed here if called as part of loadAllData(),
       // as loadAllData's finally block will call it.
     } catch (e) {
       if (kDebugMode) {
-        print('Error loading template categories into AppStateProvider: $e');
+        debugPrint('Error loading template categories into AppStateProvider: $e');
       }
     }
   }
@@ -432,7 +446,7 @@ class AppStateProvider extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      if (kDebugMode) print('Error importing products: $e');
+      if (kDebugMode) debugPrint('Error importing products: $e');
       rethrow;
     } finally {
       setLoading(false);
@@ -505,7 +519,7 @@ class AppStateProvider extends ChangeNotifier {
       }
       return null;
     } catch (e) {
-      if (kDebugMode) print('Error in extractRoofScopeFromPdf: $e');
+      if (kDebugMode) debugPrint('Error in extractRoofScopeFromPdf: $e');
       return null;
     }
   }
@@ -514,7 +528,7 @@ class AppStateProvider extends ChangeNotifier {
     try {
       final file = File(filePath);
       if (!await file.exists()) {
-        if (kDebugMode) print('PDF file not found: $filePath');
+        if (kDebugMode) debugPrint('PDF file not found: $filePath');
         return null;
       }
 
@@ -527,23 +541,23 @@ class AppStateProvider extends ChangeNotifier {
         document = syncfusion.PdfDocument(inputBytes: bytes);
 
         if (kDebugMode) {
-          print('📄 PDF Document Info:');
-          print('   File: ${file.path.split('/').last}');
-          print('   Size: ${(bytes.length / 1024).toStringAsFixed(1)} KB');
-          print('   Pages: ${document.pages.count}');
+          debugPrint('📄 PDF Document Info:');
+          debugPrint('   File: ${file.path.split('/').last}');
+          debugPrint('   Size: ${(bytes.length / 1024).toStringAsFixed(1)} KB');
+          debugPrint('   Pages: ${document.pages.count}');
         }
 
         // Multiple extraction strategies
         try {
           final textExtractor = syncfusion.PdfTextExtractor(document);
           extractedText = textExtractor.extractText();
-          if (kDebugMode) print('Strategy 1 - Full document: ${extractedText.length} chars');
+          if (kDebugMode) debugPrint('Strategy 1 - Full document: ${extractedText.length} chars');
 
           if (extractedText.trim().isNotEmpty) {
-            if (kDebugMode) print('✅ Full document extraction successful');
+            if (kDebugMode) debugPrint('✅ Full document extraction successful');
           }
         } catch (e) {
-          if (kDebugMode) print('Strategy 1 failed: $e');
+          if (kDebugMode) debugPrint('Strategy 1 failed: $e');
         }
 
         if (extractedText.trim().isEmpty) {
@@ -555,18 +569,18 @@ class AppStateProvider extends ChangeNotifier {
                 extractedText += '$pageText\n---PAGE_BREAK---\n';
               }
             }
-            if (kDebugMode) print('Strategy 2 - Page-by-page: ${extractedText.length} chars');
+            if (kDebugMode) debugPrint('Strategy 2 - Page-by-page: ${extractedText.length} chars');
 
             if (extractedText.trim().isNotEmpty) {
-              if (kDebugMode) print('✅ Page-by-page extraction successful');
+              if (kDebugMode) debugPrint('✅ Page-by-page extraction successful');
             }
           } catch (e) {
-            if (kDebugMode) print('Strategy 2 failed: $e');
+            if (kDebugMode) debugPrint('Strategy 2 failed: $e');
           }
         }
 
       } catch (e) {
-        if (kDebugMode) print('❌ PDF document loading failed: $e');
+        if (kDebugMode) debugPrint('❌ PDF document loading failed: $e');
       } finally {
         document?.dispose();
       }
@@ -574,12 +588,12 @@ class AppStateProvider extends ChangeNotifier {
       extractedText = extractedText.trim();
 
       if (kDebugMode) {
-        print('=== FINAL EXTRACTION RESULTS ===');
-        print('Total text length: ${extractedText.length}');
+        debugPrint('=== FINAL EXTRACTION RESULTS ===');
+        debugPrint('Total text length: ${extractedText.length}');
 
         if (extractedText.isNotEmpty) {
-          print('Text sample (first 500 chars):');
-          print(extractedText.substring(0, extractedText.length > 500 ? 500 : extractedText.length));
+          debugPrint('Text sample (first 500 chars):');
+          debugPrint(extractedText.substring(0, extractedText.length > 500 ? 500 : extractedText.length));
 
           final indicators = [
             'roofscope', 'total roof area', 'project totals', 'sq', 'lf',
@@ -587,16 +601,16 @@ class AppStateProvider extends ChangeNotifier {
             'roof planes', 'structures', '15.73', '26', '58.9'
           ];
 
-          print('\nRoofScope indicators found:');
+          debugPrint('\nRoofScope indicators found:');
           for (final indicator in indicators) {
             if (extractedText.toLowerCase().contains(indicator.toLowerCase())) {
-              print('✅ $indicator');
+              debugPrint('✅ $indicator');
             }
           }
         } else {
-          print('❌ NO TEXT EXTRACTED FROM PDF');
+          debugPrint('❌ NO TEXT EXTRACTED FROM PDF');
         }
-        print('=================================');
+        debugPrint('=================================');
       }
 
       RoofScopeData roofScopeData;
@@ -610,7 +624,7 @@ class AppStateProvider extends ChangeNotifier {
       return roofScopeData;
 
     } catch (e) {
-      if (kDebugMode) print('❌ Critical error in extractRoofScopeData: $e');
+      if (kDebugMode) debugPrint('❌ Critical error in extractRoofScopeData: $e');
       return null;
     }
   }
@@ -619,14 +633,14 @@ class AppStateProvider extends ChangeNotifier {
     final data = RoofScopeData(customerId: customerId, sourceFileName: fileName);
 
     if (kDebugMode) {
-      print('🧠 Creating smart fallback for: $fileName');
+      debugPrint('🧠 Creating smart fallback for: $fileName');
     }
 
     if (fileName.contains('4245_11th_ave_s_seattle') ||
         fileName.contains('4245') && fileName.contains('seattle')) {
 
       if (kDebugMode) {
-        print('🎯 Recognized specific RoofScope PDF - applying known values');
+        debugPrint('🎯 Recognized specific RoofScope PDF - applying known values');
       }
 
       data.roofArea = 15.73;
@@ -646,7 +660,7 @@ class AppStateProvider extends ChangeNotifier {
 
     } else {
       if (kDebugMode) {
-        print('⚠️ Unknown RoofScope PDF - creating empty template');
+        debugPrint('⚠️ Unknown RoofScope PDF - creating empty template');
       }
 
       data.addMeasurement('extraction_method', 'text_extraction_failed');
@@ -663,7 +677,7 @@ class AppStateProvider extends ChangeNotifier {
   RoofScopeData _parseRoofScopeText(String text, String customerId, String sourceFileName) {
     final data = RoofScopeData(customerId: customerId, sourceFileName: sourceFileName);
 
-    if (kDebugMode) print('🏠 Parsing RoofScope data from: $sourceFileName');
+    if (kDebugMode) debugPrint('🏠 Parsing RoofScope data from: $sourceFileName');
 
     try {
       String cleanText = text
@@ -674,7 +688,7 @@ class AppStateProvider extends ChangeNotifier {
           .toLowerCase();
 
       if (cleanText.isEmpty) {
-        if (kDebugMode) print('⚠️ No text to parse - creating empty template');
+        if (kDebugMode) debugPrint('⚠️ No text to parse - creating empty template');
         data.addMeasurement('parse_status', 'empty_text');
         return data;
       }
@@ -698,7 +712,7 @@ class AppStateProvider extends ChangeNotifier {
             data.roofArea = area;
             data.numberOfSquares = area;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Total Roof Area: ${data.roofArea} SQ');
+            if (kDebugMode) debugPrint('✅ Total Roof Area: ${data.roofArea} SQ');
             break;
           }
         }
@@ -719,7 +733,7 @@ class AppStateProvider extends ChangeNotifier {
           if (planes > 0) {
             data.addMeasurement('roof_planes', planes);
             foundAnyData = true;
-            if (kDebugMode) print('✅ Roof Planes: $planes');
+            if (kDebugMode) debugPrint('✅ Roof Planes: $planes');
             break;
           }
         }
@@ -739,7 +753,7 @@ class AppStateProvider extends ChangeNotifier {
           if (structures >= 0) { // 0 is valid for structures
             data.addMeasurement('structures_count', structures);
             foundAnyData = true;
-            if (kDebugMode) print('✅ Structures: $structures');
+            if (kDebugMode) debugPrint('✅ Structures: $structures');
             break;
           }
         }
@@ -761,7 +775,7 @@ class AppStateProvider extends ChangeNotifier {
           if (ridge > 0) {
             data.ridgeLength = ridge;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Ridge: ${data.ridgeLength} LF');
+            if (kDebugMode) debugPrint('✅ Ridge: ${data.ridgeLength} LF');
             break;
           }
         }
@@ -781,7 +795,7 @@ class AppStateProvider extends ChangeNotifier {
           if (hip > 0) {
             data.hipLength = hip;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Hip: ${data.hipLength} LF');
+            if (kDebugMode) debugPrint('✅ Hip: ${data.hipLength} LF');
             break;
           }
         }
@@ -801,7 +815,7 @@ class AppStateProvider extends ChangeNotifier {
           if (valley > 0) {
             data.valleyLength = valley;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Valley: ${data.valleyLength} LF');
+            if (kDebugMode) debugPrint('✅ Valley: ${data.valleyLength} LF');
             break;
           }
         }
@@ -822,7 +836,7 @@ class AppStateProvider extends ChangeNotifier {
             data.eaveLength = eave;
             data.gutterLength = eave; // Eave length typically equals gutter length
             foundAnyData = true;
-            if (kDebugMode) print('✅ Eave/Gutter: ${data.eaveLength} LF');
+            if (kDebugMode) debugPrint('✅ Eave/Gutter: ${data.eaveLength} LF');
             break;
           }
         }
@@ -842,7 +856,7 @@ class AppStateProvider extends ChangeNotifier {
             data.eaveLength = rake;
             data.gutterLength = rake;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Rake Edge (as Eave): ${data.eaveLength} LF');
+            if (kDebugMode) debugPrint('✅ Rake Edge (as Eave): ${data.eaveLength} LF');
             break;
           }
         }
@@ -862,7 +876,7 @@ class AppStateProvider extends ChangeNotifier {
           if (perimeter > 0) {
             data.perimeterLength = perimeter;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Perimeter: ${data.perimeterLength} LF');
+            if (kDebugMode) debugPrint('✅ Perimeter: ${data.perimeterLength} LF');
             break;
           }
         }
@@ -883,7 +897,7 @@ class AppStateProvider extends ChangeNotifier {
           final step = double.tryParse(match.group(1) ?? '0') ?? 0.0;
           totalFlashing += step;
           data.addMeasurement('step_flashing', step);
-          if (step > 0 && kDebugMode) print('✅ Step Flashing: $step LF');
+          if (step > 0 && kDebugMode) debugPrint('✅ Step Flashing: $step LF');
           break;
         }
       }
@@ -900,7 +914,7 @@ class AppStateProvider extends ChangeNotifier {
           final headwall = double.tryParse(match.group(1) ?? '0') ?? 0.0;
           totalFlashing += headwall;
           data.addMeasurement('headwall_flashing', headwall);
-          if (headwall > 0 && kDebugMode) print('✅ Headwall Flashing: $headwall LF');
+          if (headwall > 0 && kDebugMode) debugPrint('✅ Headwall Flashing: $headwall LF');
           break;
         }
       }
@@ -918,14 +932,14 @@ class AppStateProvider extends ChangeNotifier {
         if (match != null) {
           final flashingAmount = double.tryParse(match.group(1) ?? '0') ?? 0.0;
           totalFlashing += flashingAmount;
-          if (flashingAmount > 0 && kDebugMode) print('✅ Additional Flashing: $flashingAmount LF');
+          if (flashingAmount > 0 && kDebugMode) debugPrint('✅ Additional Flashing: $flashingAmount LF');
         }
       }
 
       if (totalFlashing > 0) {
         data.flashingLength = totalFlashing;
         foundAnyData = true;
-        if (kDebugMode) print('✅ Total Flashing: ${data.flashingLength} LF');
+        if (kDebugMode) debugPrint('✅ Total Flashing: ${data.flashingLength} LF');
       }
 
       // PITCH/SLOPE INFORMATION
@@ -944,7 +958,7 @@ class AppStateProvider extends ChangeNotifier {
           if (pitch > 0) {
             data.pitch = pitch;
             foundAnyData = true;
-            if (kDebugMode) print('✅ Pitch: ${data.pitch}/12');
+            if (kDebugMode) debugPrint('✅ Pitch: ${data.pitch}/12');
             break;
           }
         }
@@ -964,7 +978,7 @@ class AppStateProvider extends ChangeNotifier {
           if (soffit > 0) {
             data.addMeasurement('soffit_length', soffit);
             foundAnyData = true;
-            if (kDebugMode) print('✅ Soffit: $soffit LF');
+            if (kDebugMode) debugPrint('✅ Soffit: $soffit LF');
             break;
           }
         }
@@ -983,7 +997,7 @@ class AppStateProvider extends ChangeNotifier {
           if (fascia > 0) {
             data.addMeasurement('fascia_length', fascia);
             foundAnyData = true;
-            if (kDebugMode) print('✅ Fascia: $fascia LF');
+            if (kDebugMode) debugPrint('✅ Fascia: $fascia LF');
             break;
           }
         }
@@ -1002,7 +1016,7 @@ class AppStateProvider extends ChangeNotifier {
           if (chimneys >= 0) {
             data.addMeasurement('chimney_count', chimneys);
             foundAnyData = true;
-            if (kDebugMode) print('✅ Chimneys: $chimneys');
+            if (kDebugMode) debugPrint('✅ Chimneys: $chimneys');
             break;
           }
         }
@@ -1021,7 +1035,7 @@ class AppStateProvider extends ChangeNotifier {
           if (skylights >= 0) {
             data.addMeasurement('skylight_count', skylights);
             foundAnyData = true;
-            if (kDebugMode) print('✅ Skylights: $skylights');
+            if (kDebugMode) debugPrint('✅ Skylights: $skylights');
             break;
           }
         }
@@ -1041,7 +1055,7 @@ class AppStateProvider extends ChangeNotifier {
           if (vents >= 0) {
             data.addMeasurement('vent_count', vents);
             foundAnyData = true;
-            if (kDebugMode) print('✅ Vents: $vents');
+            if (kDebugMode) debugPrint('✅ Vents: $vents');
             break;
           }
         }
@@ -1060,7 +1074,7 @@ class AppStateProvider extends ChangeNotifier {
           if (wasteFactor >= 0) {
             data.addMeasurement('waste_factor', wasteFactor);
             foundAnyData = true;
-            if (kDebugMode) print('✅ Waste Factor: $wasteFactor%');
+            if (kDebugMode) debugPrint('✅ Waste Factor: $wasteFactor%');
             break;
           }
         }
@@ -1073,7 +1087,7 @@ class AppStateProvider extends ChangeNotifier {
       return data;
 
     } catch (e) {
-      if (kDebugMode) print('❌ Error parsing RoofScope text: $e');
+      if (kDebugMode) debugPrint('❌ Error parsing RoofScope text: $e');
       data.addMeasurement('parse_status', 'error');
       data.addMeasurement('error_message', e.toString());
       data.addMeasurement('extraction_method', 'text_parsing_failed');
@@ -1116,47 +1130,73 @@ class AppStateProvider extends ChangeNotifier {
       _pdfTemplates.add(template);
       notifyListeners();
       if (kDebugMode) {
-        print('➕ Added PDF template: ${template.templateName}');
+        debugPrint('➕ Added PDF template: ${template.templateName}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error adding PDF template: $e');
+        debugPrint('Error adding PDF template: $e');
       }
       rethrow;
     }
   }
 
+  /// Ensures the protected "inspection" category always exists
+  Future<void> _ensureInspectionCategoryExists() async {
+    try {
+      // Check if inspection category already exists
+      final inspectionExists = _templateCategories.any(
+              (cat) => cat.templateType == 'custom_fields' && cat.key == 'inspection'
+      );
+
+      if (!inspectionExists) {
+        if (kDebugMode) debugPrint('🔒 Creating protected inspection category...');
+
+        // Create the protected inspection category
+        await addTemplateCategory('custom_fields', 'inspection', 'Inspection Fields');
+
+        if (kDebugMode) debugPrint('✅ Protected inspection category created');
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error ensuring inspection category exists: $e');
+    }
+  }
+
   Future<void> updatePDFTemplate(PDFTemplate template) async {
     try {
+      debugPrint('🔧 AppState: Updating PDF template: ${template.templateName}');
       await _db.savePDFTemplate(template);
+
       final index = _pdfTemplates.indexWhere((t) => t.id == template.id);
       if (index != -1) {
         _pdfTemplates[index] = template;
-        notifyListeners();
-        if (kDebugMode) {
-          print('📝 Updated PDF template: ${template.templateName}');
-        }
+        debugPrint('✅ AppState: Updated PDF template in memory');
+      } else {
+        debugPrint('⚠️ AppState: PDF template not found in memory, adding it');
+        _pdfTemplates.add(template);
       }
+
+      notifyListeners();
+      debugPrint('✅ AppState: PDF template updated and notified');
     } catch (e) {
-      if (kDebugMode) {
-        print('Error updating PDF template: $e');
-      }
+      debugPrint('❌ AppState: Error updating PDF template: $e');
       rethrow;
     }
   }
 
   Future<void> deletePDFTemplate(String templateId) async {
     try {
-      await TemplateService.instance.deleteTemplate(templateId);
+      debugPrint('🗑️ AppState: Deleting PDF template: $templateId');
+      await _db.deletePDFTemplate(templateId);
+
+      final removedCount = _pdfTemplates.length;
       _pdfTemplates.removeWhere((t) => t.id == templateId);
+      final newCount = _pdfTemplates.length;
+
+      debugPrint('✅ AppState: Removed PDF template ($removedCount -> $newCount)');
       notifyListeners();
-      if (kDebugMode) {
-        print('🗑️ Deleted PDF template: $templateId');
-      }
+      debugPrint('✅ AppState: PDF template deleted and notified');
     } catch (e) {
-      if (kDebugMode) {
-        print('Error deleting PDF template: $e');
-      }
+      debugPrint('❌ AppState: Error deleting PDF template: $e');
       rethrow;
     }
   }
@@ -1168,11 +1208,11 @@ class AppStateProvider extends ChangeNotifier {
       template.isActive = !template.isActive;
       notifyListeners();
       if (kDebugMode) {
-        print('🔄 Toggled PDF template active: ${template.templateName} -> ${template.isActive}');
+        debugPrint('🔄 Toggled PDF template active: ${template.templateName} -> ${template.isActive}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error toggling PDF template active: $e');
+        debugPrint('Error toggling PDF template active: $e');
       }
       rethrow;
     }
@@ -1204,13 +1244,13 @@ class AppStateProvider extends ChangeNotifier {
       );
 
       if (kDebugMode) {
-        print('📄 Generated PDF from template: ${template.templateName}');
+        debugPrint('📄 Generated PDF from template: ${template.templateName}');
       }
 
       return pdfPath;
     } catch (e) {
       if (kDebugMode) {
-        print('Error generating PDF from template: $e');
+        debugPrint('Error generating PDF from template: $e');
       }
       rethrow;
     }
@@ -1227,7 +1267,7 @@ class AppStateProvider extends ChangeNotifier {
     }
 
     if (invalidTemplates.isNotEmpty && kDebugMode) {
-      print('⚠️ Found ${invalidTemplates.length} invalid templates');
+      debugPrint('⚠️ Found ${invalidTemplates.length} invalid templates');
     }
 
     return invalidTemplates;
@@ -1241,12 +1281,12 @@ class AppStateProvider extends ChangeNotifier {
         notifyListeners();
 
         if (kDebugMode) {
-          print('✅ Added template to memory list: ${template.templateName}');
-          print('📊 Total templates: ${_pdfTemplates.length}');
+          debugPrint('✅ Added template to memory list: ${template.templateName}');
+          debugPrint('📊 Total templates: ${_pdfTemplates.length}');
         }
       }
     } catch (e) {
-      if (kDebugMode) print('❌ Error adding template to list: $e');
+      if (kDebugMode) debugPrint('❌ Error adding template to list: $e');
       rethrow;
     }
   }
@@ -1256,53 +1296,58 @@ class AppStateProvider extends ChangeNotifier {
       _messageTemplates.add(template);
       notifyListeners();
       if (kDebugMode) {
-        print('➕ Added message template: ${template.templateName}');
+        debugPrint('➕ Added message template: ${template.templateName}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error adding message template: $e');
+        debugPrint('Error adding message template: $e');
       }
       rethrow;
     }
   }
   Future<void> updateMessageTemplate(MessageTemplate template) async {
     try {
+      debugPrint('🔧 AppState: Updating message template: ${template.templateName}');
       await _db.saveMessageTemplate(template);
+
       final index = _messageTemplates.indexWhere((t) => t.id == template.id);
       if (index != -1) {
         _messageTemplates[index] = template;
-        notifyListeners();
-        if (kDebugMode) {
-          print('📝 Updated message template: ${template.templateName}');
-        }
+        debugPrint('✅ AppState: Updated message template in memory');
+      } else {
+        debugPrint('⚠️ AppState: Message template not found in memory, adding it');
+        _messageTemplates.add(template);
       }
+
+      notifyListeners();
+      debugPrint('✅ AppState: Message template updated and notified');
     } catch (e) {
-      if (kDebugMode) {
-        print('Error updating message template: $e');
-      }
+      debugPrint('❌ AppState: Error updating message template: $e');
       rethrow;
     }
   }
 
   Future<void> deleteMessageTemplate(String templateId) async {
     try {
+      debugPrint('🗑️ AppState: Deleting message template: $templateId');
       await _db.deleteMessageTemplate(templateId);
+
+      final removedCount = _messageTemplates.length;
       _messageTemplates.removeWhere((t) => t.id == templateId);
+      final newCount = _messageTemplates.length;
+
+      debugPrint('✅ AppState: Removed message template ($removedCount -> $newCount)');
       notifyListeners();
-      if (kDebugMode) {
-        print('🗑️ Deleted message template: $templateId');
-      }
+      debugPrint('✅ AppState: Message template deleted and notified');
     } catch (e) {
-      if (kDebugMode) {
-        print('Error deleting message template: $e');
-      }
+      debugPrint('❌ AppState: Error deleting message template: $e');
       rethrow;
     }
   }
 
   Future<void> toggleMessageTemplateActive(String templateId) async {
     try {
-      await _db.toggleMessageTemplateActive(templateId);
+      debugPrint('🔄 AppState: Toggling message template active: $templateId');
       final index = _messageTemplates.indexWhere((t) => t.id == templateId);
       if (index != -1) {
         final template = _messageTemplates[index];
@@ -1310,19 +1355,20 @@ class AppStateProvider extends ChangeNotifier {
           isActive: !template.isActive,
           updatedAt: DateTime.now(),
         );
+
+        await _db.saveMessageTemplate(updatedTemplate);
         _messageTemplates[index] = updatedTemplate;
         notifyListeners();
-        if (kDebugMode) {
-          print('🔄 Toggled message template active: ${updatedTemplate.templateName} -> ${updatedTemplate.isActive}');
-        }
+        debugPrint('✅ AppState: Message template toggled and notified: ${updatedTemplate.isActive}');
+      } else {
+        debugPrint('❌ AppState: Message template not found for toggle: $templateId');
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('Error toggling message template active: $e');
-      }
+      debugPrint('❌ AppState: Error toggling message template: $e');
       rethrow;
     }
   }
+
 
   List<MessageTemplate> getMessageTemplatesByCategory(String category) {
     return _messageTemplates.where((t) => t.category == category).toList();
@@ -1341,58 +1387,60 @@ class AppStateProvider extends ChangeNotifier {
 // --- Email Template Operations ---
   Future<void> addEmailTemplate(EmailTemplate template) async {
     try {
+      debugPrint('🆕 AppState: Adding email template: ${template.templateName}');
       await _db.saveEmailTemplate(template);
       _emailTemplates.add(template);
       notifyListeners();
-      if (kDebugMode) {
-        print('➕ Added email template: ${template.templateName}');
-      }
+      debugPrint('✅ AppState: Email template added and notified');
     } catch (e) {
-      if (kDebugMode) {
-        print('Error adding email template: $e');
-      }
+      debugPrint('❌ AppState: Error adding email template: $e');
       rethrow;
     }
   }
 
   Future<void> updateEmailTemplate(EmailTemplate template) async {
     try {
+      debugPrint('🔧 AppState: Updating email template: ${template.templateName}');
       await _db.saveEmailTemplate(template);
+
       final index = _emailTemplates.indexWhere((t) => t.id == template.id);
       if (index != -1) {
         _emailTemplates[index] = template;
-        notifyListeners();
-        if (kDebugMode) {
-          print('📝 Updated email template: ${template.templateName}');
-        }
+        debugPrint('✅ AppState: Updated email template in memory');
+      } else {
+        debugPrint('⚠️ AppState: Email template not found in memory, adding it');
+        _emailTemplates.add(template);
       }
+
+      notifyListeners();
+      debugPrint('✅ AppState: Email template updated and notified');
     } catch (e) {
-      if (kDebugMode) {
-        print('Error updating email template: $e');
-      }
+      debugPrint('❌ AppState: Error updating email template: $e');
       rethrow;
     }
   }
 
   Future<void> deleteEmailTemplate(String templateId) async {
     try {
+      debugPrint('🗑️ AppState: Deleting email template: $templateId');
       await _db.deleteEmailTemplate(templateId);
+
+      final removedCount = _emailTemplates.length;
       _emailTemplates.removeWhere((t) => t.id == templateId);
+      final newCount = _emailTemplates.length;
+
+      debugPrint('✅ AppState: Removed email template ($removedCount -> $newCount)');
       notifyListeners();
-      if (kDebugMode) {
-        print('🗑️ Deleted email template: $templateId');
-      }
+      debugPrint('✅ AppState: Email template deleted and notified');
     } catch (e) {
-      if (kDebugMode) {
-        print('Error deleting email template: $e');
-      }
+      debugPrint('❌ AppState: Error deleting email template: $e');
       rethrow;
     }
   }
 
   Future<void> toggleEmailTemplateActive(String templateId) async {
     try {
-      await _db.toggleEmailTemplateActive(templateId);
+      debugPrint('🔄 AppState: Toggling email template active: $templateId');
       final index = _emailTemplates.indexWhere((t) => t.id == templateId);
       if (index != -1) {
         final template = _emailTemplates[index];
@@ -1400,16 +1448,16 @@ class AppStateProvider extends ChangeNotifier {
           isActive: !template.isActive,
           updatedAt: DateTime.now(),
         );
+
+        await _db.saveEmailTemplate(updatedTemplate);
         _emailTemplates[index] = updatedTemplate;
         notifyListeners();
-        if (kDebugMode) {
-          print('🔄 Toggled email template active: ${updatedTemplate.templateName} -> ${updatedTemplate.isActive}');
-        }
+        debugPrint('✅ AppState: Email template toggled and notified: ${updatedTemplate.isActive}');
+      } else {
+        debugPrint('❌ AppState: Email template not found for toggle: $templateId');
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('Error toggling email template active: $e');
-      }
+      debugPrint('❌ AppState: Error toggling email template: $e');
       rethrow;
     }
   }
@@ -1432,68 +1480,130 @@ class AppStateProvider extends ChangeNotifier {
   // --- Custom App Data Field Operations ---
   Future<void> addCustomAppDataField(CustomAppDataField field) async {
     try {
+      debugPrint('🆕 AppState: Adding custom field: ${field.fieldName}');
       await _db.saveCustomAppDataField(field);
       _customAppDataFields.add(field);
-      // notifyListeners(); // <--- COMMENT THIS OUT TEMPORARILY
-
-      if (kDebugMode) {
-        print('✅ Added custom field (NO NOTIFY): ${field.fieldName} = "${field.currentValue}"');
-      }
+      notifyListeners();
+      debugPrint('✅ AppState: Added and notified for field: ${field.fieldName}');
     } catch (e) {
-      if (kDebugMode) print('Error adding custom app data field: $e');
+      debugPrint('❌ AppState: Error adding custom field: $e');
       rethrow;
     }
   }
 
   Future<void> updateCustomAppDataField(String fieldId, String newValue) async {
     try {
+      debugPrint('🔄 AppState: Updating field value: $fieldId = "$newValue"');
       final fieldIndex = _customAppDataFields.indexWhere((f) => f.id == fieldId);
       if (fieldIndex != -1) {
         final field = _customAppDataFields[fieldIndex];
         field.updateValue(newValue);
         await _db.saveCustomAppDataField(field);
         notifyListeners();
-
-        if (kDebugMode) {
-          print('✅ Updated custom field: ${field.fieldName} = "$newValue"');
-        }
+        debugPrint('✅ AppState: Updated field value and notified');
+      } else {
+        debugPrint('❌ AppState: Field not found for value update: $fieldId');
       }
     } catch (e) {
-      if (kDebugMode) print('Error updating custom app data field: $e');
+      debugPrint('❌ AppState: Error updating field value: $e');
       rethrow;
     }
   }
 
   Future<void> updateCustomAppDataFieldStructure(CustomAppDataField updatedField) async {
     try {
+      debugPrint('🔧 AppState: Updating field structure: ${updatedField.fieldName}');
       await _db.saveCustomAppDataField(updatedField);
+
       final index = _customAppDataFields.indexWhere((f) => f.id == updatedField.id);
       if (index != -1) {
         _customAppDataFields[index] = updatedField;
-        notifyListeners();
+        debugPrint('✅ AppState: Updated field in memory list');
+      } else {
+        debugPrint('⚠️ AppState: Field not found in memory, adding it');
+        _customAppDataFields.add(updatedField);
       }
+
+      notifyListeners();
+      debugPrint('✅ AppState: Field structure updated and notified');
     } catch (e) {
-      if (kDebugMode) print('Error updating custom app data field structure: $e');
+      debugPrint('❌ AppState: Error updating field structure: $e');
       rethrow;
     }
   }
 
   Future<void> deleteCustomAppDataField(String fieldId) async {
     try {
+      debugPrint('🗑️ AppState: Deleting custom field: $fieldId');
       await _db.deleteCustomAppDataField(fieldId);
+
+      final removedCount = _customAppDataFields.length;
       _customAppDataFields.removeWhere((f) => f.id == fieldId);
+      final newCount = _customAppDataFields.length;
+
+      debugPrint('✅ AppState: Removed field from memory ($removedCount -> $newCount)');
       notifyListeners();
+      debugPrint('✅ AppState: Field deleted and notified');
     } catch (e) {
-      if (kDebugMode) print('Error deleting custom app data field: $e');
+      debugPrint('❌ AppState: Error deleting field: $e');
       rethrow;
     }
   }
 
-  CustomAppDataField? getCustomAppDataField(String fieldName) {
+  // --- Inspection Document Management ---
+
+  List<InspectionDocument> getInspectionDocumentsForCustomer(String customerId) {
+    return _inspectionDocuments
+        .where((doc) => doc.customerId == customerId)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  Future<void> addInspectionDocument(InspectionDocument document) async {
     try {
-      return _customAppDataFields.firstWhere((f) => f.fieldName == fieldName);
+      await DatabaseService.instance.saveInspectionDocument(document);
+      _inspectionDocuments.add(document);
+
+      if (document.sortOrder == 0) {
+        final customerDocs = getInspectionDocumentsForCustomer(document.customerId);
+        document.updateSortOrder(customerDocs.length);
+        await DatabaseService.instance.saveInspectionDocument(document);
+      }
+
+      notifyListeners();
     } catch (e) {
-      return null;
+      rethrow;
+    }
+  }
+
+  Future<void> deleteInspectionDocument(String documentId) async {
+    try {
+      await DatabaseService.instance.deleteInspectionDocument(documentId);
+      _inspectionDocuments.removeWhere((doc) => doc.id == documentId);
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> reorderCustomAppDataFields(String category, List<CustomAppDataField> reorderedFields) async {
+    try {
+      for (int i = 0; i < reorderedFields.length; i++) {
+        reorderedFields[i].updateField(sortOrder: i);
+      }
+
+      await DatabaseService.instance.saveMultipleCustomAppDataFields(reorderedFields);
+
+      for (final field in reorderedFields) {
+        final index = _customAppDataFields.indexWhere((f) => f.id == field.id);
+        if (index != -1) {
+          _customAppDataFields[index] = field;
+        }
+      }
+
+      notifyListeners();
+    } catch (e) {
+      rethrow;
     }
   }
 
@@ -1521,11 +1631,11 @@ class AppStateProvider extends ChangeNotifier {
         }
 
         if (kDebugMode) {
-          print('✅ Initialized ${defaultFields.length} default custom fields');
+          debugPrint('✅ Initialized ${defaultFields.length} default custom fields');
         }
       }
     } catch (e) {
-      if (kDebugMode) print('Error initializing default custom fields: $e');
+      if (kDebugMode) debugPrint('Error initializing default custom fields: $e');
     }
   }
 
@@ -1542,10 +1652,10 @@ class AppStateProvider extends ChangeNotifier {
       }
 
       if (kDebugMode) {
-        print('✅ Added ${templateFields.length} template fields');
+        debugPrint('✅ Added ${templateFields.length} template fields');
       }
     } catch (e) {
-      if (kDebugMode) print('Error adding template fields: $e');
+      if (kDebugMode) debugPrint('Error adding template fields: $e');
       rethrow;
     } finally {
       setLoading(false);
@@ -1582,11 +1692,11 @@ class AppStateProvider extends ChangeNotifier {
         }
 
         if (kDebugMode) {
-          print('✅ Imported ${importedFields.length} custom app data fields');
+          debugPrint('✅ Imported ${importedFields.length} custom app data fields');
         }
       }
     } catch (e) {
-      if (kDebugMode) print('Error importing custom app data: $e');
+      if (kDebugMode) debugPrint('Error importing custom app data: $e');
       rethrow;
     } finally {
       setLoading(false);
@@ -1612,9 +1722,9 @@ class AppStateProvider extends ChangeNotifier {
       // Also update the local list if you're maintaining one
       _templateCategories.add(newCategory);
       notifyListeners();
-      if (kDebugMode) print('➕ Added template category in AppState: $categoryDisplayName for $templateTypeKey (key: $categoryUserKey)');
+      if (kDebugMode) debugPrint('➕ Added template category in AppState: $categoryDisplayName for $templateTypeKey (key: $categoryUserKey)');
     } catch (e) {
-      if (kDebugMode) print('Error adding template category in AppState: $e');
+      if (kDebugMode) debugPrint('Error adding template category in AppState: $e');
       rethrow;
     }
   }
@@ -1640,14 +1750,14 @@ class AppStateProvider extends ChangeNotifier {
         // Update the object in the local list
         _templateCategories[foundIndex] = categoryToUpdate.copyWith(name: newDisplayName, updatedAt: DateTime.now());
         notifyListeners();
-        if (kDebugMode) print('📝 Updated template category in AppState (Type: $templateTypeKey, Key: $categoryUserKey) to "$newDisplayName"');
+        if (kDebugMode) debugPrint('📝 Updated template category in AppState (Type: $templateTypeKey, Key: $categoryUserKey) to "$newDisplayName"');
       } catch (e) {
-        if (kDebugMode) print('Error updating template category in AppState: $e');
+        if (kDebugMode) debugPrint('Error updating template category in AppState: $e');
         rethrow;
       }
     } else {
       if (kDebugMode) {
-        print("Category not found in AppStateProvider for update: Type='$templateTypeKey', Key='$categoryUserKey'. Available: ${_templateCategories.map((c) => '${c.templateType}-${c.key}(id:${c.id})').join(', ')}");
+        debugPrint("Category not found in AppStateProvider for update: Type='$templateTypeKey', Key='$categoryUserKey'. Available: ${_templateCategories.map((c) => '${c.templateType}-${c.key}(id:${c.id})').join(', ')}");
       }
     }
   }
@@ -1668,14 +1778,14 @@ class AppStateProvider extends ChangeNotifier {
         await _db.deleteTemplateCategory(categoryToDelete.id);
         _templateCategories.removeWhere((cat) => cat.id == categoryToDelete!.id); // Remove from local list
         notifyListeners();
-        if (kDebugMode) print('🗑️ Deleted template category in AppState (Type: $templateTypeKey, Key: $categoryUserKey)');
+        if (kDebugMode) debugPrint('🗑️ Deleted template category in AppState (Type: $templateTypeKey, Key: $categoryUserKey)');
       } catch (e) {
-        if (kDebugMode) print('Error deleting template category in AppState: $e');
+        if (kDebugMode) debugPrint('Error deleting template category in AppState: $e');
         rethrow;
       }
     } else {
       if (kDebugMode) {
-        print("Category not found in AppStateProvider for deletion: Type='$templateTypeKey', Key='$categoryUserKey'. Available: ${_templateCategories.map((c) => '${c.templateType}-${c.key}(id:${c.id})').join(', ')}");
+        debugPrint("Category not found in AppStateProvider for deletion: Type='$templateTypeKey', Key='$categoryUserKey'. Available: ${_templateCategories.map((c) => '${c.templateType}-${c.key}(id:${c.id})').join(', ')}");
       }
     }
   }

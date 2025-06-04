@@ -32,6 +32,7 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
   late String _selectedFieldCategory;
   late String _selectedFieldType;
   late bool _isRequired;
+  bool _isLoading = false;
 
   final List<String> _fieldTypes = [
     'text',
@@ -40,7 +41,8 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
     'phone',
     'multiline',
     'date',
-    'currency'
+    'currency',
+    'checkbox'
   ];
 
   final Map<String, String> _fieldTypeNames = {
@@ -51,6 +53,7 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
     'multiline': 'Multi-line Text',
     'date': 'Date',
     'currency': 'Currency',
+    'checkbox': 'Checkbox',
   };
 
   @override
@@ -63,13 +66,14 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
     _descriptionController = TextEditingController(text: widget.field.description ?? '');
 
     // Ensure the field category exists in available categories
-    final availableCategories = widget.categories.where((c) => c != 'all').toSet().toList();
-    _selectedFieldCategory = availableCategories.contains(widget.field.category)
+    _selectedFieldCategory = widget.categories.contains(widget.field.category)
         ? widget.field.category
-        : (availableCategories.isNotEmpty ? availableCategories.first : 'custom');
+        : (widget.categories.isNotEmpty ? widget.categories.first : 'custom');
 
     _selectedFieldType = widget.field.fieldType;
     _isRequired = widget.field.isRequired;
+
+    debugPrint('🔧 Editing field: ${widget.field.fieldName} in category: $_selectedFieldCategory');
   }
 
   @override
@@ -84,9 +88,6 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // Get unique categories and filter out 'all'
-    final availableCategories = widget.categories.where((c) => c != 'all').toSet().toList();
-
     return AlertDialog(
       title: Text('Edit Field: ${widget.field.displayName}'),
       content: Form(
@@ -99,8 +100,11 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
               // Category
               DropdownButtonFormField<String>(
                 value: _selectedFieldCategory,
-                decoration: const InputDecoration(labelText: 'Category *'),
-                items: availableCategories.map((String categoryValue) {
+                decoration: const InputDecoration(
+                  labelText: 'Category *',
+                  border: OutlineInputBorder(),
+                ),
+                items: widget.categories.map((String categoryValue) {
                   return DropdownMenuItem<String>(
                     value: categoryValue,
                     child: Text(widget.categoryNames[categoryValue] ?? categoryValue),
@@ -120,7 +124,10 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
               // Field Type
               DropdownButtonFormField<String>(
                 value: _selectedFieldType,
-                decoration: const InputDecoration(labelText: 'Field Type *'),
+                decoration: const InputDecoration(
+                  labelText: 'Field Type *',
+                  border: OutlineInputBorder(),
+                ),
                 items: _fieldTypes.map((String fieldType) {
                   return DropdownMenuItem<String>(
                     value: fieldType,
@@ -144,11 +151,13 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Field Name *',
                   hintText: 'e.g., representative_email (no spaces)',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Please enter a field name';
                   if (value.contains(' ')) return 'Field name cannot contain spaces';
-                  final appState = Provider.of<AppStateProvider>(context, listen: false);
+
+                  final appState = context.read<AppStateProvider>();
                   // Allow keeping the same name, but check for duplicates with different IDs
                   if (value.trim() != widget.field.fieldName &&
                       appState.customAppDataFields.any((f) =>
@@ -168,6 +177,7 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Display Name *',
                   hintText: 'e.g., Representative Email',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -184,7 +194,9 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Current Value *',
                   hintText: 'e.g., example@example.com',
+                  border: OutlineInputBorder(),
                 ),
+                maxLines: _selectedFieldType == 'multiline' ? 3 : 1,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a value for this field';
@@ -200,6 +212,7 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Placeholder (optional)',
                   hintText: 'e.g., Enter email address',
+                  border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
@@ -211,6 +224,7 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Description (optional)',
                   hintText: 'Brief description of this field',
+                  border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
@@ -233,19 +247,40 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
       ),
       actions: [
         TextButton(
+          onPressed: _isLoading ? null : () => Navigator.of(context).pop(null),
           child: const Text('Cancel'),
-          onPressed: () => Navigator.of(context).pop(null),
         ),
         ElevatedButton(
-          onPressed: _handleSaveChanges,
-          child: const Text('Save Changes'),
+          onPressed: _isLoading ? null : _handleSaveChanges,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF2E86AB),
+            foregroundColor: Colors.white,
+          ),
+          child: _isLoading
+              ? const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          )
+              : const Text('Save Changes'),
         ),
       ],
     );
   }
 
-  void _handleSaveChanges() {
-    if (_formKey.currentState!.validate()) {
+  Future<void> _handleSaveChanges() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
       final updatedField = CustomAppDataField(
         id: widget.field.id, // Keep the same ID
         fieldName: _fieldNameController.text.trim(),
@@ -261,7 +296,25 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog> {
         updatedAt: DateTime.now(), // Update the modified date
       );
 
+      debugPrint('💾 Saving updated field: ${updatedField.fieldName}');
       Navigator.of(context).pop(updatedField);
+    } catch (e) {
+      debugPrint('❌ Error in edit field dialog: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving field: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 }

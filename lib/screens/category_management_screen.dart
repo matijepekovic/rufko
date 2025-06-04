@@ -1,5 +1,6 @@
 // lib/screens/category_management_screen.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
@@ -62,14 +63,10 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
   }
 
   Widget _buildCategoryTab(String templateType) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _loadCategoriesForType(templateType),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final actualCategories = snapshot.data ?? [];
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, child) {
+        // Get categories synchronously from the already-loaded data
+        final allCategories = _getCachedCategories(appState, templateType);
 
         return Column(
           children: [
@@ -102,13 +99,13 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
 
             // Categories list
             Expanded(
-              child: actualCategories.isEmpty
+              child: allCategories.isEmpty
                   ? _buildEmptyState(templateType)
                   : ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: actualCategories.length,
+                itemCount: allCategories.length,
                 itemBuilder: (context, index) {
-                  final category = actualCategories[index];
+                  final category = allCategories[index];
                   return _buildCategoryCard(templateType, category);
                 },
               ),
@@ -132,61 +129,66 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
         return templateType.toLowerCase().replaceAll(' ', '_');
     }
   }
-  Future<List<Map<String, dynamic>>> _loadCategoriesForType(String templateType) async {
-    final appState = Provider.of<AppStateProvider>(context, listen: false);
-    final allCategories = await appState.getAllTemplateCategories();
-
-    final templateTypeKey = _getTemplateTypeKey(templateType);
-    final categories = allCategories[templateTypeKey] ?? [];
-
-    // Add usage counts to each category
-    final categoriesWithUsage = <Map<String, dynamic>>[];
-    for (final category in categories) {
-      final usageCount = await appState.getCategoryUsageCount(templateType, category['key']);
-      categoriesWithUsage.add({
-        ...category,
-        'usageCount': usageCount,
-      });
-    }
-
-    return categoriesWithUsage;
-  }
 
   Widget _buildCategoryCard(String templateType, Map<String, dynamic> category) {
     final String categoryKey = category['key'];
     final String categoryName = category['name'];
     final int usageCount = category['usageCount'] ?? 0;
-    final bool canDelete = usageCount == 0;
+    final bool isProtected = category['isProtected'] ?? false;
+    final bool canDelete = usageCount == 0 && !isProtected;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _getCategoryColor(templateType),
+          backgroundColor: isProtected ? Colors.blue.shade700 : _getCategoryColor(templateType),
           child: Icon(
-            _getCategoryIcon(templateType),
+            isProtected ? Icons.security : _getCategoryIcon(templateType),
             color: Colors.white,
             size: 20,
           ),
         ),
-        title: Text(
-          categoryName,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+        title: Row(
+          children: [
+            Text(
+              categoryName,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            if (isProtected) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'PROTECTED',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade700,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         subtitle: Text(
           usageCount > 0
-              ? '$usageCount template${usageCount != 1 ? 's' : ''} using this category'
-              : 'No templates using this category',
+              ? '$usageCount field${usageCount != 1 ? 's' : ''} in this category'
+              : 'No fields in this category',
           style: TextStyle(color: Colors.grey[600]),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              icon: const Icon(Icons.edit_outlined),
-              onPressed: () => _showEditCategoryDialog(templateType, categoryKey, categoryName),
-              tooltip: 'Edit category name',
-            ),
+            if (!isProtected)
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: () => _showEditCategoryDialog(templateType, categoryKey, categoryName),
+                tooltip: 'Edit category name',
+              ),
             if (canDelete)
               IconButton(
                 icon: Icon(Icons.delete_outline, color: Colors.red.shade600),
@@ -197,6 +199,74 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
         ),
       ),
     );
+  }
+  List<Map<String, dynamic>> _getCachedCategories(AppStateProvider appState, String templateType) {
+    try {
+      final templateTypeKey = _getTemplateTypeKey(templateType);
+
+      // Start with empty list
+      List<Map<String, dynamic>> relevantCategories = [];
+
+      // For Custom Fields, ALWAYS add protected "inspection" category first
+      if (templateType == 'Custom Fields') {
+        relevantCategories.add({
+          'id': 'protected_inspection',
+          'key': 'inspection',
+          'name': 'Inspection Fields',
+          'usageCount': _calculateUsageCount(appState, templateType, 'inspection'),
+          'isProtected': true, // Mark as protected
+        });
+      }
+
+      // Add categories from the template categories system
+      final loadedCategories = appState.templateCategories
+          .where((cat) => cat.templateType == templateTypeKey)
+          .map((cat) {
+        // Skip inspection if it already exists from protection above
+        if (templateType == 'Custom Fields' && cat.key == 'inspection') {
+          return null;
+        }
+
+        // Calculate actual usage count
+        int usageCount = _calculateUsageCount(appState, templateType, cat.key);
+
+        return {
+          'id': cat.id,
+          'key': cat.key,
+          'name': cat.name,
+          'usageCount': usageCount,
+          'isProtected': false,
+        };
+      })
+          .where((cat) => cat != null)
+          .cast<Map<String, dynamic>>()
+          .toList();
+
+      relevantCategories.addAll(loadedCategories);
+      return relevantCategories;
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error getting cached categories: $e');
+      return [];
+    }
+  }
+  int _calculateUsageCount(AppStateProvider appState, String templateType, String categoryKey) {
+    try {
+      switch (templateType) {
+        case 'PDF Templates':
+          return appState.pdfTemplates.where((t) => t.userCategoryKey == categoryKey).length;
+        case 'Message Templates':
+          return appState.messageTemplates.where((t) => t.userCategoryKey == categoryKey).length;
+        case 'Email Templates':
+          return appState.emailTemplates.where((t) => t.userCategoryKey == categoryKey).length;
+        case 'Custom Fields':
+          return appState.customAppDataFields.where((f) => f.category == categoryKey).length;
+        default:
+          return 0;
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('Error calculating usage count: $e');
+      return 0;
+    }
   }
 
   Widget _buildEmptyState(String templateType) {
@@ -231,42 +301,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
 
   // Placeholder methods for getting categories (hardcoded for now)
   // Real data methods using AppStateProvider
-  List<Map<String, dynamic>> _getPDFCategories() {
-    return [];  // Will be loaded from FutureBuilder
-  }
 
-  List<Map<String, dynamic>> _getMessageCategories() {
-    return [];  // Will be loaded from FutureBuilder
-  }
-
-  List<Map<String, dynamic>> _getEmailCategories() {
-    return [];  // Will be loaded from FutureBuilder
-  }
-
-  List<Map<String, dynamic>> _getCustomFieldCategories() {
-    final appState = Provider.of<AppStateProvider>(context, listen: false);
-    final categories = ['company', 'contact', 'legal', 'pricing', 'custom'];
-
-    return categories.map((categoryKey) {
-      final fieldsInCategory = appState.customAppDataFields
-          .where((field) => field.category == categoryKey)
-          .length;
-
-      final categoryNames = {
-        'company': 'Company Information',
-        'contact': 'Contact Information',
-        'legal': 'Legal Information',
-        'pricing': 'Pricing Information',
-        'custom': 'Custom Fields',
-      };
-
-      return {
-        'key': categoryKey,
-        'name': categoryNames[categoryKey] ?? categoryKey,
-        'usageCount': fieldsInCategory,
-      };
-    }).toList();
-  }
 
   Color _getCategoryColor(String templateType) {
     switch (templateType) {
@@ -499,7 +534,12 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
   // Real action methods with database integration
   Future<void> _addCategory(String templateType, String categoryName, TextEditingController controller) async {
     try {
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
+      // Store the context reference before any async operations
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
+
+      // Get the provider reference before any async operations
+      final appState = context.read<AppStateProvider>();
 
       // Generate category key from name
       final categoryKey = categoryName.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(' ', '_');
@@ -508,74 +548,88 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
       await appState.addTemplateCategory(templateTypeKey, categoryKey, categoryName);
 
       controller.dispose();
-      Navigator.pop(context);
+      navigator.pop();
 
-      setState(() {}); // Refresh the UI
-
-      ScaffoldMessenger.of(context).showSnackBar(
+      // Use the stored reference instead of accessing context
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Added "$categoryName" to $templateType successfully!'),
           backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error adding category: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // Use the stored reference instead of accessing context
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding category: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _editCategory(String templateType, String categoryKey, String newName, TextEditingController controller) async {
     try {
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
+      // Store the context reference before any async operations
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
 
-      await appState.updateTemplateCategory(templateType, categoryKey, newName);
+      // Get the provider reference before any async operations
+      final appState = context.read<AppStateProvider>();
+
+      final templateTypeKey = _getTemplateTypeKey(templateType);
+      await appState.updateTemplateCategory(templateTypeKey, categoryKey, newName);
 
       controller.dispose();
-      Navigator.pop(context);
+      navigator.pop();
 
-      setState(() {}); // Refresh the UI
-
-      ScaffoldMessenger.of(context).showSnackBar(
+      // Use the stored reference instead of accessing context
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Updated category to "$newName" successfully!'),
           backgroundColor: Colors.orange,
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error updating category: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating category: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _deleteCategory(String templateType, String categoryKey, String categoryName) async {
     try {
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
+      // Store the context reference before any async operations
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-      await appState.deleteTemplateCategory(templateType, categoryKey);
+      // Get the provider reference before any async operations
+      final appState = context.read<AppStateProvider>();
 
-      setState(() {}); // Refresh the UI
+      final templateTypeKey = _getTemplateTypeKey(templateType);
+      await appState.deleteTemplateCategory(templateTypeKey, categoryKey);
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      // Use the stored reference instead of accessing context
+      scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Deleted "$categoryName" successfully!'),
           backgroundColor: Colors.red,
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error deleting category: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting category: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
-  }
-}
+  }}

@@ -1,5 +1,6 @@
-// lib/screens/custom_app_data_screen.dart
+// lib/screens/custom_app_data_screen.dart - FIXED FILTER CHIP DATA SOURCE
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/custom_app_data.dart';
@@ -14,55 +15,12 @@ class CustomAppDataScreen extends StatefulWidget {
   State<CustomAppDataScreen> createState() => _CustomAppDataScreenState();
 }
 
-class _CustomAppDataScreenState extends State<CustomAppDataScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
   String _searchQuery = '';
   String _selectedCategory = 'all';
-  final TextEditingController _newCategoryController = TextEditingController();
 
   bool _isFieldSelectionMode = false;
   Set<String> _selectedFieldIds = <String>{};
-
-  final List<String> _categories = [
-    'all',
-    'company',
-    'contact',
-    'legal',
-    'pricing',
-    'custom'
-  ];
-
-  final Map<String, String> _categoryNames = {
-    'all': 'All Fields',
-    'company': 'Company Info',
-    'contact': 'Contact Info',
-    'legal': 'Legal Info',
-    'pricing': 'Pricing',
-    'custom': 'Custom Fields',
-  };
-
-  final Map<String, IconData> _categoryIcons = {
-    'all': Icons.view_list,
-    'company': Icons.business,
-    'contact': Icons.contact_phone,
-    'legal': Icons.gavel,
-    'pricing': Icons.attach_money,
-    'custom': Icons.extension,
-  };
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _newCategoryController.dispose(); // ADD THIS LINE
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +32,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
       return _buildManageFieldsTab();
     }
 
-    // Full screen version with AppBar and tabs (when accessed directly)
+    // Full screen version with AppBar (when accessed directly)
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
@@ -82,16 +40,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
         backgroundColor: const Color(0xFF2E86AB),
         foregroundColor: Colors.white,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(icon: Icon(Icons.settings), text: 'Manage Fields'),
-            Tab(icon: Icon(Icons.category), text: 'Manage Categories'),
-          ],
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -100,13 +48,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
           ),
         ],
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildManageFieldsTab(),
-          _buildManageCategoriesTab(),
-        ],
-      ),
+      body: _buildManageFieldsTab(),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddFieldDialog,
         backgroundColor: const Color(0xFF2E86AB),
@@ -156,6 +98,10 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
   void _deleteSelectedFields() {
     if (_selectedFieldIds.isEmpty) return;
 
+    // Store context reference before async operations
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -167,7 +113,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => navigator.pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
@@ -180,22 +126,26 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
                 }
 
                 _exitFieldSelectionMode();
-                Navigator.pop(context);
+                navigator.pop();
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Deleted ${_selectedFieldIds.length} field${_selectedFieldIds.length == 1 ? '' : 's'}'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Deleted ${_selectedFieldIds.length} field${_selectedFieldIds.length == 1 ? '' : 's'}'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
               } catch (e) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error deleting fields: $e'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                navigator.pop();
+                if (mounted) {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting fields: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -214,7 +164,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
 
         return Column(
           children: [
-            // Search and Filter Bar (ALWAYS SHOWN)
+            // Search and Filter Bar
             Container(
               padding: const EdgeInsets.all(16),
               color: Colors.white,
@@ -231,48 +181,59 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
                     onChanged: (value) {
-                      setState(() => _searchQuery = value);
+                      if (mounted) {
+                        setState(() => _searchQuery = value);
+                      }
                     },
                   ),
                   const SizedBox(height: 12),
-                  // Category Filter Chips + Actions
+
+                  // 🚀 FIXED: Use the same async data source as other tabs
                   Row(
                     children: [
                       Expanded(
                         child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: _categories.map((category) {
-                              final isSelected = _selectedCategory == category;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: FilterChip(
-                                  label: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        _categoryIcons[category],
-                                        size: 16,
-                                        color: isSelected ? Colors.white : Colors.grey[600],
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(_categoryNames[category] ?? category),
-                                    ],
+                          child: FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
+                            future: appState.getAllTemplateCategories(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const SizedBox(height: 40); // Placeholder while loading
+                              }
+
+                              final allCategories = snapshot.data!;
+                              final customFieldCategories = allCategories['custom_fields'] ?? [];
+
+                              if (kDebugMode) {
+                                debugPrint('🔍 Custom Fields tab found ${customFieldCategories.length} categories from async source:');
+                                for (final cat in customFieldCategories) {
+                                  debugPrint('  - ${cat['key']}: ${cat['name']}');
+                                }
+                              }
+
+                              return Row(
+                                children: [
+                                  // "All Fields" chip
+                                  _buildCategoryFilterChip(
+                                    'All Fields',
+                                    Icons.view_list,
+                                    _selectedCategory == 'all',
+                                    'all',
                                   ),
-                                  selected: isSelected,
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      _selectedCategory = selected ? category : 'all';
-                                    });
-                                  },
-                                  selectedColor: const Color(0xFF2E86AB),
-                                  labelStyle: TextStyle(
-                                    color: isSelected ? Colors.white : Colors.grey[700],
-                                    fontSize: 12,
-                                  ),
-                                ),
+                                  // Dynamic category chips from database
+                                  ...customFieldCategories.map((category) {
+                                    final categoryKey = category['key'] as String;
+                                    final categoryName = category['name'] as String;
+                                    return _buildCategoryFilterChip(
+                                      categoryName,
+                                      Icons.data_object,
+                                      _selectedCategory == categoryKey,
+                                      categoryKey,
+                                    );
+                                  }),
+                                ],
                               );
-                            }).toList(),
+                            },
                           ),
                         ),
                       ),
@@ -380,52 +341,101 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
     );
   }
 
-  Widget _buildCategorySection(String category, List<CustomAppDataField> fields) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Category Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2E86AB).withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(8),
-                topRight: Radius.circular(8),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _categoryIcons[category] ?? Icons.folder,
-                  color: const Color(0xFF2E86AB),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _categoryNames[category] ?? category.toUpperCase(),
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF2E86AB),
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '${fields.length} fields',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Fields List
-          ...fields.map((field) => _buildFieldTile(field)),
-        ],
+  // 🚀 NEW: Consistent filter chip builder (matches other tabs)
+  Widget _buildCategoryFilterChip(String label, IconData icon, bool isSelected, String categoryKey) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
+            const SizedBox(width: 4),
+            Text(label),
+          ],
+        ),
+        selected: isSelected,
+        selectedColor: const Color(0xFF2E86AB),
+        labelStyle: TextStyle(
+          color: isSelected ? Colors.white : Colors.grey[700],
+          fontSize: 12,
+        ),
+        onSelected: (selected) {
+          setState(() {
+            _selectedCategory = selected ? categoryKey : 'all';
+          });
+        },
       ),
+    );
+  }
+
+  Widget _buildCategorySection(String category, List<CustomAppDataField> fields) {
+    // 🚀 FIXED: Get category display name from async data source
+    return FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
+      future: context.read<AppStateProvider>().getAllTemplateCategories(),
+      builder: (context, snapshot) {
+        String categoryDisplayName = _formatCategoryName(category);
+
+        if (snapshot.hasData) {
+          final allCategories = snapshot.data!;
+          final customFieldCategories = allCategories['custom_fields'] ?? [];
+
+          // Find the category display name from the database
+          for (final cat in customFieldCategories) {
+            if (cat['key'] == category) {
+              categoryDisplayName = cat['name'] as String;
+              break;
+            }
+          }
+        }
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Category Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E86AB).withValues(alpha: 0.1),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(8),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getCategoryIcon(category),
+                      color: const Color(0xFF2E86AB),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      categoryDisplayName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2E86AB),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${fields.length} fields',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Fields List
+              ...fields.map((field) => _buildFieldTile(field)),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -438,7 +448,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
         children: [
           Card(
             elevation: isSelected ? 3 : 1,
-            color: isSelected ? const Color(0xFF2E86AB).withOpacity(0.1) : null,
+            color: isSelected ? const Color(0xFF2E86AB).withValues(alpha: 0.1) : null,
             child: InkWell(
               onTap: _isFieldSelectionMode
                   ? () => _toggleFieldSelection(field.id)
@@ -474,7 +484,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
                         'Field: ${field.fieldName} • Type: ${field.fieldType}',
                         style: TextStyle(
                           color: isSelected
-                              ? const Color(0xFF2E86AB).withOpacity(0.7)
+                              ? const Color(0xFF2E86AB).withValues(alpha: 0.7)
                               : Colors.grey[600],
                           fontSize: 12,
                         ),
@@ -485,7 +495,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? const Color(0xFF2E86AB).withOpacity(0.2)
+                                ? const Color(0xFF2E86AB).withValues(alpha: 0.2)
                                 : Colors.grey[200],
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -540,7 +550,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 2,
                       offset: const Offset(0, 1),
                     ),
@@ -559,188 +569,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
       ),
     );
   }
-
-
-  Widget _buildManageCategoriesTab() {
-    return Consumer<AppStateProvider>(
-      builder: (context, appState, child) {
-        final currentCategories = List<String>.from(_categories.where((c) => c != 'all'));
-
-        return Column(
-          children: [
-            // Header with add new category
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.category, color: const Color(0xFF2E86AB)),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Custom Field Categories',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Organize your custom fields into categories. You can add, edit, or remove categories as needed.',
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Add new category section
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2E86AB).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFF2E86AB).withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _newCategoryController,
-                            decoration: InputDecoration(
-                              labelText: 'New Category Name',
-                              hintText: 'e.g., Project Details',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              isDense: true,
-                              filled: true,
-                              fillColor: Colors.white,
-                              prefixIcon: Icon(Icons.add, color: const Color(0xFF2E86AB)),
-                            ),
-                            onSubmitted: (_) => _addNewCategory(),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: _addNewCategory,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2E86AB),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: const Text('Add'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Categories list
-            Expanded(
-              child: currentCategories.isEmpty
-                  ? _buildEmptyCategoriesState()
-                  : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: currentCategories.length,
-                itemBuilder: (context, index) {
-                  final category = currentCategories[index];
-                  final fieldsInCategory = appState.customAppDataFields
-                      .where((f) => f.category == category)
-                      .length;
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: _getCategoryColor(category),
-                        child: Icon(
-                          _categoryIcons[category] ?? Icons.folder,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      title: Text(
-                        _categoryNames[category] ?? category,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      subtitle: Text(
-                        '$fieldsInCategory field${fieldsInCategory != 1 ? 's' : ''}',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.edit_outlined, color: const Color(0xFF2E86AB)),
-                            onPressed: () => _editCategory(category, index),
-                            tooltip: 'Edit category',
-                          ),
-                          if (fieldsInCategory == 0)
-                            IconButton(
-                              icon: Icon(Icons.delete_outline, color: Colors.red.shade600),
-                              onPressed: () => _deleteCategory(category, index),
-                              tooltip: 'Delete category',
-                            ),
-                        ],
-                      ),
-                      onTap: () => _editCategory(category, index),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildEmptyCategoriesState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.category_outlined,
-            size: 64,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No Custom Categories Yet',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add your first category to organize custom fields',
-            style: TextStyle(color: Colors.grey[500]),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getCategoryColor(String category) {
-    switch (category) {
-      case 'company': return Colors.indigo;
-      case 'contact': return Colors.green;
-      case 'legal': return Colors.orange;
-      case 'pricing': return Colors.purple;
-      case 'custom': return Colors.teal;
-      default: return const Color(0xFF2E86AB);
-    }
-  }
-
-
-
 
   Widget _buildEmptyState() {
     return Center(
@@ -808,6 +636,19 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
     return grouped;
   }
 
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'all': return Icons.view_list;
+      case 'company': return Icons.business;
+      case 'contact': return Icons.contact_phone;
+      case 'legal': return Icons.gavel;
+      case 'pricing': return Icons.attach_money;
+      case 'custom': return Icons.extension;
+      case 'inspection': return Icons.checklist;
+      default: return Icons.folder;
+    }
+  }
+
   Color _getFieldTypeColor(String fieldType) {
     switch (fieldType) {
       case 'text': return Colors.blue;
@@ -834,12 +675,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
     }
   }
 
-  void _updateFieldValue(CustomAppDataField field, String value) {
-    final appState = context.read<AppStateProvider>();
-    appState.updateCustomAppDataField(field.id, value);
-  }
-
-
   void _handleFieldAction(String action, CustomAppDataField field) {
     switch (action) {
       case 'edit':
@@ -851,52 +686,147 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
     }
   }
 
-  // lib/screens/custom_app_data_screen.dart
-// ... (inside _CustomAppDataScreenState class) ...
-
   void _showAddFieldDialog() {
-    print('Show add field dialog - SIMPLIFIED with separate widget');
+    if (!mounted) return;
 
+    // 🚀 FIXED: Use async data source for consistency
     showDialog<CustomAppDataField?>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        return AddCustomFieldDialog(
-          categories: _categories,
-          categoryNames: _categoryNames,
+        return FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
+          future: context.read<AppStateProvider>().getAllTemplateCategories(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const AlertDialog(
+                content: CircularProgressIndicator(),
+              );
+            }
+
+            final allCategories = snapshot.data!;
+            final customFieldCategories = allCategories['custom_fields'] ?? [];
+
+            // Build available categories and names
+            final availableCategories = <String>['custom'];
+            final categoryNames = <String, String>{'custom': 'Custom Fields'};
+
+            for (final category in customFieldCategories) {
+              final categoryKey = category['key'] as String;
+              final categoryName = category['name'] as String;
+              if (!availableCategories.contains(categoryKey)) {
+                availableCategories.add(categoryKey);
+                categoryNames[categoryKey] = categoryName;
+              }
+            }
+
+            return AddCustomFieldDialog(
+              categories: availableCategories,
+              categoryNames: categoryNames,
+            );
+          },
         );
       },
     ).then((returnedValue) {
-      if (returnedValue != null) {
-        final appState = Provider.of<AppStateProvider>(context, listen: false);
-        appState.addCustomAppDataField(returnedValue);
-
-        // Manually trigger UI update if notifyListeners is commented out in provider
-        if (mounted) {
-          Provider.of<AppStateProvider>(context, listen: false).notifyListeners();
-          print("Manually triggered notifyListeners from _showAddFieldDialog.then AFTER adding to provider");
-        }
+      if (returnedValue != null && mounted) {
+        final appState = context.read<AppStateProvider>();
+        appState.addCustomAppDataField(returnedValue).then((_) {
+          if (mounted) {
+            appState.notifyListeners();
+          }
+        }).catchError((error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error adding field: $error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        });
+      }
+    }).catchError((error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     });
   }
 
-  void _showEditFieldDialog(CustomAppDataField field) {
-    print('Show edit field dialog for: ${field.fieldName}');
+  @override
+  void dispose() {
+    // Cancel any pending operations
+    super.dispose();
+  }
 
+  String _formatCategoryName(String categoryKey) {
+    return categoryKey
+        .split('_')
+        .map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : '')
+        .join(' ');
+  }
+
+  void _showEditFieldDialog(CustomAppDataField field) {
+    if (!mounted) return;
+
+    // 🚀 FIXED: Use async data source for consistency
     showDialog<CustomAppDataField?>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext dialogContext) {
-        return EditCustomFieldDialog(
-          field: field,
-          categories: _categories,
-          categoryNames: _categoryNames,
+        return FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
+          future: context.read<AppStateProvider>().getAllTemplateCategories(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const AlertDialog(
+                content: CircularProgressIndicator(),
+              );
+            }
+
+            final allCategories = snapshot.data!;
+            final customFieldCategories = allCategories['custom_fields'] ?? [];
+
+            // Build available categories including current field's category
+            final availableCategories = <String>[field.category];
+            final categoryNames = <String, String>{
+              field.category: _formatCategoryName(field.category)
+            };
+
+            for (final category in customFieldCategories) {
+              final categoryKey = category['key'] as String;
+              final categoryName = category['name'] as String;
+              if (!availableCategories.contains(categoryKey)) {
+                availableCategories.add(categoryKey);
+                categoryNames[categoryKey] = categoryName;
+              }
+            }
+
+            // Add defaults if missing
+            final defaults = ['custom', 'inspection', 'company', 'contact', 'legal', 'pricing'];
+            for (final defaultCat in defaults) {
+              if (!availableCategories.contains(defaultCat)) {
+                availableCategories.add(defaultCat);
+                categoryNames[defaultCat] = defaultCat == 'inspection'
+                    ? 'Inspection Fields'
+                    : _formatCategoryName(defaultCat);
+              }
+            }
+
+            return EditCustomFieldDialog(
+              field: field,
+              categories: availableCategories,
+              categoryNames: categoryNames,
+            );
+          },
         );
       },
     ).then((updatedField) async {
-      if (updatedField != null) {
+      if (updatedField != null && mounted) {
         try {
-          final appState = Provider.of<AppStateProvider>(context, listen: false);
+          final appState = context.read<AppStateProvider>();
           await appState.updateCustomAppDataFieldStructure(updatedField);
 
           if (mounted) {
@@ -918,12 +848,22 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
           }
         }
       }
+    }).catchError((error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     });
   }
 
-
-
   void _deleteField(CustomAppDataField field) {
+    // Store context reference before async operations
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -938,9 +878,9 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -950,7 +890,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text('Name: ${field.fieldName}'),
-                    Text('Category: ${_categoryNames[field.category] ?? field.category}'),
+                    Text('Category: ${field.category}'),
                     if (field.currentValue.isNotEmpty)
                       Text('Value: ${field.currentValue}'),
                   ],
@@ -983,13 +923,13 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
         );
       },
     ).then((confirmed) async {
-      if (confirmed == true) {
+      if (confirmed == true && mounted) {
         try {
-          final appState = Provider.of<AppStateProvider>(context, listen: false);
+          final appState = context.read<AppStateProvider>();
           await appState.deleteCustomAppDataField(field.id);
 
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            scaffoldMessenger.showSnackBar(
               SnackBar(
                 content: Text('Deleted field: ${field.displayName}'),
                 backgroundColor: Colors.green,
@@ -998,7 +938,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
           }
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            scaffoldMessenger.showSnackBar(
               SnackBar(
                 content: Text('Error deleting field: $e'),
                 backgroundColor: Colors.red,
@@ -1009,226 +949,4 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen>
       }
     });
   }
-
-  // Category Management Methods
-  void _addNewCategory() {
-    final newCategoryName = _newCategoryController.text.trim();
-    if (newCategoryName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a category name'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    // Create category key (lowercase, no spaces)
-    final categoryKey = newCategoryName.toLowerCase().replaceAll(' ', '_');
-
-    // Check if category already exists
-    if (_categories.contains(categoryKey)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Category already exists'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _categories.add(categoryKey);
-      _categoryNames[categoryKey] = newCategoryName;
-      _newCategoryController.clear();
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Added category: $newCategoryName'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
-
-  void _editCategory(String category, int index) {
-    final TextEditingController editController = TextEditingController(
-        text: _categoryNames[category] ?? category
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2E86AB).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.edit, color: const Color(0xFF2E86AB)),
-            ),
-            const SizedBox(width: 12),
-            const Text('Edit Category'),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: editController,
-              decoration: InputDecoration(
-                labelText: 'Category Name',
-                prefixIcon: Icon(Icons.category, color: const Color(0xFF2E86AB)),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: const Color(0xFF2E86AB), width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              autofocus: true,
-              onSubmitted: (value) {
-                if (value.trim().isNotEmpty) {
-                  _updateCategoryName(category, value.trim(), editController);
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2E86AB).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF2E86AB).withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: const Color(0xFF2E86AB), size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Existing fields with this category will be updated automatically.',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              editController.dispose();
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final newName = editController.text.trim();
-              if (newName.isNotEmpty) {
-                _updateCategoryName(category, newName, editController);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E86AB),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Update'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _updateCategoryName(String category, String newName, TextEditingController controller) {
-    if (newName == (_categoryNames[category] ?? category)) {
-      // No change
-      controller.dispose();
-      Navigator.pop(context);
-      return;
-    }
-
-    setState(() {
-      _categoryNames[category] = newName;
-    });
-
-    controller.dispose();
-    Navigator.pop(context);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Category updated to "$newName"'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
-
-  void _deleteCategory(String category, int index) {
-    final appState = Provider.of<AppStateProvider>(context, listen: false);
-    final fieldsInCategory = appState.customAppDataFields
-        .where((f) => f.category == category)
-        .length;
-
-    if (fieldsInCategory > 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Cannot delete category with $fieldsInCategory field${fieldsInCategory != 1 ? 's' : ''}'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange.shade600),
-            const SizedBox(width: 12),
-            const Text('Delete Category'),
-          ],
-        ),
-        content: Text(
-          'Are you sure you want to delete "${_categoryNames[category] ?? category}"?\n\nThis action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                _categories.remove(category);
-                _categoryNames.remove(category);
-              });
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Deleted category: ${_categoryNames[category] ?? category}'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-
 }

@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter/foundation.dart';
 import '../models/message_template.dart';
 import '../models/pdf_template.dart';
 import '../providers/app_state_provider.dart';
@@ -15,6 +14,9 @@ import 'message_template_editor_screen.dart';
 import 'email_template_editor_screen.dart';
 import '../models/email_template.dart';
 import 'category_management_screen.dart';
+import '../models/custom_app_data.dart';
+import '../widgets/add_custom_field_dialog.dart';
+
 
 class TemplatesScreen extends StatefulWidget {
   const TemplatesScreen({super.key});
@@ -23,15 +25,16 @@ class TemplatesScreen extends StatefulWidget {
   State<TemplatesScreen> createState() => _TemplatesScreenState();
 }
 
-class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderStateMixin {
+class _TemplatesScreenState extends State<TemplatesScreen>
+    with TickerProviderStateMixin {
   late TabController _tabController;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
   // Filter state variables
-  String _selectedPDFType = 'all';
-  String _selectedTextCategory = 'all';
-  String _selectedEmailCategory = 'all';
+  String _selectedPDFCategoryKey = 'all'; // <<< RENAMED
+  String _selectedMessageCategoryKey = 'all'; // <<< RENAMED
+  String _selectedEmailCategoryKey = 'all'; // <<< RENAMED
 
   // Selection states for each tab
   bool _isPDFSelectionMode = false;
@@ -122,22 +125,27 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
 
   void _selectAllMessages() {
     final categories = _getTextMessageCategories();
-    final filteredCategories = _selectedTextCategory == 'all'
+    final filteredCategories = _selectedMessageCategoryKey == 'all'
         ? categories
-        : categories.where((cat) => _getCategoryKey(cat['name']) == _selectedTextCategory).toList();
+        : categories
+            .where((cat) =>
+                _getCategoryKey(cat['name']) == _selectedMessageCategoryKey)
+            .toList();
 
     setState(() {
       if (_selectedMessageIds.length == filteredCategories.length) {
         _selectedMessageIds.clear();
       } else {
-        _selectedMessageIds = filteredCategories.map((c) => c['name'].toString()).toSet();
+        _selectedMessageIds =
+            filteredCategories.map((c) => c['name'].toString()).toSet();
       }
     });
   }
 
   void _deleteSelectedMessages() {
     if (_selectedMessageIds.isEmpty) return;
-    _showErrorSnackBar('Delete ${_selectedMessageIds.length} message template${_selectedMessageIds.length == 1 ? '' : 's'} - Coming soon!');
+    _showErrorSnackBar(
+        'Delete ${_selectedMessageIds.length} message template${_selectedMessageIds.length == 1 ? '' : 's'} - Coming soon!');
     _exitMessageSelectionMode();
   }
 
@@ -158,22 +166,27 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
 
   void _selectAllEmails() {
     final categories = _getEmailCategories();
-    final filteredCategories = _selectedEmailCategory == 'all'
+    final filteredCategories = _selectedEmailCategoryKey == 'all'
         ? categories
-        : categories.where((cat) => _getCategoryKey(cat['name']) == _selectedEmailCategory).toList();
+        : categories
+            .where((cat) =>
+                _getCategoryKey(cat['name']) == _selectedEmailCategoryKey)
+            .toList();
 
     setState(() {
       if (_selectedEmailIds.length == filteredCategories.length) {
         _selectedEmailIds.clear();
       } else {
-        _selectedEmailIds = filteredCategories.map((c) => c['name'].toString()).toSet();
+        _selectedEmailIds =
+            filteredCategories.map((c) => c['name'].toString()).toSet();
       }
     });
   }
 
   void _deleteSelectedEmails() {
     if (_selectedEmailIds.isEmpty) return;
-    _showErrorSnackBar('Delete ${_selectedEmailIds.length} email template${_selectedEmailIds.length == 1 ? '' : 's'} - Coming soon!');
+    _showErrorSnackBar(
+        'Delete ${_selectedEmailIds.length} email template${_selectedEmailIds.length == 1 ? '' : 's'} - Coming soon!');
     _exitEmailSelectionMode();
   }
 
@@ -183,12 +196,11 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete ${_selectedPDFIds.length} template${_selectedPDFIds.length == 1 ? '' : 's'}'),
-        content: Text(
-            _selectedPDFIds.length == 1
-                ? 'Are you sure you want to delete this PDF template?'
-                : 'Are you sure you want to delete these ${_selectedPDFIds.length} PDF templates?'
-        ),
+        title: Text(
+            'Delete ${_selectedPDFIds.length} template${_selectedPDFIds.length == 1 ? '' : 's'}'),
+        content: Text(_selectedPDFIds.length == 1
+            ? 'Are you sure you want to delete this PDF template?'
+            : 'Are you sure you want to delete these ${_selectedPDFIds.length} PDF templates?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -208,7 +220,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Deleted ${_selectedPDFIds.length} template${_selectedPDFIds.length == 1 ? '' : 's'}'),
+                    content: Text(
+                        'Deleted ${_selectedPDFIds.length} template${_selectedPDFIds.length == 1 ? '' : 's'}'),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -227,8 +240,10 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_isPDFSelectionMode && !_isMessageSelectionMode && !_isEmailSelectionMode,
-      onPopInvoked: (didPop) {
+      canPop: !_isPDFSelectionMode &&
+          !_isMessageSelectionMode &&
+          !_isEmailSelectionMode,
+      onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           if (_isPDFSelectionMode) {
             _exitPDFSelectionMode();
@@ -244,7 +259,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
           return Scaffold(
             backgroundColor: Colors.grey[50],
             body: NestedScrollView(
-              headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+              headerSliverBuilder:
+                  (BuildContext context, bool innerBoxIsScrolled) {
                 return <Widget>[
                   _buildModernSliverAppBar(appState),
                 ];
@@ -389,7 +405,13 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               backgroundColor: Colors.orange,
             );
           case 3: // Custom Fields tab
-            return const SizedBox.shrink();
+            return FloatingActionButton.extended(
+              heroTag: "custom_fields_fab",
+              onPressed: _createNewCustomField,
+              icon: const Icon(Icons.add),
+              label: const Text('New Custom Field'),
+              backgroundColor: const Color(0xFF2E86AB),
+            );
           default:
             return FloatingActionButton.extended(
               heroTag: "default_fab",
@@ -414,10 +436,11 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
           return const Center(child: CircularProgressIndicator());
         }
 
-        // Group templates by type
+        // Group templates by user category
         final groupedTemplates = <String, List<PDFTemplate>>{};
         for (final template in templates) {
-          groupedTemplates.putIfAbsent(template.templateType, () => []).add(template);
+          final categoryKey = template.userCategoryKey ?? 'uncategorized';
+          groupedTemplates.putIfAbsent(categoryKey, () => []).add(template);
         }
 
         return Column(
@@ -436,7 +459,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                     ),
                     onChanged: (value) {
                       setState(() => _searchQuery = value);
@@ -449,14 +473,41 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                       Expanded(
                         child: SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              _buildPDFFilterChip('All Types', Icons.view_list, _selectedPDFType == 'all'),
-                              _buildPDFFilterChip('Quote', Icons.description, _selectedPDFType == 'quote'),
-                              _buildPDFFilterChip('Contract', Icons.assignment, _selectedPDFType == 'contract'),
-                              _buildPDFFilterChip('Invoice', Icons.receipt, _selectedPDFType == 'invoice'),
-                              _buildPDFFilterChip('Estimate', Icons.calculate, _selectedPDFType == 'estimate'),
-                            ],
+                          child: FutureBuilder<
+                              Map<String, List<Map<String, dynamic>>>>(
+                            future: appState.getAllTemplateCategories(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const SizedBox(
+                                    height: 40); // Placeholder while loading
+                              }
+
+                              final allCategories = snapshot.data!;
+                              final pdfCategories =
+                                  allCategories['pdf_templates'] ?? [];
+
+                              return Row(
+                                children: [
+                                  // "All Categories" chip
+                                  _buildPDFFilterChip(
+                                      'All Categories',
+                                      Icons.view_list,
+                                      _selectedPDFCategoryKey == 'all'),
+                                  // Dynamic user category chips
+                                  ...pdfCategories.map((category) {
+                                    final categoryKey =
+                                        category['key'] as String;
+                                    final categoryName =
+                                        category['name'] as String;
+                                    return _buildPDFFilterChip(
+                                        categoryName,
+                                        Icons.description,
+                                        _selectedPDFCategoryKey == categoryKey,
+                                        categoryKey);
+                                  }),
+                                ],
+                              );
+                            },
                           ),
                         ),
                       ),
@@ -470,7 +521,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
                           ),
                         )
                       else
@@ -512,7 +564,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                   padding: const EdgeInsets.all(12),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                      Icon(Icons.info_outline,
+                          color: Colors.blue.shade700, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -533,7 +586,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
                           ),
                         ),
                     ],
@@ -548,15 +602,18 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               child: templates.isEmpty
                   ? _buildEmptyPDFState()
                   : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: groupedTemplates.length,
-                itemBuilder: (context, index) {
-                  final templateType = groupedTemplates.keys.elementAt(index);
-                  final typeTemplates = groupedTemplates[templateType]!;
+                      padding: const EdgeInsets.all(16),
+                      itemCount: groupedTemplates.length,
+                      itemBuilder: (context, index) {
+                        final categoryKey =
+                            groupedTemplates.keys.elementAt(index);
+                        final categoryTemplates =
+                            groupedTemplates[categoryKey]!;
 
-                  return _buildPDFCategorySection(templateType, typeTemplates);
-                },
-              ),
+                        return _buildPDFCategorySection(
+                            categoryKey, categoryTemplates);
+                      },
+                    ),
             ),
           ],
         );
@@ -564,14 +621,16 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildPDFFilterChip(String label, IconData icon, bool isSelected) {
+  Widget _buildPDFFilterChip(String label, IconData icon, bool isSelected,
+      [String? categoryKey]) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
+            Icon(icon,
+                size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
             const SizedBox(width: 4),
             Text(label),
           ],
@@ -584,10 +643,11 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
         ),
         onSelected: (selected) {
           setState(() {
-            if (label == 'All Types') {
-              _selectedPDFType = 'all';
+            if (label == 'All Categories') {
+              _selectedPDFCategoryKey = 'all';
             } else {
-              _selectedPDFType = selected ? label.toLowerCase() : 'all';
+              _selectedPDFCategoryKey =
+                  selected ? (categoryKey ?? label.toLowerCase()) : 'all';
             }
           });
         },
@@ -595,7 +655,15 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildPDFCategorySection(String templateType, List<PDFTemplate> typeTemplates) {
+  String _getCategoryDisplayName(String categoryKey) {
+    if (categoryKey == 'uncategorized') return 'Uncategorized Templates';
+
+    // For now, just use the key - we'll improve this later
+    return '$categoryKey Templates';
+  }
+
+  Widget _buildPDFCategorySection(
+      String templateType, List<PDFTemplate> typeTemplates) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -605,7 +673,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _getTypeColor(templateType).withOpacity(0.1),
+              color: _getTypeColor(templateType).withValues(alpha: 0.1),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(8),
                 topRight: Radius.circular(8),
@@ -613,10 +681,11 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
             ),
             child: Row(
               children: [
-                Icon(_getTypeIcon(templateType), color: _getTypeColor(templateType), size: 20),
+                Icon(_getTypeIcon(templateType),
+                    color: _getTypeColor(templateType), size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  _formatTypeName(templateType),
+                  _getCategoryDisplayName(templateType),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: _getTypeColor(templateType),
@@ -632,173 +701,332 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
           ),
 
           // Templates in this category
-          ...typeTemplates.map((template) =>
-          _isPDFSelectionMode
+          ...typeTemplates.map((template) => _isPDFSelectionMode
               ? _buildSelectablePDFCard(template)
-              : _buildPDFTemplateCard(template)
-          ),
+              : _buildPDFTemplateCard(template)),
         ],
       ),
     );
   }
 
   Widget _buildTextTemplatesTab() {
-    final allCategories = _getTextMessageCategories();
-    final filteredCategories = _selectedTextCategory == 'all'
-        ? allCategories
-        : allCategories.where((cat) =>
-    _getCategoryKey(cat['name']) == _selectedTextCategory
-    ).toList();
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, child) {
+        // Filter templates by user categories
+        final allTemplates = appState.messageTemplates;
+        final filteredTemplates = _filterMessageTemplates(allTemplates);
 
-    return Column(
-      children: [
-        // Search and Filter Bar
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Colors.white,
-          child: Column(
-            children: [
-              // Search Bar
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search text templates...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                onChanged: (value) {
-                  setState(() => _searchQuery = value);
-                },
-              ),
-              const SizedBox(height: 12),
-              // Category Filter Chips
-              // Category Filter Chips + Actions
-              Row(
+        if (appState.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Group templates by user category
+        final groupedTemplates = <String, List<MessageTemplate>>{};
+        for (final template in filteredTemplates) {
+          final categoryKey = template.userCategoryKey ?? 'uncategorized';
+          groupedTemplates.putIfAbsent(categoryKey, () => []).add(template);
+        }
+
+        return Column(
+          children: [
+            // Search and Filter Bar
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Column(
                 children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildTextFilterChip('All Categories', Icons.view_list, _selectedTextCategory == 'all'),
-                          _buildTextFilterChip('Quote Notifications', Icons.notifications, _selectedTextCategory == 'quote_notifications'),
-                          _buildTextFilterChip('Appointments', Icons.schedule, _selectedTextCategory == 'appointment_reminders'),
-                          _buildTextFilterChip('Job Updates', Icons.construction, _selectedTextCategory == 'job_status_updates'),
-                          _buildTextFilterChip('Payment', Icons.payment, _selectedTextCategory == 'payment_reminders'),
-                          _buildTextFilterChip('Follow-ups', Icons.chat, _selectedTextCategory == 'follow-ups'),
-                          _buildTextFilterChip('Emergency', Icons.warning, _selectedTextCategory == 'emergency/urgent'),
-                        ],
+                  // Search Bar
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search message templates...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                     ),
+                    onChanged: (value) {
+                      setState(() => _searchQuery = value);
+                    },
                   ),
-                  const SizedBox(width: 8),
-                  // Select Button
-                  if (!_isMessageSelectionMode)
-                    ElevatedButton.icon(
-                      onPressed: _enterMessageSelectionMode,
-                      icon: const Icon(Icons.checklist, size: 18),
-                      label: const Text('Select'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                    )
-                  else
-                    Row(
-                      children: [
-                        TextButton.icon(
-                          onPressed: _selectAllMessages,
-                          icon: const Icon(Icons.select_all, size: 18),
-                          label: Text(
-                            _selectedMessageIds.length == _getTextMessageCategories().length
-                                ? 'Deselect All'
-                                : 'Select All',
+                  const SizedBox(height: 12),
+                  // Dynamic Category Filter Chips + Actions
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: FutureBuilder<
+                              Map<String, List<Map<String, dynamic>>>>(
+                            future: appState.getAllTemplateCategories(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const SizedBox(height: 40);
+                              }
+
+                              final allCategories = snapshot.data!;
+                              final messageCategories =
+                                  allCategories['message_templates'] ?? [];
+
+                              return Row(
+                                children: [
+                                  _buildTextFilterChip(
+                                      'All Categories',
+                                      Icons.view_list,
+                                      _selectedMessageCategoryKey == 'all'),
+                                  ...messageCategories.map((category) {
+                                    final categoryKey =
+                                        category['key'] as String;
+                                    final categoryName =
+                                        category['name'] as String;
+                                    return _buildTextFilterChip(
+                                        categoryName,
+                                        Icons.sms,
+                                        _selectedMessageCategoryKey ==
+                                            categoryKey,
+                                        categoryKey);
+                                  }),
+                                ],
+                              );
+                            },
                           ),
                         ),
-                        const SizedBox(width: 8),
+                      ),
+                      const SizedBox(width: 8),
+                      // Select Button
+                      if (!_isMessageSelectionMode)
                         ElevatedButton.icon(
-                          onPressed: _exitMessageSelectionMode,
-                          icon: const Icon(Icons.close, size: 18),
-                          label: const Text('Cancel'),
+                          onPressed: _enterMessageSelectionMode,
+                          icon: const Icon(Icons.checklist, size: 18),
+                          label: const Text('Select'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey,
+                            backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
                           ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            TextButton.icon(
+                              onPressed: _selectAllMessages,
+                              icon: const Icon(Icons.select_all, size: 18),
+                              label: Text(
+                                _selectedMessageIds.length ==
+                                        filteredTemplates.length
+                                    ? 'Deselect All'
+                                    : 'Select All',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _exitMessageSelectionMode,
+                              icon: const Icon(Icons.close, size: 18),
+                              label: const Text('Cancel'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        // Selection mode info
-        if (_isMessageSelectionMode) ...[
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            color: Colors.green.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.green.shade700, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _selectedMessageIds.isEmpty
-                          ? 'Tap message templates to select them'
-                          : '${_selectedMessageIds.length} of ${_getTextMessageCategories().length} templates selected',
-                      style: TextStyle(
-                        color: Colors.green.shade800,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    ],
                   ),
-                  if (_selectedMessageIds.isNotEmpty)
-                    ElevatedButton.icon(
-                      onPressed: _deleteSelectedMessages,
-                      icon: const Icon(Icons.delete, size: 16),
-                      label: const Text('Delete'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      ),
-                    ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-        ],
-        // Templates List
-        Expanded(
-          child: filteredCategories.isEmpty
-              ? const Center(child: Text('No categories match your filter'))
-              : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: filteredCategories.length,
-            itemBuilder: (context, index) {
-              final category = filteredCategories[index];
-              return _buildTextCategorySection(category);
-            },
-          ),
-        ),
-      ],
+            // Selection mode info
+            if (_isMessageSelectionMode) ...[
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                color: Colors.green.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.green.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _selectedMessageIds.isEmpty
+                              ? 'Tap message templates to select them'
+                              : '${_selectedMessageIds.length} of ${filteredTemplates.length} templates selected',
+                          style: TextStyle(
+                            color: Colors.green.shade800,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (_selectedMessageIds.isNotEmpty)
+                        ElevatedButton.icon(
+                          onPressed: _deleteSelectedMessages,
+                          icon: const Icon(Icons.delete, size: 16),
+                          label: const Text('Delete'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            // Templates content or empty state
+            Expanded(
+              child: filteredTemplates.isEmpty
+                  ? _buildEmptyMessageState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: groupedTemplates.length,
+                      itemBuilder: (context, index) {
+                        final categoryKey =
+                            groupedTemplates.keys.elementAt(index);
+                        final categoryTemplates =
+                            groupedTemplates[categoryKey]!;
+
+                        return _buildMessageCategorySection(
+                            categoryKey, categoryTemplates);
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildTextFilterChip(String label, IconData icon, bool isSelected) {
+  List<MessageTemplate> _filterMessageTemplates(
+      List<MessageTemplate> templates) {
+    var filtered = templates;
+
+    // Filter by user category
+    if (_selectedMessageCategoryKey != 'all') {
+      filtered = filtered
+          .where((template) =>
+              template.userCategoryKey == _selectedMessageCategoryKey)
+          .toList();
+    }
+
+    // Then filter by search query
+    if (_searchQuery.isNotEmpty) {
+      final lowerQuery = _searchQuery.toLowerCase();
+      filtered = filtered
+          .where((template) =>
+              template.templateName.toLowerCase().contains(lowerQuery) ||
+              template.description.toLowerCase().contains(lowerQuery) ||
+              template.messageContent.toLowerCase().contains(lowerQuery))
+          .toList();
+    }
+
+    return filtered;
+  }
+
+  Widget _buildMessageCategorySection(
+      String categoryKey, List<MessageTemplate> categoryTemplates) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Category Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.sms, color: Colors.green, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  _getMessageCategoryDisplayName(categoryKey),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${categoryTemplates.length} template${categoryTemplates.length == 1 ? '' : 's'}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+
+          // Templates in this category
+          ...categoryTemplates.map((template) => _isMessageSelectionMode
+              ? _buildSelectableMessageCard(template)
+              : _buildMessageTemplateCard(template)),
+        ],
+      ),
+    );
+  }
+
+  String _getMessageCategoryDisplayName(String categoryKey) {
+    if (categoryKey == 'uncategorized') return 'Uncategorized Templates';
+    return '$categoryKey Templates';
+  }
+
+  Widget _buildEmptyMessageState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.sms_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Message Templates',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.grey[600],
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create your first message template to get started',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[500],
+                ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _createNewTextTemplate,
+            icon: const Icon(Icons.add),
+            label: const Text('Create Message Template'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextFilterChip(String label, IconData icon, bool isSelected,
+      [String? categoryKey]) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
+            Icon(icon,
+                size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
             const SizedBox(width: 4),
             Text(label),
           ],
@@ -812,9 +1040,10 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
         onSelected: (selected) {
           setState(() {
             if (label == 'All Categories') {
-              _selectedTextCategory = 'all';
+              _selectedMessageCategoryKey = 'all';
             } else {
-              _selectedTextCategory = selected ? _getCategoryKey(label) : 'all';
+              _selectedMessageCategoryKey =
+                  selected ? (categoryKey ?? label.toLowerCase()) : 'all';
             }
           });
         },
@@ -823,155 +1052,261 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
   }
 
   Widget _buildEmailTemplatesTab() {
-    final allCategories = _getEmailCategories();
-    final filteredCategories = _selectedEmailCategory == 'all'
-        ? allCategories
-        : allCategories.where((cat) =>
-    _getCategoryKey(cat['name']) == _selectedEmailCategory
-    ).toList();
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, child) {
+        // Filter templates by user categories
+        final allTemplates = appState.emailTemplates;
+        final filteredTemplates = _filterEmailTemplates(allTemplates);
 
-    return Column(
-      children: [
-        // Search and Filter Bar
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Colors.white,
-          child: Column(
-            children: [
-              // Search Bar
-              TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search email templates...',
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                onChanged: (value) {
-                  setState(() => _searchQuery = value);
-                },
-              ),
-              const SizedBox(height: 12),
-              // Category Filter Chips
-              // Category Filter Chips + Actions
-              Row(
+        if (appState.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Group templates by user category
+        final groupedTemplates = <String, List<EmailTemplate>>{};
+        for (final template in filteredTemplates) {
+          final categoryKey = template.userCategoryKey ?? 'uncategorized';
+          groupedTemplates.putIfAbsent(categoryKey, () => []).add(template);
+        }
+
+        return Column(
+          children: [
+            // Search and Filter Bar
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Column(
                 children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildEmailFilterChip('All Categories', Icons.view_list, _selectedEmailCategory == 'all'),
-                          _buildEmailFilterChip('Quote Emails', Icons.email, _selectedEmailCategory == 'quote_emails'),
-                          _buildEmailFilterChip('Contracts', Icons.assignment, _selectedEmailCategory == 'contract_emails'),
-                          _buildEmailFilterChip('Invoices', Icons.receipt, _selectedEmailCategory == 'invoice_emails'),
-                          _buildEmailFilterChip('Follow-ups', Icons.reply, _selectedEmailCategory == 'follow-up_emails'),
-                          _buildEmailFilterChip('Appointments', Icons.event, _selectedEmailCategory == 'appointment_emails'),
-                          _buildEmailFilterChip('Marketing', Icons.campaign, _selectedEmailCategory == 'marketing/newsletter'),
-                        ],
+                  // Search Bar
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search email templates...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                     ),
+                    onChanged: (value) {
+                      setState(() => _searchQuery = value);
+                    },
                   ),
-                  const SizedBox(width: 8),
-                  // Select Button
-                  if (!_isEmailSelectionMode)
-                    ElevatedButton.icon(
-                      onPressed: _enterEmailSelectionMode,
-                      icon: const Icon(Icons.checklist, size: 18),
-                      label: const Text('Select'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                    )
-                  else
-                    Row(
-                      children: [
-                        TextButton.icon(
-                          onPressed: _selectAllEmails,
-                          icon: const Icon(Icons.select_all, size: 18),
-                          label: Text(
-                            _selectedEmailIds.length == _getEmailCategories().length
-                                ? 'Deselect All'
-                                : 'Select All',
+                  const SizedBox(height: 12),
+                  // Dynamic Category Filter Chips + Actions
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: FutureBuilder<
+                              Map<String, List<Map<String, dynamic>>>>(
+                            future: appState.getAllTemplateCategories(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const SizedBox(height: 40);
+                              }
+
+                              final allCategories = snapshot.data!;
+                              final emailCategories =
+                                  allCategories['email_templates'] ?? [];
+
+                              return Row(
+                                children: [
+                                  _buildEmailFilterChip(
+                                      'All Categories',
+                                      Icons.view_list,
+                                      _selectedEmailCategoryKey == 'all'),
+                                  ...emailCategories.map((category) {
+                                    final categoryKey =
+                                        category['key'] as String;
+                                    final categoryName =
+                                        category['name'] as String;
+                                    return _buildEmailFilterChip(
+                                        categoryName,
+                                        Icons.email,
+                                        _selectedEmailCategoryKey ==
+                                            categoryKey,
+                                        categoryKey);
+                                  }),
+                                ],
+                              );
+                            },
                           ),
                         ),
-                        const SizedBox(width: 8),
+                      ),
+                      const SizedBox(width: 8),
+                      // Select Button
+                      if (!_isEmailSelectionMode)
                         ElevatedButton.icon(
-                          onPressed: _exitEmailSelectionMode,
-                          icon: const Icon(Icons.close, size: 18),
-                          label: const Text('Cancel'),
+                          onPressed: _enterEmailSelectionMode,
+                          icon: const Icon(Icons.checklist, size: 18),
+                          label: const Text('Select'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey,
+                            backgroundColor: Colors.orange,
                             foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
                           ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            TextButton.icon(
+                              onPressed: _selectAllEmails,
+                              icon: const Icon(Icons.select_all, size: 18),
+                              label: Text(
+                                _selectedEmailIds.length ==
+                                        filteredTemplates.length
+                                    ? 'Deselect All'
+                                    : 'Select All',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _exitEmailSelectionMode,
+                              icon: const Icon(Icons.close, size: 18),
+                              label: const Text('Cancel'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        if (_isEmailSelectionMode) ...[
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            color: Colors.orange.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.orange.shade700, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      _selectedEmailIds.isEmpty
-                          ? 'Tap email templates to select them'
-                          : '${_selectedEmailIds.length} of ${_getEmailCategories().length} templates selected',
-                      style: TextStyle(
-                        color: Colors.orange.shade800,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    ],
                   ),
-                  if (_selectedEmailIds.isNotEmpty)
-                    ElevatedButton.icon(
-                      onPressed: _deleteSelectedEmails,
-                      icon: const Icon(Icons.delete, size: 16),
-                      label: const Text('Delete'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      ),
-                    ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-        ],
+            if (_isEmailSelectionMode) ...[
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                color: Colors.orange.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.orange.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _selectedEmailIds.isEmpty
+                              ? 'Tap email templates to select them'
+                              : '${_selectedEmailIds.length} of ${filteredTemplates.length} templates selected',
+                          style: TextStyle(
+                            color: Colors.orange.shade800,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (_selectedEmailIds.isNotEmpty)
+                        ElevatedButton.icon(
+                          onPressed: _deleteSelectedEmails,
+                          icon: const Icon(Icons.delete, size: 16),
+                          label: const Text('Delete'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
 
-        // Templates List
-        Expanded(
-          child: filteredCategories.isEmpty
-              ? const Center(child: Text('No categories match your filter'))
-              : ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: filteredCategories.length,
-            itemBuilder: (context, index) {
-              final category = filteredCategories[index];
-              return _buildEmailCategorySection(category);
-            },
-          ),
-        ),
-      ],
+            // Templates content or empty state
+            Expanded(
+              child: filteredTemplates.isEmpty
+                  ? _buildEmptyEmailState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: groupedTemplates.length,
+                      itemBuilder: (context, index) {
+                        final categoryKey =
+                            groupedTemplates.keys.elementAt(index);
+                        final categoryTemplates =
+                            groupedTemplates[categoryKey]!;
+
+                        return _buildEmailCategorySection(
+                            categoryKey, categoryTemplates);
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildEmailFilterChip(String label, IconData icon, bool isSelected) {
+  List<EmailTemplate> _filterEmailTemplates(List<EmailTemplate> templates) {
+    var filtered = templates;
+
+    // Filter by user category
+    if (_selectedEmailCategoryKey != 'all') {
+      filtered = filtered
+          .where((template) =>
+              template.userCategoryKey == _selectedEmailCategoryKey)
+          .toList();
+    }
+
+    // Then filter by search query
+    if (_searchQuery.isNotEmpty) {
+      final lowerQuery = _searchQuery.toLowerCase();
+      filtered = filtered
+          .where((template) =>
+              template.templateName.toLowerCase().contains(lowerQuery) ||
+              template.description.toLowerCase().contains(lowerQuery) ||
+              template.subject.toLowerCase().contains(lowerQuery) ||
+              template.emailContent.toLowerCase().contains(lowerQuery))
+          .toList();
+    }
+
+    return filtered;
+  }
+  Widget _buildEmptyEmailState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.email_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Email Templates',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create your first email template to get started',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[500],
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _createNewEmailTemplate,
+            icon: const Icon(Icons.add),
+            label: const Text('Create Email Template'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildEmailFilterChip(String label, IconData icon, bool isSelected, [String? categoryKey]) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
@@ -992,15 +1327,17 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
         onSelected: (selected) {
           setState(() {
             if (label == 'All Categories') {
-              _selectedEmailCategory = 'all';
+              _selectedEmailCategoryKey = 'all';
             } else {
-              _selectedEmailCategory = selected ? _getCategoryKey(label) : 'all';
+              _selectedEmailCategoryKey = selected ? (categoryKey ?? label.toLowerCase()) : 'all';
             }
           });
         },
       ),
     );
   }
+
+
 
   Widget _buildCustomDataTab() {
     return const CustomAppDataScreen(); // No preview, direct content
@@ -1023,7 +1360,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: (category['color'] as Color).withOpacity(0.1),
+                  color: (category['color'] as Color).withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(8),
                     topRight: Radius.circular(8),
@@ -1053,8 +1390,10 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               if (templatesInCategory.isEmpty)
                 ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: (category['color'] as Color).withOpacity(0.2),
-                    child: Icon(category['icon'], color: category['color'], size: 18),
+                    backgroundColor:
+                        (category['color'] as Color).withValues(alpha: 0.2),
+                    child: Icon(category['icon'],
+                        color: category['color'], size: 18),
                   ),
                   title: Text('Create ${category['name']} templates'),
                   subtitle: const Text('Tap to create your first template'),
@@ -1062,85 +1401,65 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                   onTap: () => _createNewTextTemplateWithCategory(categoryKey),
                 )
               else
-              // Show actual templates
-                ...templatesInCategory.map((template) =>
-                _isMessageSelectionMode
+                // Show actual templates
+                ...templatesInCategory.map((template) => _isMessageSelectionMode
                     ? _buildSelectableMessageCard(template)
-                    : _buildMessageTemplateCard(template)
-                ),
+                    : _buildMessageTemplateCard(template)),
             ],
           ),
         );
       },
     );
   }
+  String _getEmailCategoryDisplayName(String categoryKey) {
+    if (categoryKey == 'uncategorized') return 'Uncategorized Templates';
+    return '$categoryKey Templates';
+  }
 
-  Widget _buildEmailCategorySection(Map<String, dynamic> category) {
-    return Consumer<AppStateProvider>(
-      builder: (context, appState, child) {
-        final categoryKey = _getCategoryKey(category['name']);
-        final templatesInCategory = appState.emailTemplates
-            .where((t) => t.category == categoryKey)
-            .toList();
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Category Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: (category['color'] as Color).withOpacity(0.1),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(8),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(category['icon'], color: category['color'], size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      category['name'],
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: category['color'],
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${templatesInCategory.length} template${templatesInCategory.length == 1 ? '' : 's'}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
-                  ],
-                ),
+  Widget _buildEmailCategorySection(String categoryKey, List<EmailTemplate> categoryTemplates) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Category Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
               ),
-
-              // Show templates or empty state
-              if (templatesInCategory.isEmpty)
-                ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: (category['color'] as Color).withOpacity(0.2),
-                    child: Icon(category['icon'], color: category['color'], size: 18),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.email, color: Colors.orange, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  _getEmailCategoryDisplayName(categoryKey),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
                   ),
-                  title: Text('Create ${category['name']} templates'),
-                  subtitle: const Text('Tap to create your first template'),
-                  trailing: const Icon(Icons.add, size: 16),
-                  onTap: () => _createNewEmailTemplateWithCategory(categoryKey),
-                )
-              else
-              // Show actual templates
-                ...templatesInCategory.map((template) =>
-                _isEmailSelectionMode
-                    ? _buildSelectableEmailCard(template)
-                    : _buildEmailTemplateCard(template)
                 ),
-            ],
+                const Spacer(),
+                Text(
+                  '${categoryTemplates.length} template${categoryTemplates.length == 1 ? '' : 's'}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+              ],
+            ),
           ),
-        );
-      },
+
+          // Templates in this category
+          ...categoryTemplates.map((template) =>
+          _isEmailSelectionMode
+              ? _buildSelectableEmailCard(template)
+              : _buildEmailTemplateCard(template)
+          ),
+        ],
+      ),
     );
   }
 
@@ -1167,15 +1486,14 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               child: Container(
                 decoration: isSelected
                     ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue, width: 2),
-                )
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue, width: 2),
+                      )
                     : null,
                 child: _buildPDFTemplateCardContent(template, isSelected),
               ),
             ),
           ),
-
           if (_isPDFSelectionMode)
             Positioned(
               top: 8,
@@ -1186,7 +1504,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 2,
                       offset: const Offset(0, 1),
                     ),
@@ -1217,6 +1535,12 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
         child: _buildPDFTemplateCardContent(template, false),
       ),
     );
+  }
+
+  String? _getTemplateCategoryName(String? categoryKey) {
+    if (categoryKey == null) return null;
+    // This will be replaced with proper category lookup
+    return categoryKey; // For now, just return the key
   }
 
   Widget _buildPDFTemplateCardContent(PDFTemplate template, bool isSelected) {
@@ -1254,16 +1578,18 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                     Text(
                       template.templateName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.blue.shade800 : null,
-                      ),
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.blue.shade800 : null,
+                          ),
                     ),
                     if (template.description.isNotEmpty)
                       Text(
                         template.description,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isSelected ? Colors.blue.shade600 : Colors.grey[600],
-                        ),
+                              color: isSelected
+                                  ? Colors.blue.shade600
+                                  : Colors.grey[600],
+                            ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1296,7 +1622,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               Expanded(
                 child: _buildDetailChip(
                   Icons.layers,
-                  'Type: ${template.templateType.toUpperCase()}',
+                  'Category: ${_getTemplateCategoryName(template.userCategoryKey) ?? 'No Category'}',
                   isSelected: isSelected,
                 ),
               ),
@@ -1339,14 +1665,17 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                 ),
                 const SizedBox(width: 8),
                 PopupMenuButton<String>(
-                  onSelected: (action) => _handlePDFTemplateAction(action, template),
+                  onSelected: (action) =>
+                      _handlePDFTemplateAction(action, template),
                   itemBuilder: (context) => [
                     PopupMenuItem(
                       value: 'toggle_active',
                       child: Row(
                         children: [
                           Icon(
-                            template.isActive ? Icons.visibility_off : Icons.visibility,
+                            template.isActive
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             size: 18,
                           ),
                           const SizedBox(width: 8),
@@ -1404,15 +1733,15 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
           Text(
             'No PDF Templates',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.grey[600],
-            ),
+                  color: Colors.grey[600],
+                ),
           ),
           const SizedBox(height: 8),
           Text(
             'Create your first PDF template to get started',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
-            ),
+                  color: Colors.grey[500],
+                ),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -1431,20 +1760,22 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
     var filtered = templates;
 
     // Filter by type first
-    if (_selectedPDFType != 'all') {
-      filtered = filtered.where((template) =>
-      template.templateType.toLowerCase() == _selectedPDFType.toLowerCase()
-      ).toList();
+    if (_selectedPDFCategoryKey != 'all') {
+      filtered = filtered
+          .where(
+              (template) => template.userCategoryKey == _selectedPDFCategoryKey)
+          .toList();
     }
 
     // Then filter by search query
     if (_searchQuery.isNotEmpty) {
       final lowerQuery = _searchQuery.toLowerCase();
-      filtered = filtered.where((template) =>
-      template.templateName.toLowerCase().contains(lowerQuery) ||
-          template.description.toLowerCase().contains(lowerQuery) ||
-          template.templateType.toLowerCase().contains(lowerQuery)
-      ).toList();
+      filtered = filtered
+          .where((template) =>
+              template.templateName.toLowerCase().contains(lowerQuery) ||
+              template.description.toLowerCase().contains(lowerQuery) ||
+              template.templateType.toLowerCase().contains(lowerQuery))
+          .toList();
     }
 
     return filtered;
@@ -1453,26 +1784,41 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
   String _getCategoryKey(String categoryName) {
     // Convert category names to consistent keys
     switch (categoryName) {
-      case 'Quote Notifications': return 'quote_notifications';
-      case 'Appointments': return 'appointment_reminders';
-      case 'Job Updates': return 'job_status_updates';
-      case 'Payment': return 'payment_reminders';
-      case 'Follow-ups': return 'follow-ups';
-      case 'Emergency': return 'emergency/urgent';
-      case 'Quote Emails': return 'quote_emails';
-      case 'Contracts': return 'contract_emails';
-      case 'Invoices': return 'invoice_emails';
-      case 'Appointment Emails': return 'appointment_emails';
-      case 'Marketing': return 'marketing/newsletter';
-      default: return categoryName.toLowerCase().replaceAll(' ', '_');
+      case 'Quote Notifications':
+        return 'quote_notifications';
+      case 'Appointments':
+        return 'appointment_reminders';
+      case 'Job Updates':
+        return 'job_status_updates';
+      case 'Payment':
+        return 'payment_reminders';
+      case 'Follow-ups':
+        return 'follow-ups';
+      case 'Emergency':
+        return 'emergency/urgent';
+      case 'Quote Emails':
+        return 'quote_emails';
+      case 'Contracts':
+        return 'contract_emails';
+      case 'Invoices':
+        return 'invoice_emails';
+      case 'Appointment Emails':
+        return 'appointment_emails';
+      case 'Marketing':
+        return 'marketing/newsletter';
+      default:
+        return categoryName.toLowerCase().replaceAll(' ', '_');
     }
   }
 
-  Widget _buildDetailChip(IconData icon, String text, {bool isSelected = false}) {
+  Widget _buildDetailChip(IconData icon, String text,
+      {bool isSelected = false}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: isSelected ? Colors.blue.shade600 : Colors.grey[600]),
+        Icon(icon,
+            size: 14,
+            color: isSelected ? Colors.blue.shade600 : Colors.grey[600]),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
@@ -1488,24 +1834,24 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
     );
   }
 
-  Color _getTypeColor(String templateType) {
-    switch (templateType.toLowerCase()) {
-      case 'quote': return Colors.blue;
-      case 'contract': return Colors.green;
-      case 'invoice': return Colors.orange;
-      case 'estimate': return Colors.purple;
-      default: return Colors.grey;
+  Color _getTypeColor(String categoryKey) {
+    // For user categories, use a consistent blue color (like the old "quote" color)
+    if (categoryKey == 'uncategorized') {
+      return Colors.grey;
     }
+
+    // Use the original blue color for all user categories
+    return Colors.blue;
   }
 
-  IconData _getTypeIcon(String templateType) {
-    switch (templateType.toLowerCase()) {
-      case 'quote': return Icons.description;
-      case 'contract': return Icons.assignment;
-      case 'invoice': return Icons.receipt;
-      case 'estimate': return Icons.calculate;
-      default: return Icons.insert_drive_file;
+  IconData _getTypeIcon(String categoryKey) {
+    // For user categories, use category icon
+    if (categoryKey == 'uncategorized') {
+      return Icons.folder_outlined;
     }
+
+    // Use category icon for all user categories
+    return Icons.description;
   }
 
   String _formatTypeName(String templateType) {
@@ -1514,23 +1860,83 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
 
   List<Map<String, dynamic>> _getTextMessageCategories() {
     return [
-      {'name': 'Quote Notifications', 'description': 'Notify customers about quote status', 'icon': Icons.notifications, 'color': Colors.blue},
-      {'name': 'Appointment Reminders', 'description': 'Remind customers of scheduled visits', 'icon': Icons.schedule, 'color': Colors.green},
-      {'name': 'Job Status Updates', 'description': 'Update customers on work progress', 'icon': Icons.construction, 'color': Colors.orange},
-      {'name': 'Payment Reminders', 'description': 'Send payment due notifications', 'icon': Icons.payment, 'color': Colors.red},
-      {'name': 'Follow-ups', 'description': 'Check in with customers', 'icon': Icons.chat, 'color': Colors.purple},
-      {'name': 'Emergency/Urgent', 'description': 'Urgent communication templates', 'icon': Icons.warning, 'color': Colors.red.shade700},
+      {
+        'name': 'Quote Notifications',
+        'description': 'Notify customers about quote status',
+        'icon': Icons.notifications,
+        'color': Colors.blue
+      },
+      {
+        'name': 'Appointment Reminders',
+        'description': 'Remind customers of scheduled visits',
+        'icon': Icons.schedule,
+        'color': Colors.green
+      },
+      {
+        'name': 'Job Status Updates',
+        'description': 'Update customers on work progress',
+        'icon': Icons.construction,
+        'color': Colors.orange
+      },
+      {
+        'name': 'Payment Reminders',
+        'description': 'Send payment due notifications',
+        'icon': Icons.payment,
+        'color': Colors.red
+      },
+      {
+        'name': 'Follow-ups',
+        'description': 'Check in with customers',
+        'icon': Icons.chat,
+        'color': Colors.purple
+      },
+      {
+        'name': 'Emergency/Urgent',
+        'description': 'Urgent communication templates',
+        'icon': Icons.warning,
+        'color': Colors.red.shade700
+      },
     ];
   }
 
   List<Map<String, dynamic>> _getEmailCategories() {
     return [
-      {'name': 'Quote Emails', 'description': 'Send quotes and estimates via email', 'icon': Icons.email, 'color': Colors.blue},
-      {'name': 'Contract Emails', 'description': 'Send contracts and agreements', 'icon': Icons.assignment, 'color': Colors.green},
-      {'name': 'Invoice Emails', 'description': 'Send invoices and billing', 'icon': Icons.receipt, 'color': Colors.orange},
-      {'name': 'Follow-up Emails', 'description': 'Customer follow-up communications', 'icon': Icons.reply, 'color': Colors.purple},
-      {'name': 'Appointment Emails', 'description': 'Schedule confirmations and reminders', 'icon': Icons.event, 'color': Colors.teal},
-      {'name': 'Marketing/Newsletter', 'description': 'Promotional and newsletter emails', 'icon': Icons.campaign, 'color': Colors.pink},
+      {
+        'name': 'Quote Emails',
+        'description': 'Send quotes and estimates via email',
+        'icon': Icons.email,
+        'color': Colors.blue
+      },
+      {
+        'name': 'Contract Emails',
+        'description': 'Send contracts and agreements',
+        'icon': Icons.assignment,
+        'color': Colors.green
+      },
+      {
+        'name': 'Invoice Emails',
+        'description': 'Send invoices and billing',
+        'icon': Icons.receipt,
+        'color': Colors.orange
+      },
+      {
+        'name': 'Follow-up Emails',
+        'description': 'Customer follow-up communications',
+        'icon': Icons.reply,
+        'color': Colors.purple
+      },
+      {
+        'name': 'Appointment Emails',
+        'description': 'Schedule confirmations and reminders',
+        'icon': Icons.event,
+        'color': Colors.teal
+      },
+      {
+        'name': 'Marketing/Newsletter',
+        'description': 'Promotional and newsletter emails',
+        'icon': Icons.campaign,
+        'color': Colors.pink
+      },
     ];
   }
 
@@ -1548,12 +1954,72 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
 
   // ACTION HANDLERS
 
-  void _createNewPDFTemplate() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const TemplateEditorScreen(),
-      ),
+  void _createNewPDFTemplate() async {
+    // Show category selection dialog first
+    final selectedCategory = await _showCategorySelectionDialog();
+
+    if (selectedCategory != null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => TemplateEditorScreen(
+            preselectedCategory: selectedCategory,
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<String?> _showCategorySelectionDialog() async {
+    final appState = context.read<AppStateProvider>();
+    final allCategories = await appState.getAllTemplateCategories();
+    final pdfCategories = allCategories['pdf_templates'] ?? [];
+
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Template Category'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // "No Category" option
+              ListTile(
+                leading: const Icon(Icons.folder_outlined),
+                title: const Text('No Category'),
+                subtitle: const Text('Create template without a specific category'),
+                onTap: () => Navigator.pop(context, null),
+              ),
+              const Divider(),
+              // User-defined categories
+              ...pdfCategories.map<Widget>((category) {
+                return ListTile(
+                  leading: const Icon(Icons.description),
+                  title: Text(category['name'] as String),
+                  onTap: () => Navigator.pop(context, category['key'] as String),
+                );
+              }),
+              const Divider(),
+              // Option to create new category
+              ListTile(
+                leading: const Icon(Icons.add, color: Colors.blue),
+                title: const Text('Create New Category'),
+                subtitle: const Text('Add a new template category'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showTemplateSettings(); // This opens category management
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -1582,7 +2048,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
         ),
       );
 
-      final previewPath = await TemplateService.instance.generateTemplatePreview(template);
+      final previewPath =
+          await TemplateService.instance.generateTemplatePreview(template);
 
       Navigator.pop(context); // Close loading dialog
 
@@ -1610,9 +2077,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              template.isActive
-                  ? 'Template deactivated'
-                  : 'Template activated',
+              template.isActive ? 'Template deactivated' : 'Template activated',
             ),
           ),
         );
@@ -1653,7 +2118,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               },
             ),
             ListTile(
-              leading: Icon(template.isActive ? Icons.visibility_off : Icons.visibility),
+              leading: Icon(
+                  template.isActive ? Icons.visibility_off : Icons.visibility),
               title: Text(template.isActive ? 'Deactivate' : 'Activate'),
               onTap: () {
                 Navigator.pop(context);
@@ -1711,7 +2177,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
         title: const Text('Delete Template'),
         content: Text(
           'Are you sure you want to delete "${template.templateName}"?\n\n'
-              'This action cannot be undone and will also delete the associated PDF file.',
+          'This action cannot be undone and will also delete the associated PDF file.',
         ),
         actions: [
           TextButton(
@@ -1723,7 +2189,9 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               Navigator.pop(context);
 
               try {
-                await context.read<AppStateProvider>().deletePDFTemplate(template.id);
+                await context
+                    .read<AppStateProvider>()
+                    .deletePDFTemplate(template.id);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Template deleted successfully'),
@@ -1759,6 +2227,71 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
     );
   }
 
+  // ADD THIS NEW METHOD HERE:
+  void _createNewCustomField() {
+    // Get the app state provider
+    final appState = context.read<AppStateProvider>();
+
+    // Get categories synchronously from already-loaded data
+    final allTemplateCategories = appState.templateCategories;
+    final customFieldCategories = allTemplateCategories
+        .where((cat) => cat.templateType == 'custom_fields')
+        .toList();
+
+    final availableCategories = <String>['custom'];
+    final categoryNames = <String, String>{'custom': 'Custom Fields'};
+
+    // Add loaded categories
+    for (final category in customFieldCategories) {
+      availableCategories.add(category.key);
+      categoryNames[category.key] = category.name;
+    }
+
+
+
+    showDialog<CustomAppDataField?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return AddCustomFieldDialog(
+          categories: availableCategories,
+          categoryNames: categoryNames,
+        );
+      },
+    ).then((returnedValue) {
+      if (returnedValue != null && returnedValue is CustomAppDataField && mounted) {
+        appState.addCustomAppDataField(returnedValue).then((_) {
+          if (mounted) {
+            appState.notifyListeners();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Added custom field: ${returnedValue.displayName}'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }).catchError((error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error adding field: $error'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        });
+      }
+    }).catchError((error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
+  }
 
   void _showTemplateSettings() {
     Navigator.push(
@@ -1768,22 +2301,28 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
       ),
     );
   }
+
+
   void _createNewTextTemplateWithCategory(String category) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MessageTemplateEditorScreen(initialCategory: category),
+        builder: (context) =>
+            MessageTemplateEditorScreen(initialCategory: category),
       ),
     );
   }
+
   void _createNewEmailTemplateWithCategory(String category) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EmailTemplateEditorScreen(initialCategory: category),
+        builder: (context) =>
+            EmailTemplateEditorScreen(initialCategory: category),
       ),
     );
   }
+
   // NEW MESSAGE TEMPLATE CARD BUILDERS
   Widget _buildSelectableMessageCard(MessageTemplate template) {
     final isSelected = _selectedMessageIds.contains(template.id);
@@ -1806,15 +2345,14 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               child: Container(
                 decoration: isSelected
                     ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green, width: 2),
-                )
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.green, width: 2),
+                      )
                     : null,
                 child: _buildMessageTemplateCardContent(template, isSelected),
               ),
             ),
           ),
-
           if (_isMessageSelectionMode)
             Positioned(
               top: 8,
@@ -1825,7 +2363,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 2,
                       offset: const Offset(0, 1),
                     ),
@@ -1833,7 +2371,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                 ),
                 child: Checkbox(
                   value: isSelected,
-                  onChanged: (bool? value) => _toggleMessageSelection(template.id),
+                  onChanged: (bool? value) =>
+                      _toggleMessageSelection(template.id),
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   visualDensity: VisualDensity.compact,
                   activeColor: Colors.green,
@@ -1858,7 +2397,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildMessageTemplateCardContent(MessageTemplate template, bool isSelected) {
+  Widget _buildMessageTemplateCardContent(
+      MessageTemplate template, bool isSelected) {
     final dateFormat = DateFormat('MMM dd, yyyy');
 
     return Padding(
@@ -1893,16 +2433,18 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                     Text(
                       template.templateName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.green.shade800 : null,
-                      ),
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.green.shade800 : null,
+                          ),
                     ),
                     if (template.description.isNotEmpty)
                       Text(
                         template.description,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isSelected ? Colors.green.shade600 : Colors.grey[600],
-                        ),
+                              color: isSelected
+                                  ? Colors.green.shade600
+                                  : Colors.grey[600],
+                            ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1958,7 +2500,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               Expanded(
                 child: _buildDetailChip(
                   Icons.category,
-                  'Category: ${template.category}',
+                  'Category: ${template.userCategoryKey ?? 'No Category'}',
                   isSelected: isSelected,
                 ),
               ),
@@ -2001,14 +2543,17 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                 ),
                 const SizedBox(width: 8),
                 PopupMenuButton<String>(
-                  onSelected: (action) => _handleMessageTemplateAction(action, template),
+                  onSelected: (action) =>
+                      _handleMessageTemplateAction(action, template),
                   itemBuilder: (context) => [
                     PopupMenuItem(
                       value: 'toggle_active',
                       child: Row(
                         children: [
                           Icon(
-                            template.isActive ? Icons.visibility_off : Icons.visibility,
+                            template.isActive
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             size: 18,
                           ),
                           const SizedBox(width: 8),
@@ -2065,7 +2610,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MessageTemplateEditorScreen(existingTemplate: template),
+        builder: (context) =>
+            MessageTemplateEditorScreen(existingTemplate: template),
       ),
     );
   }
@@ -2077,13 +2623,13 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
   void _handleMessageTemplateAction(String action, MessageTemplate template) {
     switch (action) {
       case 'toggle_active':
-        context.read<AppStateProvider>().toggleMessageTemplateActive(template.id);
+        context
+            .read<AppStateProvider>()
+            .toggleMessageTemplateActive(template.id);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              template.isActive
-                  ? 'Template deactivated'
-                  : 'Template activated',
+              template.isActive ? 'Template deactivated' : 'Template activated',
             ),
           ),
         );
@@ -2124,7 +2670,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               },
             ),
             ListTile(
-              leading: Icon(template.isActive ? Icons.visibility_off : Icons.visibility),
+              leading: Icon(
+                  template.isActive ? Icons.visibility_off : Icons.visibility),
               title: Text(template.isActive ? 'Deactivate' : 'Activate'),
               onTap: () {
                 Navigator.pop(context);
@@ -2195,7 +2742,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
         title: const Text('Delete Message Template'),
         content: Text(
           'Are you sure you want to delete "${template.templateName}"?\n\n'
-              'This action cannot be undone.',
+          'This action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -2207,7 +2754,9 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               Navigator.pop(context);
 
               try {
-                await context.read<AppStateProvider>().deleteMessageTemplate(template.id);
+                await context
+                    .read<AppStateProvider>()
+                    .deleteMessageTemplate(template.id);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Message template deleted successfully'),
@@ -2224,6 +2773,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
       ),
     );
   }
+
 // Email template selection helpers
   void _toggleEmailSelection(String templateId) {
     setState(() {
@@ -2239,7 +2789,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EmailTemplateEditorScreen(existingTemplate: template),
+        builder: (context) =>
+            EmailTemplateEditorScreen(existingTemplate: template),
       ),
     );
   }
@@ -2269,7 +2820,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               },
             ),
             ListTile(
-              leading: Icon(template.isActive ? Icons.visibility_off : Icons.visibility),
+              leading: Icon(
+                  template.isActive ? Icons.visibility_off : Icons.visibility),
               title: Text(template.isActive ? 'Deactivate' : 'Activate'),
               onTap: () {
                 Navigator.pop(context);
@@ -2297,6 +2849,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
       ),
     );
   }
+
   void _sendTestEmail(EmailTemplate template) {
     _showErrorSnackBar('Test email sending coming soon!');
   }
@@ -2308,9 +2861,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              template.isActive
-                  ? 'Template deactivated'
-                  : 'Template activated',
+              template.isActive ? 'Template deactivated' : 'Template activated',
             ),
           ),
         );
@@ -2370,7 +2921,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
         title: const Text('Delete Email Template'),
         content: Text(
           'Are you sure you want to delete "${template.templateName}"?\n\n'
-              'This action cannot be undone.',
+          'This action cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -2382,7 +2933,9 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               Navigator.pop(context);
 
               try {
-                await context.read<AppStateProvider>().deleteEmailTemplate(template.id);
+                await context
+                    .read<AppStateProvider>()
+                    .deleteEmailTemplate(template.id);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Email template deleted successfully'),
@@ -2399,7 +2952,9 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
       ),
     );
   }
-  Widget _buildEmailTemplateCardContent(EmailTemplate template, bool isSelected) {
+
+  Widget _buildEmailTemplateCardContent(
+      EmailTemplate template, bool isSelected) {
     final dateFormat = DateFormat('MMM dd, yyyy');
 
     return Padding(
@@ -2434,16 +2989,18 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                     Text(
                       template.templateName,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.orange.shade800 : null,
-                      ),
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.orange.shade800 : null,
+                          ),
                     ),
                     if (template.description.isNotEmpty)
                       Text(
                         template.description,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isSelected ? Colors.orange.shade600 : Colors.grey[600],
-                        ),
+                              color: isSelected
+                                  ? Colors.orange.shade600
+                                  : Colors.grey[600],
+                            ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -2560,14 +3117,17 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                 ),
                 const SizedBox(width: 8),
                 PopupMenuButton<String>(
-                  onSelected: (action) => _handleEmailTemplateAction(action, template),
+                  onSelected: (action) =>
+                      _handleEmailTemplateAction(action, template),
                   itemBuilder: (context) => [
                     PopupMenuItem(
                       value: 'toggle_active',
                       child: Row(
                         children: [
                           Icon(
-                            template.isActive ? Icons.visibility_off : Icons.visibility,
+                            template.isActive
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             size: 18,
                           ),
                           const SizedBox(width: 8),
@@ -2631,15 +3191,14 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
               child: Container(
                 decoration: isSelected
                     ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.orange, width: 2),
-                )
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange, width: 2),
+                      )
                     : null,
                 child: _buildEmailTemplateCardContent(template, isSelected),
               ),
             ),
           ),
-
           if (_isEmailSelectionMode)
             Positioned(
               top: 8,
@@ -2650,7 +3209,7 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 2,
                       offset: const Offset(0, 1),
                     ),
@@ -2658,7 +3217,8 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
                 ),
                 child: Checkbox(
                   value: isSelected,
-                  onChanged: (bool? value) => _toggleEmailSelection(template.id),
+                  onChanged: (bool? value) =>
+                      _toggleEmailSelection(template.id),
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   visualDensity: VisualDensity.compact,
                   activeColor: Colors.orange,
@@ -2682,5 +3242,4 @@ class _TemplatesScreenState extends State<TemplatesScreen> with TickerProviderSt
       ),
     );
   }
-
 }

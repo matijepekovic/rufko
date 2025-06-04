@@ -11,6 +11,7 @@ import '../models/quote.dart';
 import '../providers/app_state_provider.dart';
 import 'simplified_quote_detail_screen.dart';
 import '../services/tax_service.dart';
+import '../models/quote_extras.dart'; // NEW: For PermitItem and CustomLineItem
 
 class SimplifiedQuoteScreen extends StatefulWidget {
   final Customer customer;
@@ -38,6 +39,13 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   final List<QuoteItem> _addedProducts = [];
 
   bool _isLoading = false;
+
+  // NEW: Quote type selection
+  String _quoteType = 'multi-level'; // 'multi-level' or 'single-tier'
+
+  final List<PermitItem> _permits = [];
+  bool _noPermitsRequired = false;
+  final List<CustomLineItem> _customLineItems = [];
 
   // NEW: Edit mode detection
   bool get _isEditMode => widget.existingQuote != null;
@@ -124,6 +132,10 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                   const SizedBox(height: 24),
                   _buildAddedProductsList(),
                   const SizedBox(height: 24),
+                  _buildPermitsSection(),
+                  const SizedBox(height: 24),
+                  _buildCustomLineItemsSection(),
+                  const SizedBox(height: 24),
                   _buildGenerateButton(),
                 ],
               ],
@@ -135,147 +147,294 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   }
 
   Widget _buildMainProductSelection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Column(
+      children: [
+        // NEW: Quote Type Selection Card
+        Card(
+          elevation: 2,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.roofing,
-                    color: Theme.of(context).primaryColor,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Step 1: Select Main Product',
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.dashboard_customize,
+                        color: Colors.purple,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Quote Type',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text(
-                        'This creates your quote levels (Builder/Homeowner/Platinum)',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Quote type selection
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _switchQuoteType('multi-level'),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _quoteType == 'multi-level' ? Theme.of(context).primaryColor : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _quoteType == 'multi-level' ? Theme.of(context).primaryColor : Colors.grey[300]!,
+                              width: 2,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.layers,
+                                color: _quoteType == 'multi-level' ? Colors.white : Colors.grey[600],
+                                size: 32,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Multi-Level Quote',
+                                style: TextStyle(
+                                  color: _quoteType == 'multi-level' ? Colors.white : Colors.grey[700],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Builder/Homeowner/Platinum',
+                                style: TextStyle(
+                                  color: _quoteType == 'multi-level' ? Colors.white70 : Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => _switchQuoteType('single-tier'),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _quoteType == 'single-tier' ? Theme.of(context).primaryColor : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _quoteType == 'single-tier' ? Theme.of(context).primaryColor : Colors.grey[300]!,
+                              width: 2,
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.description,
+                                color: _quoteType == 'single-tier' ? Colors.white : Colors.grey[600],
+                                size: 32,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Single-Tier Quote',
+                                style: TextStyle(
+                                  color: _quoteType == 'single-tier' ? Colors.white : Colors.grey[700],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'One price level only',
+                                style: TextStyle(
+                                  color: _quoteType == 'single-tier' ? Colors.white70 : Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-
-            Consumer<AppStateProvider>(
-              builder: (context, appState, child) {
-                final mainProducts = appState.products.where((p) =>
-                p.isActive && p.pricingType == ProductPricingType.MAIN_DIFFERENTIATOR
-                ).toList();
-
-                if (mainProducts.isEmpty) {
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.shade200),
-                    ),
-                    child: Column(
-                      children: [
-                        Icon(Icons.warning_amber, color: Colors.orange.shade600, size: 48),
-                        const SizedBox(height: 8),
-                        Text(
-                          'No Main Products Found',
-                          style: TextStyle(
-                            color: Colors.orange.shade800,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Create a main differentiator product first.',
-                          style: TextStyle(color: Colors.orange.shade700),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return Column(
-                  children: [
-                    DropdownButtonFormField<Product>(
-                      decoration: const InputDecoration(
-                        labelText: 'Main Product',
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.architecture),
-                      ),
-                      value: _mainProduct,
-                      items: mainProducts.map((product) => DropdownMenuItem(
-                        value: product,
-                        child: Text(
-                          '${product.name} (${product.availableMainLevels.length} levels)',
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                      )).toList(),
-                      onChanged: (product) {
-                        setState(() {
-                          _mainProduct = product;
-                          _createQuoteLevels();
-                        });
-                      },
-                      validator: (value) => value == null ? 'Please select a main product' : null,
-                    ),
-
-                    if (_mainProduct != null) ...[
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _quantityController,
-                        decoration: InputDecoration(
-                          labelText: 'Quantity',
-                          border: const OutlineInputBorder(),
-                          suffixText: _mainProduct!.unit,
-                          prefixIcon: const Icon(Icons.calculate_outlined),
-                          helperText: 'Amount of ${_mainProduct!.name} needed',
-                        ),
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        onChanged: (value) {
-                          final quantity = double.tryParse(value);
-                          if (quantity != null && quantity > 0) {
-                            setState(() {
-                              _mainQuantity = quantity;
-                              _updateQuoteLevelsQuantity();
-                            });
-                          }
-                        },
-                        validator: (value) {
-                          if (value == null || value.isEmpty) return 'Please enter quantity';
-                          final qty = double.tryParse(value);
-                          if (qty == null || qty <= 0) return 'Enter a valid positive quantity';
-                          return null;
-                        },
-                      ),
-                    ],
-                  ],
-                );
-              },
-            ),
-          ],
+          ),
         ),
-      ),
+
+        const SizedBox(height: 16),
+
+        // Main Product Selection Card
+        Card(
+          elevation: 2,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.roofing,
+                        color: Theme.of(context).primaryColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _quoteType == 'multi-level' ? 'Step 1: Select Main Product' : 'Step 1: Select Product',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            _quoteType == 'multi-level'
+                                ? 'This creates your quote levels (Builder/Homeowner/Platinum)'
+                                : 'Select any product for your single-tier quote',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                Consumer<AppStateProvider>(
+                  builder: (context, appState, child) {
+                    // For multi-level: only show main differentiator products
+                    // For single-tier: show all active products
+                    final availableProducts = _quoteType == 'multi-level'
+                        ? appState.products.where((p) =>
+                    p.isActive && p.pricingType == ProductPricingType.mainDifferentiator
+                    ).toList()
+                        : appState.products.where((p) => p.isActive).toList();
+
+                    if (availableProducts.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.warning_amber, color: Colors.orange.shade600, size: 48),
+                            const SizedBox(height: 8),
+                            Text(
+                              _quoteType == 'multi-level' ? 'No Main Products Found' : 'No Products Found',
+                              style: TextStyle(
+                                color: Colors.orange.shade800,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _quoteType == 'multi-level'
+                                  ? 'Create a main differentiator product first.'
+                                  : 'Add some products in the Products section first.',
+                              style: TextStyle(color: Colors.orange.shade700),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        DropdownButtonFormField<Product>(
+                          decoration: InputDecoration(
+                            labelText: _quoteType == 'multi-level' ? 'Main Product' : 'Product',
+                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(Icons.architecture),
+                          ),
+                          value: _mainProduct,
+                          items: availableProducts.map((product) => DropdownMenuItem(
+                            value: product,
+                            child: Text(
+                              _quoteType == 'multi-level'
+                                  ? '${product.name} (${product.availableMainLevels.length} levels)'
+                                  : product.name,
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                          )).toList(),
+                          onChanged: (product) {
+                            setState(() {
+                              _mainProduct = product;
+                              _createQuoteLevels();
+                            });
+                          },
+                          validator: (value) => value == null ? 'Please select a product' : null,
+                        ),
+
+                        if (_mainProduct != null) ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _quantityController,
+                            decoration: InputDecoration(
+                              labelText: 'Quantity',
+                              border: const OutlineInputBorder(),
+                              suffixText: _mainProduct!.unit,
+                              prefixIcon: const Icon(Icons.calculate_outlined),
+                              helperText: 'Amount of ${_mainProduct!.name} needed',
+                            ),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            onChanged: (value) {
+                              final quantity = double.tryParse(value);
+                              if (quantity != null && quantity > 0) {
+                                setState(() {
+                                  _mainQuantity = quantity;
+                                  _updateQuoteLevelsQuantity();
+                                });
+                              }
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) return 'Please enter quantity';
+                              final qty = double.tryParse(value);
+                              if (qty == null || qty <= 0) return 'Enter a valid positive quantity';
+                              return null;
+                            },
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -291,19 +450,31 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Quote Levels Created',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                Icon(
+                  _quoteType == 'multi-level' ? Icons.layers : Icons.description,
+                  color: Theme.of(context).primaryColor,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _quoteType == 'multi-level' ? 'Quote Levels Created' : 'Quote Created',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: _quoteType == 'multi-level' ? Colors.blue.shade50 : Colors.green.shade50,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
+                border: Border.all(
+                  color: _quoteType == 'multi-level' ? Colors.blue.shade200 : Colors.green.shade200,
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,37 +484,77 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: _quoteLevels.map((level) {
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue.shade300),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              level.name,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              currencyFormat.format(level.baseProductTotal),
-                              style: TextStyle(
-                                color: Theme.of(context).primaryColor,
-                                fontWeight: FontWeight.w600,
+
+                  if (_quoteType == 'multi-level') ...[
+                    // Multi-level display (existing)
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: _quoteLevels.map((level) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.shade300),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                level.name,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
+                              const SizedBox(height: 4),
+                              Text(
+                                currencyFormat.format(level.baseProductTotal),
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ] else ...[
+                    // Single-tier display (NEW)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade300),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Unit Price: ${currencyFormat.format(_mainProduct!.unitPrice)}',
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                              Text(
+                                'Quantity: ${_mainQuantity.toStringAsFixed(1)} ${_mainProduct!.unit}',
+                                style: TextStyle(color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            currencyFormat.format(_quoteLevels.first.baseProductTotal),
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
                             ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -368,7 +579,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Step 2: Add Products',
+                      _quoteType == 'multi-level' ? 'Step 2: Add Products' : 'Step 2: Add Additional Products',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -412,7 +623,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                   )
                 else ...[
                   Text(
-                    'Added to ALL quote levels:',
+                    _quoteType == 'multi-level' ? 'Added to ALL quote levels:' : 'Additional products:',
                     style: TextStyle(
                       color: Colors.grey[700],
                       fontWeight: FontWeight.w500,
@@ -618,7 +829,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
     return Card(
       elevation: 3,
-      color: Colors.blue.shade50,
+      color: _quoteType == 'multi-level' ? Colors.blue.shade50 : Colors.green.shade50,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -626,179 +837,985 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.calculate, color: Colors.blue.shade700),
+                Icon(
+                  Icons.calculate,
+                  color: _quoteType == 'multi-level' ? Colors.blue.shade700 : Colors.green.shade700,
+                ),
                 const SizedBox(width: 8),
                 Text(
-                  'Quote Totals',
+                  _quoteType == 'multi-level' ? 'Quote Totals' : 'Quote Total',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade800,
+                    color: _quoteType == 'multi-level' ? Colors.blue.shade800 : Colors.green.shade800,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
 
-            // Mobile-friendly layout
-            Column(
-              children: _quoteLevels.map((level) {
-                // Calculate tax for this level
-                final subtotal = level.subtotal;
-                final taxAmount = subtotal * (_taxRate / 100);
-                final totalWithTax = subtotal + taxAmount;
+            if (_quoteType == 'multi-level') ...[
+              // Multi-level layout (existing)
+              Column(
+                children: _quoteLevels.map((level) {
+                  // Calculate totals including permits and custom items
+                  final levelSubtotal = level.subtotal;
+                  final permitsTotal = _permits.fold(0.0, (sum, permit) => sum + permit.amount);
+                  final taxableCustomItems = _customLineItems.where((item) => item.isTaxable).fold(0.0, (sum, item) => sum + item.amount);
+                  final nonTaxableCustomItems = _customLineItems.where((item) => !item.isTaxable).fold(0.0, (sum, item) => sum + item.amount);
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue.shade300),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        level.name,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.blue.shade800,
+                  final taxableSubtotal = levelSubtotal + permitsTotal + taxableCustomItems;
+                  final nonTaxableSubtotal = nonTaxableCustomItems;
+                  final totalSubtotal = taxableSubtotal + nonTaxableSubtotal;
+                  final taxAmount = taxableSubtotal * (_taxRate / 100);
+                  final totalWithTax = totalSubtotal + taxAmount;
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.shade300),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          level.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.blue.shade800,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
+                        const SizedBox(height: 8),
 
-                      // Main product
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              '${_mainProduct!.name} (${_mainQuantity.toStringAsFixed(1)} ${_mainProduct!.unit})',
-                              style: const TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                          ),
-                          Text(
-                            currencyFormat.format(level.baseProductTotal),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-
-                      // Added products
-                      ..._addedProducts.map((product) => Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Row(
+                        // Main product
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Expanded(
                               child: Text(
-                                '${product.productName} (${product.quantity.toStringAsFixed(1)} ${product.unit})',
+                                '${_mainProduct!.name} (${_mainQuantity.toStringAsFixed(1)} ${_mainProduct!.unit})',
+                                style: const TextStyle(fontWeight: FontWeight.w500),
                               ),
                             ),
-                            Text(currencyFormat.format(product.totalPrice)),
+                            Text(
+                              currencyFormat.format(level.baseProductTotal),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ],
                         ),
-                      )),
 
-                      const Divider(),
-
-                      // SUBTOTAL
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'SUBTOTAL:',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue.shade800,
-                            ),
+                        // Added products
+                        // Added products
+                        ..._addedProducts.map((product) => Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${product.productName} (${product.quantity.toStringAsFixed(1)} ${product.unit})',
+                                ),
+                              ),
+                              Text(currencyFormat.format(product.totalPrice)),
+                            ],
                           ),
-                          Text(
-                            currencyFormat.format(subtotal),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.blue.shade800,
+                        )),
+
+// NEW: Show permits if any
+                        if (_permits.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'PERMITS:',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.orange.shade800,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    Text(
+                                      currencyFormat.format(permitsTotal),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.orange.shade800,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                ..._permits.map((permit) => Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          '  ${permit.name}',
+                                          style: const TextStyle(fontSize: 11),
+                                        ),
+                                      ),
+                                      Text(
+                                        currencyFormat.format(permit.amount),
+                                        style: const TextStyle(fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                              ],
                             ),
                           ),
                         ],
-                      ),
 
-                      // TAX (only show if tax rate > 0)
-                      if (_taxRate > 0) ...[
-                        const SizedBox(height: 4),
+// NEW: Show custom line items if any
+                        if (_customLineItems.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.purple.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'CUSTOM ITEMS:',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.purple.shade800,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    Text(
+                                      currencyFormat.format(_customLineItems.fold(0.0, (sum, item) => sum + item.amount)),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.purple.shade800,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                ..._customLineItems.map((item) => Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          '  ${item.name}${item.isTaxable ? '' : ' (non-taxable)'}',
+                                          style: const TextStyle(fontSize: 11),
+                                        ),
+                                      ),
+                                      Text(
+                                        currencyFormat.format(item.amount),
+                                        style: const TextStyle(fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
+                                )),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        const Divider(),
+
+                        // SUBTOTAL
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'TAX (${_taxRate.toStringAsFixed(2)}%):',
+                              'SUBTOTAL:',
                               style: TextStyle(
-                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue.shade800,
                               ),
                             ),
                             Text(
-                              currencyFormat.format(taxAmount),
+                              currencyFormat.format(totalSubtotal),
                               style: TextStyle(
-                                color: Colors.grey.shade700,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue.shade800,
                               ),
                             ),
                           ],
+                        ),
+
+                        // TAX (only show if tax rate > 0)
+                        if (_taxRate > 0) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'TAX (${_taxRate.toStringAsFixed(2)}%):',
+                                style: TextStyle(
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                              Text(
+                                currencyFormat.format(taxAmount),
+                                style: TextStyle(
+                                  color: Colors.grey.shade700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'TOTAL:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.blue.shade800,
+                                ),
+                              ),
+                              Text(
+                                currencyFormat.format(totalWithTax),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: Colors.blue.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
-
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'TOTAL:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.blue.shade800,
-                              ),
-                            ),
-                            Text(
-                              currencyFormat.format(totalWithTax),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: Colors.blue.shade800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ] else ...[
+              // Single-tier layout (NEW)
+              _buildSingleTierTotal(currencyFormat),
+            ],
           ],
         ),
       ),
     );
   }
 
+// NEW: Add this helper method right after _buildQuoteTotalsSection
+  Widget _buildSingleTierTotal(NumberFormat currencyFormat) {
+    final level = _quoteLevels.first;
+    final levelSubtotal = level.subtotal;
+
+    // Calculate permits total (taxable)
+    final permitsTotal = _permits.fold(0.0, (sum, permit) => sum + permit.amount);
+
+    // Calculate custom items (separate taxable and non-taxable)
+    final taxableCustomItems = _customLineItems.where((item) => item.isTaxable).fold(0.0, (sum, item) => sum + item.amount);
+    final nonTaxableCustomItems = _customLineItems.where((item) => !item.isTaxable).fold(0.0, (sum, item) => sum + item.amount);
+
+    // Calculate subtotal before tax
+    final taxableSubtotal = levelSubtotal + permitsTotal + taxableCustomItems; // Include permits in taxable
+    final nonTaxableSubtotal = nonTaxableCustomItems;
+    final totalSubtotal = taxableSubtotal + nonTaxableSubtotal;
+
+    // Calculate tax (on taxable items including permits)
+    final taxAmount = taxableSubtotal * (_taxRate / 100);
+    final totalWithTax = totalSubtotal + taxAmount;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Main product
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  '${_mainProduct!.name} (${_mainQuantity.toStringAsFixed(1)} ${_mainProduct!.unit})',
+                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+                ),
+              ),
+              Text(
+                currencyFormat.format(level.baseProductTotal),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+
+          // Added products
+          // Added products
+          ..._addedProducts.map((product) => Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    '${product.productName} (${product.quantity.toStringAsFixed(1)} ${product.unit})',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+                Text(
+                  currencyFormat.format(product.totalPrice),
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ],
+            ),
+          )),
+
+// NEW: Show permits if any
+          if (_permits.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'PERMITS:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange.shade800,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        currencyFormat.format(permitsTotal),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.orange.shade800,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  ..._permits.map((permit) => Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '  ${permit.name}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        Text(
+                          currencyFormat.format(permit.amount),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  )),
+                ],
+              ),
+            ),
+          ],
+
+// NEW: Show custom line items if any
+          if (_customLineItems.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.purple.shade50,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'CUSTOM ITEMS:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.purple.shade800,
+                          fontSize: 12,
+                        ),
+                      ),
+                      Text(
+                        currencyFormat.format(_customLineItems.fold(0.0, (sum, item) => sum + item.amount)),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.purple.shade800,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  ..._customLineItems.map((item) => Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '  ${item.name}${item.isTaxable ? '' : ' (non-taxable)'}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        Text(
+                          currencyFormat.format(item.amount),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  )),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 12),
+          const Divider(thickness: 1),
+          const SizedBox(height: 8),
+
+          // SUBTOTAL
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'SUBTOTAL:',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Colors.green.shade800,
+                ),
+              ),
+              Text(
+                currencyFormat.format(totalSubtotal),
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Colors.green.shade800,
+                ),
+              ),
+            ],
+          ),
+
+          // TAX (only show if tax rate > 0)
+          if (_taxRate > 0) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'TAX (${_taxRate.toStringAsFixed(2)}%):',
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  currencyFormat.format(taxAmount),
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: Colors.green.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'TOTAL:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.green.shade800,
+                  ),
+                ),
+                Text(
+                  currencyFormat.format(totalWithTax),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                    color: Colors.green.shade800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+// NEW: Permits section
+  Widget _buildPermitsSection() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.assignment,
+                    color: Colors.orange,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Permits (Required)',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // No permits required checkbox
+            CheckboxListTile(
+              title: const Text('No permits required for this project'),
+              subtitle: Text(
+                'Check this if no building permits are needed',
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              ),
+              value: _noPermitsRequired,
+              onChanged: (value) {
+                setState(() {
+                  _noPermitsRequired = value ?? false;
+                  if (_noPermitsRequired) {
+                    _permits.clear(); // Clear permits if none required
+                  }
+                });
+              },
+              activeColor: Colors.green,
+            ),
+
+            if (!_noPermitsRequired) ...[
+              const Divider(),
+
+              // Add permit button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Required Permits:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _showAddPermitDialog,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Permit'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+
+              // Permits list
+              if (_permits.isEmpty) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.red.shade600),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'No permits added yet. Add permits or check "No permits required"',
+                          style: TextStyle(color: Colors.red.shade800),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 12),
+                ..._permits.map((permit) => Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  color: Colors.orange.shade50,
+                  child: ListTile(
+                    leading: Icon(Icons.assignment, color: Colors.orange.shade700),
+                    title: Text(permit.name),
+                    subtitle: permit.description?.isNotEmpty == true
+                        ? Text(permit.description!)
+                        : null,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          NumberFormat.currency(symbol: '\$').format(permit.amount),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => _removePermit(permit),
+                        ),
+                      ],
+                    ),
+                  ),
+                )),
+              ],
+            ],
+
+            // Show permit total if any permits
+            if (_permits.isNotEmpty) ...[
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total Permits:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange.shade800,
+                    ),
+                  ),
+                  Text(
+                    NumberFormat.currency(symbol: '\$').format(
+                      _permits.fold(0.0, (sum, permit) => sum + permit.amount),
+                    ),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.orange.shade800,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+// NEW: Custom line items section
+  Widget _buildCustomLineItemsSection() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.add_box,
+                        color: Colors.purple,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Custom Line Items (Optional)',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                ElevatedButton.icon(
+                  onPressed: _showAddCustomItemDialog,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Item'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.purple,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            if (_customLineItems.isEmpty) ...[
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.add_box_outlined,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No custom items added',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Add custom fees, rentals, or special services',
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ] else ...[
+              Text(
+                'Custom items:',
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ..._customLineItems.map((item) => Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                color: Colors.purple.shade50,
+                child: ListTile(
+                  leading: Icon(
+                    item.isTaxable ? Icons.monetization_on : Icons.money_off,
+                    color: Colors.purple.shade700,
+                  ),
+                  title: Text(item.name),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (item.description?.isNotEmpty == true)
+                        Text(item.description!),
+                      Text(
+                        item.isTaxable ? 'Taxable' : 'Non-taxable',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        NumberFormat.currency(symbol: '\$').format(item.amount),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => _removeCustomItem(item),
+                      ),
+                    ],
+                  ),
+                  isThreeLine: item.description?.isNotEmpty == true,
+                ),
+              )),
+
+              // Show custom items total
+              const Divider(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Total Custom Items:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple.shade800,
+                    ),
+                  ),
+                  Text(
+                    NumberFormat.currency(symbol: '\$').format(
+                      _customLineItems.fold(0.0, (sum, item) => sum + item.amount),
+                    ),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.purple.shade800,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+  void _showAddPermitDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => _PermitDialog(
+        onPermitAdded: (permit) {
+          setState(() {
+            _permits.add(permit);
+          });
+        },
+      ),
+    );
+  }
+
+  void _removePermit(PermitItem permit) {
+    setState(() {
+      _permits.remove(permit);
+    });
+  }
+
+  void _showAddCustomItemDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => _CustomItemDialog(
+        onItemAdded: (item) {
+          setState(() {
+            _customLineItems.add(item);
+          });
+        },
+      ),
+    );
+  }
+
+  void _removeCustomItem(CustomLineItem item) {
+    setState(() {
+      _customLineItems.remove(item);
+    });
+  }
+
+// NEW: Check if permits requirement is satisfied
+  bool get _isPermitsRequirementSatisfied {
+    return _noPermitsRequired || _permits.isNotEmpty;
+  }
   Widget _buildGenerateButton() {
     if (_quoteLevels.isEmpty) return const SizedBox.shrink();
 
-    return ElevatedButton.icon(
-      onPressed: _generateQuote,
-      icon: Icon(_isEditMode ? Icons.save : Icons.rocket_launch),
-      label: Text(_isEditMode ? 'Update Quote' : 'Generate Quote'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-      ),
+    String buttonText;
+    if (_isEditMode) {
+      buttonText = _quoteType == 'single-tier' ? 'Update Single-Tier Quote' : 'Update Multi-Level Quote';
+    } else {
+      buttonText = _quoteType == 'single-tier' ? 'Generate Single-Tier Quote' : 'Generate Multi-Level Quote';
+    }
+
+    // Check if permits requirement is satisfied
+    final permitsSatisfied = _isPermitsRequirementSatisfied;
+
+    return Column(
+      children: [
+        // Show validation warning if permits not satisfied
+        if (!permitsSatisfied) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.red.shade200),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning, color: Colors.red.shade600),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Permits required: Please add permits or check "No permits required"',
+                    style: TextStyle(
+                      color: Colors.red.shade800,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Generate button
+        ElevatedButton.icon(
+          onPressed: permitsSatisfied ? _generateQuote : null, // Disable if permits not satisfied
+          icon: Icon(_isEditMode ? Icons.save : Icons.rocket_launch),
+          label: Text(buttonText),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: permitsSatisfied
+                ? (_quoteType == 'single-tier' ? Colors.green.shade600 : Theme.of(context).primaryColor)
+                : Colors.grey,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
     );
   }
 
@@ -807,16 +1824,33 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     if (_mainProduct == null) return;
 
     _quoteLevels.clear();
-    final mainLevels = _mainProduct!.availableMainLevels;
 
-    for (var i = 0; i < mainLevels.length; i++) {
-      final mainLevel = mainLevels[i];
+    if (_quoteType == 'multi-level') {
+      // Multi-level logic (existing)
+      final mainLevels = _mainProduct!.availableMainLevels;
 
+      for (var i = 0; i < mainLevels.length; i++) {
+        final mainLevel = mainLevels[i];
+
+        final quoteLevel = QuoteLevel(
+          id: mainLevel.levelId,
+          name: mainLevel.levelName,
+          levelNumber: i + 1,
+          basePrice: mainLevel.price,
+          baseQuantity: _mainQuantity,
+          includedItems: List.from(_addedProducts),
+        );
+
+        quoteLevel.calculateSubtotal();
+        _quoteLevels.add(quoteLevel);
+      }
+    } else {
+      // Single-tier logic (NEW)
       final quoteLevel = QuoteLevel(
-        id: mainLevel.levelId,
-        name: mainLevel.levelName,
-        levelNumber: i + 1,
-        basePrice: mainLevel.price,
+        id: 'single-tier-${DateTime.now().millisecondsSinceEpoch}',
+        name: 'Quote',
+        levelNumber: 1,
+        basePrice: _mainProduct!.unitPrice,
         baseQuantity: _mainQuantity,
         includedItems: List.from(_addedProducts),
       );
@@ -824,6 +1858,28 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
       quoteLevel.calculateSubtotal();
       _quoteLevels.add(quoteLevel);
     }
+  }
+
+  void _switchQuoteType(String newType) {
+    if (_quoteType == newType) return; // No change needed
+
+    setState(() {
+      _quoteType = newType;
+
+      // Reset everything when switching types
+      _mainProduct = null;
+      _quoteLevels.clear();
+      _addedProducts.clear();
+      _quantityController.text = '1.0';
+      _mainQuantity = 1.0;
+
+      // NEW: Reset permits and custom items too
+      _permits.clear();
+      _noPermitsRequired = false;
+      _customLineItems.clear();
+    });
+
+    debugPrint('🔄 Switched to $_quoteType quote type - form reset');
   }
 
   void _updateQuoteLevelsQuantity() {
@@ -850,11 +1906,11 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   void _autoDetectTaxRate(AppStateProvider appState) {
     final customer = widget.customer;
 
-    print('🔍 AUTO-DETECTING TAX RATE FOR:');
-    print('   Customer: ${customer.name}');
-    print('   ZIP: ${customer.zipCode}');
-    print('   State: ${customer.stateAbbreviation}');
-    print('   City: ${customer.city}');
+    debugPrint('🔍 AUTO-DETECTING TAX RATE FOR:');
+    debugPrint('   Customer: ${customer.name}');
+    debugPrint('   ZIP: ${customer.zipCode}');
+    debugPrint('   State: ${customer.stateAbbreviation}');
+    debugPrint('   City: ${customer.city}');
 
     // Try to get tax rate from local database
     final detectedRate = TaxService.getTaxRateByAddress(
@@ -877,7 +1933,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
         source = 'state ${customer.stateAbbreviation}';
       }
 
-      print('✅ TAX RATE DETECTED: ${detectedRate.toStringAsFixed(2)}% from $source');
+      debugPrint('✅ TAX RATE DETECTED: ${detectedRate.toStringAsFixed(2)}% from $source');
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -896,7 +1952,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
           _updateQuoteLevelsQuantity();
         });
 
-        print('📝 USING FALLBACK TAX RATE: ${fallbackRate.toStringAsFixed(2)}%');
+        debugPrint('📝 USING FALLBACK TAX RATE: ${fallbackRate.toStringAsFixed(2)}%');
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -907,7 +1963,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
         );
       } else {
         // No rate found anywhere - prompt user to enter manually
-        print('⚠️ NO TAX RATE FOUND - prompting user');
+        debugPrint('⚠️ NO TAX RATE FOUND - prompting user');
         _showManualTaxRateDialog();
       }
     }
@@ -1042,6 +2098,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   }
 
 // NEW: Load existing quote data for editing
+  // NEW: Load existing quote data for editing
   void _loadExistingQuoteData() {
     if (_editingQuote == null) return;
 
@@ -1049,6 +2106,13 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
     // Load basic quote data
     _taxRate = _editingQuote!.taxRate;
+
+    // Determine quote type based on existing quote structure
+    if (_editingQuote!.levels.length == 1 && _editingQuote!.levels.first.name == 'Quote') {
+      _quoteType = 'single-tier';
+    } else {
+      _quoteType = 'multi-level';
+    }
 
     // Find the main product
     if (_editingQuote!.baseProductId != null) {
@@ -1069,19 +2133,32 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     }
 
     // Load additional products from the first level (they should be the same across all levels)
+    // Load additional products from the first level (they should be the same across all levels)
     _addedProducts.clear();
     if (_quoteLevels.isNotEmpty) {
       _addedProducts.addAll(_quoteLevels.first.includedItems);
     }
 
+// NEW: Load permits and custom line items
+    _permits.clear();
+    _permits.addAll(_editingQuote!.permits);
+    _noPermitsRequired = _editingQuote!.noPermitsRequired;
+
+    _customLineItems.clear();
+    _customLineItems.addAll(_editingQuote!.customLineItems);
+
     setState(() {});
 
-    print('📝 Loaded existing quote data:');
-    print('   Tax Rate: $_taxRate%');
-    print('   Main Product: ${_mainProduct?.name}');
-    print('   Main Quantity: $_mainQuantity');
-    print('   Quote Levels: ${_quoteLevels.length}');
-    print('   Additional Products: ${_addedProducts.length}');
+    debugPrint('📝 Loaded existing quote data:');
+    debugPrint('   Quote Type: $_quoteType');
+    debugPrint('   Tax Rate: $_taxRate%');
+    debugPrint('   Main Product: ${_mainProduct?.name}');
+    debugPrint('   Main Quantity: $_mainQuantity');
+    debugPrint('   Quote Levels: ${_quoteLevels.length}');
+    debugPrint('   Additional Products: ${_addedProducts.length}');
+    debugPrint('   Permits: ${_permits.length}');
+    debugPrint('   No Permits Required: $_noPermitsRequired');
+    debugPrint('   Custom Line Items: ${_customLineItems.length}');
   }
 
   void _showAddProductDialog() {
@@ -1133,6 +2210,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
       if (_isEditMode) {
         // UPDATE existing quote
+        // UPDATE existing quote
         final updatedQuote = _editingQuote!;
         updatedQuote.levels = _quoteLevels.map((level) {
           level.calculateSubtotal();
@@ -1143,6 +2221,9 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
         updatedQuote.baseProductName = _mainProduct!.name;
         updatedQuote.baseProductUnit = _mainProduct!.unit;
         updatedQuote.roofScopeDataId = widget.roofScopeData?.id;
+        updatedQuote.permits = List.from(_permits); // NEW: Update permits
+        updatedQuote.noPermitsRequired = _noPermitsRequired; // NEW: Update permit flag
+        updatedQuote.customLineItems = List.from(_customLineItems); // NEW: Update custom items
         updatedQuote.updatedAt = DateTime.now();
 
         await appState.updateSimplifiedQuote(updatedQuote);
@@ -1150,7 +2231,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Quote ${updatedQuote.quoteNumber} updated with ${_taxRate.toStringAsFixed(2)}% tax!'),
+              content: Text('${_quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${updatedQuote.quoteNumber} updated with ${_taxRate.toStringAsFixed(2)}% tax!'),
               backgroundColor: Colors.green,
             ),
           );
@@ -1167,6 +2248,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
         }
       } else {
         // CREATE new quote
+        // CREATE new quote
         final newQuote = SimplifiedMultiLevelQuote(
           customerId: widget.customer.id,
           roofScopeDataId: widget.roofScopeData?.id,
@@ -1179,6 +2261,9 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
           baseProductId: _mainProduct!.id,
           baseProductName: _mainProduct!.name,
           baseProductUnit: _mainProduct!.unit,
+          permits: List.from(_permits), // NEW: Add permits
+          noPermitsRequired: _noPermitsRequired, // NEW: Add permit flag
+          customLineItems: List.from(_customLineItems), // NEW: Add custom items
         );
 
         await appState.addSimplifiedQuote(newQuote);
@@ -1186,7 +2271,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Quote ${newQuote.quoteNumber} generated with ${_taxRate.toStringAsFixed(2)}% tax!'),
+              content: Text('${_quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${newQuote.quoteNumber} generated with ${_taxRate.toStringAsFixed(2)}% tax!'),
               backgroundColor: Colors.green,
             ),
           );
@@ -1206,7 +2291,9 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isEditMode ? 'Error updating quote: $e' : 'Error generating quote: $e'),
+            content: Text(_isEditMode
+                ? 'Error updating ${_quoteType == 'single-tier' ? 'single-tier' : 'multi-level'} quote: $e'
+                : 'Error generating ${_quoteType == 'single-tier' ? 'single-tier' : 'multi-level'} quote: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -1434,7 +2521,7 @@ class _AddProductDialogState extends State<_AddProductDialog> {
 
     for (final product in products) {
       if (!product.isActive) continue;
-      if (product.pricingType == ProductPricingType.MAIN_DIFFERENTIATOR) continue;
+      if (product.pricingType == ProductPricingType.mainDifferentiator) continue;
 
       final category = product.category;
       grouped.putIfAbsent(category, () => []).add(product);
@@ -1514,5 +2601,277 @@ class _AddProductDialogState extends State<_AddProductDialog> {
         backgroundColor: Colors.green,
       ),
     );
+  }
+
+}// NEW: Permit dialog
+class _PermitDialog extends StatefulWidget {
+  final Function(PermitItem) onPermitAdded;
+
+  const _PermitDialog({required this.onPermitAdded});
+
+  @override
+  State<_PermitDialog> createState() => _PermitDialogState();
+}
+
+class _PermitDialogState extends State<_PermitDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _amountController = TextEditingController();
+  final _descriptionController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.assignment, color: Colors.orange),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Add Permit',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const Divider(),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Permit Name',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.assignment),
+                    ),
+                    validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _amountController,
+                    decoration: const InputDecoration(
+                      labelText: 'Amount',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.attach_money),
+                      prefixText: '\$ ',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (value?.isEmpty == true) return 'Required';
+                      final amount = double.tryParse(value!);
+                      if (amount == null || amount < 0) return 'Enter valid amount';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (Optional)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.description),
+                    ),
+                    maxLines: 2,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _addPermit,
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                    child: const Text('Add Permit'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addPermit() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final permit = PermitItem(
+      name: _nameController.text,
+      amount: double.parse(_amountController.text),
+      description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+    );
+
+    widget.onPermitAdded(permit);
+    Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _amountController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+}
+
+// NEW: Custom item dialog
+class _CustomItemDialog extends StatefulWidget {
+  final Function(CustomLineItem) onItemAdded;
+
+  const _CustomItemDialog({required this.onItemAdded});
+
+  @override
+  State<_CustomItemDialog> createState() => _CustomItemDialogState();
+}
+
+class _CustomItemDialogState extends State<_CustomItemDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _amountController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  bool _isTaxable = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.add_box, color: Colors.purple),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Add Custom Line Item',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const Divider(),
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Item Name',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.label),
+                    ),
+                    validator: (value) => value?.isEmpty == true ? 'Required' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _amountController,
+                    decoration: const InputDecoration(
+                      labelText: 'Amount',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.attach_money),
+                      prefixText: '\$ ',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      if (value?.isEmpty == true) return 'Required';
+                      final amount = double.tryParse(value!);
+                      if (amount == null || amount < 0) return 'Enter valid amount';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _descriptionController,
+                    decoration: const InputDecoration(
+                      labelText: 'Description (Optional)',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.description),
+                    ),
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile(
+                    title: const Text('Taxable Item'),
+                    subtitle: const Text('Include this item in tax calculations'),
+                    value: _isTaxable,
+                    onChanged: (value) => setState(() => _isTaxable = value),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _addCustomItem,
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+                    child: const Text('Add Item'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addCustomItem() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final item = CustomLineItem(
+      name: _nameController.text,
+      amount: double.parse(_amountController.text),
+      description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+      isTaxable: _isTaxable,
+    );
+
+    widget.onItemAdded(item);
+    Navigator.pop(context);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _amountController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 }

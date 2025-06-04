@@ -46,6 +46,9 @@ class Customer extends HiveObject {
 
   @HiveField(12)
   String? zipCode;
+
+  @HiveField(13) // Next available field number
+  Map<String, dynamic> inspectionData;
   // --- END NEW STRUCTURED ADDRESS FIELDS ---
 
   Customer({
@@ -63,7 +66,9 @@ class Customer extends HiveObject {
     this.city,
     this.stateAbbreviation,
     this.zipCode,
+    Map<String, dynamic>? inspectionData,
   })  : communicationHistory = communicationHistory ?? [],
+        inspectionData = inspectionData ?? {},
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now() {
     this.id = id ?? const Uuid().v4();
@@ -213,9 +218,13 @@ class Customer extends HiveObject {
     for (final comm in communicationHistory) {
       if (comm.contains('📞')) {
         stats['calls'] = stats['calls']! + 1;
-      } else if (comm.contains('📧')) stats['emails'] = stats['emails']! + 1;
-      // ... (other stats increments)
-      else if (comm.contains('📝')) stats['notes'] = stats['notes']! + 1;
+      } else if (comm.contains('📧')) {
+        stats['emails'] = stats['emails']! + 1;
+      }
+// ... (other stats increments)
+      else if (comm.contains('📝')) {
+        stats['notes'] = stats['notes']! + 1;
+      }
       if (comm.contains('📅 FOLLOW-UP')) stats['follow_ups'] = stats['follow_ups']! + 1;
     }
     return stats;
@@ -259,7 +268,9 @@ class Customer extends HiveObject {
       'city': city,
       'stateAbbreviation': stateAbbreviation,
       'zipCode': zipCode,
+      'inspectionData': inspectionData,
     };
+
   }
 
   factory Customer.fromMap(Map<String, dynamic> map) {
@@ -276,11 +287,22 @@ class Customer extends HiveObject {
       city: map['city'],
       stateAbbreviation: map['stateAbbreviation'],
       zipCode: map['zipCode'],
+      inspectionData: Map<String, dynamic>.from(map['inspectionData'] ?? {}),
     );
   }
 
   @override
   String toString() {
     return 'Customer(id: $id, name: $name, address: $fullDisplayAddress)';
+  }
+  // Methods to get/set inspection values
+  void setInspectionValue(String fieldName, dynamic value) {
+    inspectionData[fieldName] = value;
+    updatedAt = DateTime.now();
+    if (isInBox) save();
+  }
+
+  dynamic getInspectionValue(String fieldName) {
+    return inspectionData[fieldName];
   }
 }

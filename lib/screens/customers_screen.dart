@@ -372,7 +372,7 @@ class _CustomerFormDialogState extends State<_CustomerFormDialog> {
             Container( // Header
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.05),
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
                 borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
               ),
               child: Row(
@@ -456,7 +456,7 @@ class _CustomerFormDialogState extends State<_CustomerFormDialog> {
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withOpacity(0.7)),
+        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withValues(alpha: 0.7)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5)),
         filled: true,

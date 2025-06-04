@@ -43,6 +43,9 @@ class CustomAppDataField extends HiveObject {
   @HiveField(11)
   DateTime updatedAt;
 
+  @HiveField(12) // Add dropdown options support
+  List<String>? dropdownOptions;
+
   CustomAppDataField({
     String? id,
     required this.fieldName,
@@ -54,6 +57,7 @@ class CustomAppDataField extends HiveObject {
     this.placeholder,
     this.description,
     this.sortOrder = 0,
+    this.dropdownOptions,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -75,6 +79,7 @@ class CustomAppDataField extends HiveObject {
     String? placeholder,
     String? description,
     int? sortOrder,
+    List<String>? dropdownOptions,
   }) {
     if (displayName != null) this.displayName = displayName;
     if (fieldType != null) this.fieldType = fieldType;
@@ -83,6 +88,7 @@ class CustomAppDataField extends HiveObject {
     if (placeholder != null) this.placeholder = placeholder;
     if (description != null) this.description = description;
     if (sortOrder != null) this.sortOrder = sortOrder;
+    if (dropdownOptions != null) this.dropdownOptions = dropdownOptions;
 
     updatedAt = DateTime.now();
     if (isInBox) save();
@@ -100,6 +106,7 @@ class CustomAppDataField extends HiveObject {
       'placeholder': placeholder,
       'description': description,
       'sortOrder': sortOrder,
+      'dropdownOptions': dropdownOptions,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -117,6 +124,9 @@ class CustomAppDataField extends HiveObject {
       placeholder: map['placeholder'],
       description: map['description'],
       sortOrder: map['sortOrder']?.toInt() ?? 0,
+      dropdownOptions: map['dropdownOptions'] != null
+          ? List<String>.from(map['dropdownOptions'])
+          : null,
       createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
     );
@@ -130,6 +140,13 @@ class CustomAppDataField extends HiveObject {
 
 // Predefined field templates for common use cases
 class CustomAppDataTemplates {
+  // Protected categories that cannot be deleted or renamed
+  static const List<String> protectedCategories = ['inspection'];
+
+  static bool isProtectedCategory(String category) {
+    return protectedCategories.contains(category.toLowerCase());
+  }
+
   static List<CustomAppDataField> getCompanyFields() {
     return [
       CustomAppDataField(

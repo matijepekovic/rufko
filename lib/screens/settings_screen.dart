@@ -9,7 +9,6 @@ import 'dart:io';
 import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:image_picker/image_picker.dart';
-import 'custom_app_data_screen.dart';
 import '../providers/app_state_provider.dart';
 import '../services/database_service.dart';
 import '../models/app_settings.dart';
@@ -138,7 +137,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     : 'Set company name, logo, and contact info',
                 onTap: _showCompanyInfoDialog,
                 trailing: settings.companyLogoPath != null
-                    ? Container( // THIS PART REMAINS UNCHANGED
+                    ? Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
@@ -158,17 +157,455 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     : null,
               ),
               _buildDivider(),
+// 🚀 AUTOMATIC TAX LOOKUP
               _buildSettingsTile(
-                icon: Icons.percent,
-                iconColor: Colors.cyan.shade600,
-                title: 'Default Tax Rate',
-                subtitle: 'Current: ${settings.taxRate.toStringAsFixed(2)}%',
-                onTap: _showTaxRateDialog,
+                icon: Icons.auto_awesome,
+                iconColor: Colors.amber.shade600,
+                title: 'Automatic Tax Lookup',
+                subtitle: 'Premium feature - Get accurate tax rates by location',
+                onTap: _showAutomaticTaxInfo,
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.shade300),
+                  ),
+                  child: Text(
+                    'PRO',
+                    style: TextStyle(
+                      color: Colors.amber.shade700,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              _buildDivider(),
+// 🚀 2-WAY COMMUNICATION
+              _buildSettingsTile(
+                icon: Icons.forum,
+                iconColor: Colors.purple.shade600,
+                title: '2-Way Communication',
+                subtitle: 'Premium feature - Real SMS & email with automatic responses',
+                onTap: _showTwoWayCommunicationInfo,
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.purple.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.purple.shade300),
+                  ),
+                  child: Text(
+                    'PRO',
+                    style: TextStyle(
+                      color: Colors.purple.shade700,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              _buildDivider(),
+// 🚀 ORGANIZATION PROFILES
+              _buildSettingsTile(
+                icon: Icons.business_center,
+                iconColor: Colors.teal.shade600,
+                title: 'Organization Profiles',
+                subtitle: 'Premium feature - Multi-tier user management & permissions',
+                onTap: _showOrganizationProfilesInfo,
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.teal.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.teal.shade300),
+                  ),
+                  child: Text(
+                    'PRO',
+                    style: TextStyle(
+                      color: Colors.teal.shade700,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  void _showAutomaticTaxInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.auto_awesome, color: Colors.amber.shade600),
+            ),
+            const SizedBox(width: 12),
+            const Text('Automatic Tax Lookup'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.location_on, color: Colors.amber.shade600, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Premium Feature - Coming Soon',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Text(
+                'Automatic Tax Features:',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              _buildFeatureItem('🗺️', 'Complete Washington State database'),
+              _buildFeatureItem('📍', 'ZIP code specific tax rates'),
+              _buildFeatureItem('🏢', 'City and county tax lookup'),
+              _buildFeatureItem('🔄', 'Regular database updates'),
+              _buildFeatureItem('⚡', 'Instant rate detection'),
+              _buildFeatureItem('📊', 'Tax rate analytics and reporting'),
+
+              const SizedBox(height: 20),
+
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Tax rates will need to be entered manually in quotes until this feature is activated.',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Tax lookup feature coming soon! For now, use manual tax rates.'),
+                  backgroundColor: Colors.amber,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              );
+            },
+            icon: const Icon(Icons.schedule),
+            label: const Text('Coming Soon'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber.shade600,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTwoWayCommunicationInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.purple.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.forum, color: Colors.purple.shade600),
+            ),
+            const SizedBox(width: 12),
+            const Text('2-Way Communication'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.purple.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.purple.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.sync_alt, color: Colors.purple.shade600, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Premium Feature - Coming Soon',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Text(
+                'Real 2-Way Communication Features:',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              _buildFeatureItem('💬', 'Send & receive SMS directly in app'),
+              _buildFeatureItem('📧', 'Full email integration with responses'),
+              _buildFeatureItem('🔄', 'Automatic response capture & logging'),
+              _buildFeatureItem('👁️', 'Read receipts and delivery confirmations'),
+              _buildFeatureItem('🤖', 'Automated follow-up sequences'),
+              _buildFeatureItem('💼', 'Professional business phone numbers'),
+              _buildFeatureItem('📊', 'Communication analytics and tracking'),
+
+              const SizedBox(height: 20),
+
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Currently limited to opening native apps. These communication services are not free for us to provide either, so they require a premium subscription.',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Communication feature coming soon! For now, templates open native apps.'),
+                  backgroundColor: Colors.purple,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              );
+            },
+            icon: const Icon(Icons.schedule),
+            label: const Text('Coming Soon'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple.shade600,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOrganizationProfilesInfo() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.teal.shade100,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(Icons.business_center, color: Colors.teal.shade600),
+            ),
+            const SizedBox(width: 12),
+            const Text('Organization Profiles'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.teal.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.teal.shade200),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.groups, color: Colors.teal.shade600, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Premium Feature - Coming Soon',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.teal.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              Text(
+                'Multi-Tier Organization Features:',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              _buildFeatureItem('👥', 'Multiple user profiles & roles'),
+              _buildFeatureItem('🔐', 'Permission-based access control'),
+              _buildFeatureItem('📊', 'Team performance analytics'),
+              _buildFeatureItem('🏢', 'Department & branch management'),
+              _buildFeatureItem('📝', 'Approval workflows'),
+              _buildFeatureItem('💼', 'Manager oversight & reporting'),
+              _buildFeatureItem('🔄', 'Data sharing between team members'),
+
+              const SizedBox(height: 20),
+
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Perfect for roofing companies with multiple sales teams, estimators, and project managers who need organized collaboration.',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Organization profiles coming soon! Currently single-user only.'),
+                  backgroundColor: Colors.teal,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              );
+            },
+            icon: const Icon(Icons.schedule),
+            label: const Text('Coming Soon'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.teal.shade600,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(String emoji, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -325,7 +762,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: isDestructive ? Colors.red.shade100 : iconColor.withOpacity(0.1),
+                color: isDestructive ? Colors.red.shade100 : iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -912,7 +1349,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       controller: controller,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withOpacity(0.7)),
+        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withValues(alpha: 0.7)),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1007,7 +1444,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           controller: controller,
           decoration: InputDecoration(
             labelText: 'Tax Rate (%)',
-            prefixIcon: Icon(Icons.percent, color: Theme.of(context).primaryColor.withOpacity(0.7)),
+            prefixIcon: Icon(Icons.percent, color: Theme.of(context).primaryColor.withValues(alpha: 0.7)),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),

@@ -98,7 +98,7 @@ class SimplePdfEditingService {
   }) async {
     try {
       if (kDebugMode) {
-        print('🔥 Starting PDF save with ${formFieldValues.length} form field changes');
+        debugPrint('🔥 Starting PDF save with ${formFieldValues.length} form field changes');
       }
 
       // Read original PDF
@@ -127,14 +127,14 @@ class SimplePdfEditingService {
       await outputFile.writeAsBytes(savedBytes);
 
       if (kDebugMode) {
-        print('✅ Edited PDF saved: ${outputFile.path}');
-        print('📊 File size: ${(savedBytes.length / 1024).toStringAsFixed(1)} KB');
+        debugPrint('✅ Edited PDF saved: ${outputFile.path}');
+        debugPrint('📊 File size: ${(savedBytes.length / 1024).toStringAsFixed(1)} KB');
       }
 
       return outputFile.path;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error saving edited PDF: $e');
+        debugPrint('❌ Error saving edited PDF: $e');
       }
       rethrow;
     }
@@ -147,7 +147,7 @@ class SimplePdfEditingService {
       ) async {
     try {
       if (document.form.fields.count == 0) {
-        if (kDebugMode) print('⚠️ No form fields found in PDF');
+        if (kDebugMode) debugPrint('⚠️ No form fields found in PDF');
         return;
       }
 
@@ -185,17 +185,17 @@ class SimplePdfEditingService {
           }
 
           if (kDebugMode) {
-            print('🔧 Updated form field "$fieldName" = "$newValue"');
+            debugPrint('🔧 Updated form field "$fieldName" = "$newValue"');
           }
         }
       }
 
       if (kDebugMode) {
-        print('✅ Updated $updatedFields form fields');
+        debugPrint('✅ Updated $updatedFields form fields');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error updating form fields: $e');
+        debugPrint('❌ Error updating form fields: $e');
       }
       rethrow;
     }
@@ -227,13 +227,13 @@ class SimplePdfEditingService {
       );
 
       if (kDebugMode) {
-        print('📎 Created ProjectMedia entry: $fileName (${projectMedia.formattedFileSize})');
+        debugPrint('📎 Created ProjectMedia entry: $fileName (${projectMedia.formattedFileSize})');
       }
 
       return projectMedia;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error creating ProjectMedia entry: $e');
+        debugPrint('❌ Error creating ProjectMedia entry: $e');
       }
       rethrow;
     }
@@ -268,13 +268,13 @@ class SimplePdfEditingService {
       document.dispose();
 
       if (kDebugMode) {
-        print('📋 Extracted ${formFieldValues.length} form field values');
+        debugPrint('📋 Extracted ${formFieldValues.length} form field values');
       }
 
       return formFieldValues;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error extracting form field values: $e');
+        debugPrint('❌ Error extracting form field values: $e');
       }
       return {};
     }
@@ -328,13 +328,13 @@ class SimplePdfEditingService {
       document.dispose();
 
       if (kDebugMode) {
-        print('📋 Found ${formFields.length} form fields');
+        debugPrint('📋 Found ${formFields.length} form fields');
       }
 
       return formFields;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error getting form field info: $e');
+        debugPrint('❌ Error getting form field info: $e');
       }
       return [];
     }
@@ -356,13 +356,13 @@ class SimplePdfEditingService {
       document.dispose();
 
       if (kDebugMode) {
-        print('📄 PDF validation - Valid: $isValid, Has form fields: $hasFormFields');
+        debugPrint('📄 PDF validation - Valid: $isValid, Has form fields: $hasFormFields');
       }
 
       return isValid;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ PDF validation failed: $e');
+        debugPrint('❌ PDF validation failed: $e');
       }
       return false;
     }
@@ -395,7 +395,7 @@ class SimplePdfEditingService {
       return info;
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Error getting PDF info: $e');
+        debugPrint('❌ Error getting PDF info: $e');
       }
       return {};
     }

@@ -30,13 +30,14 @@ class PDFTemplateAdapter extends TypeAdapter<PDFTemplate> {
       createdAt: fields[10] as DateTime?,
       updatedAt: fields[11] as DateTime?,
       metadata: (fields[12] as Map?)?.cast<String, dynamic>(),
+      userCategoryKey: fields[13] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, PDFTemplate obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -62,7 +63,9 @@ class PDFTemplateAdapter extends TypeAdapter<PDFTemplate> {
       ..writeByte(11)
       ..write(obj.updatedAt)
       ..writeByte(12)
-      ..write(obj.metadata);
+      ..write(obj.metadata)
+      ..writeByte(13)
+      ..write(obj.userCategoryKey);
   }
 
   @override

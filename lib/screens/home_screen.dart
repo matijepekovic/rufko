@@ -35,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     const BottomNavigationBarItem(icon: Icon(Icons.description), label: 'Quotes'),
     const BottomNavigationBarItem(icon: Icon(Icons.inventory), label: 'Products'),
     const BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: 'Templates'),
-    const BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
   ];
 
   @override
@@ -86,7 +85,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           const QuotesScreen(),
           const ProductsScreen(),
           const TemplatesScreen(),
-          const SettingsScreen(),
         ],
       ),
       bottomNavigationBar: Container(
@@ -94,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -136,11 +134,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildStatsOverview(appState),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
                         _buildRecentCustomers(appState),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
                         _buildRecentActivity(appState),
-                        const SizedBox(height: 100),
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
@@ -198,8 +196,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             child: Image.asset(
                               'assets/images/logo/rufko_full_logo.png',
                               fit: BoxFit.cover,
+                              cacheWidth: 315,
+                              cacheHeight: 315,
                               errorBuilder: (context, error, stackTrace) {
-                                print('Logo load error: $error');
+                                debugPrint('Logo load error: $error');
                                 return Container(
                                   decoration: BoxDecoration(
                                     color: Colors.white,
@@ -221,7 +221,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               Text(
                                 'Total Revenue',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Colors.white.withValues(alpha: 0.9),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -238,7 +238,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               Text(
                                 'Active Quotes',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Colors.white.withValues(alpha: 0.9),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -265,44 +265,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       actions: [
         IconButton(
-          onPressed: () => appState.loadAllData(),
-          icon: const Icon(Icons.refresh),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SettingsScreen()),
+          ),
+          icon: const Icon(Icons.settings),
           color: Colors.white,
         ),
       ],
     );
   }
 
-  Widget _buildHeaderStat(String label, String value, IconData icon) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: Colors.white.withOpacity(0.8), size: 18),
-        const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
 
   Widget _buildLoadingState(String message) {
     return Center(
@@ -338,43 +311,50 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
         const SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.5,
-          children: [
-            _buildStatsCard(
-              'Total Customers',
-              '${stats['totalCustomers'] ?? 0}',
-              Icons.people,
-              Colors.blue.shade600,
-                  () => _navigateToTab(1),
-            ),
-            _buildStatsCard(
-              'Total Quotes',
-              '${stats['totalQuotes'] ?? 0}',
-              Icons.description,
-              Colors.green.shade600,
-                  () => _navigateToTab(2),
-            ),
-            _buildStatsCard(
-              'Active Products',
-              '${stats['totalProducts'] ?? 0}',
-              Icons.inventory,
-              Colors.purple.shade600,
-                  () => _navigateToTab(3),
-            ),
-            _buildStatsCard(
-              'Monthly Revenue',
-              NumberFormat.compactCurrency(symbol: r'$').format(stats['monthlyRevenue'] ?? 0.0),
-              Icons.trending_up,
-              Colors.orange.shade600,
-              null,
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cardWidth = (constraints.maxWidth - 16) / 2;
+            final aspectRatio = cardWidth > 160 ? 1.8 : 2.2;
+            return GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: aspectRatio,
+              padding: EdgeInsets.zero,
+              children: [
+                _buildStatsCard(
+                  'Total Customers',
+                  '${stats['totalCustomers'] ?? 0}',
+                  Icons.people,
+                  Colors.blue.shade600,
+                      () => _navigateToTab(1),
+                ),
+                _buildStatsCard(
+                  'Total Quotes',
+                  '${stats['totalQuotes'] ?? 0}',
+                  Icons.description,
+                  Colors.green.shade600,
+                      () => _navigateToTab(2),
+                ),
+                _buildStatsCard(
+                  'Active Products',
+                  '${stats['totalProducts'] ?? 0}',
+                  Icons.inventory,
+                  Colors.purple.shade600,
+                      () => _navigateToTab(3),
+                ),
+                _buildStatsCard(
+                  'Monthly Revenue',
+                  NumberFormat.compactCurrency(symbol: r'$').format(stats['monthlyRevenue'] ?? 0.0),
+                  Icons.trending_up,
+                  Colors.orange.shade600,
+                  null,
+                ),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -391,42 +371,61 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+              Flexible(
+                flex: 1,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(icon, color: color, size: 24),
                     ),
-                    child: Icon(icon, color: color, size: 24),
-                  ),
-                  if (onTap != null)
-                    Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
-                ],
+                    if (onTap != null)
+                      Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+                  ],
+                ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+              Flexible(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          value,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -434,7 +433,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
     );
   }
-
   Widget _buildRecentCustomers(AppStateProvider appState) {
     final recentCustomers = [...appState.customers]
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -480,7 +478,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildCustomerListItem(Customer customer, int quoteCount) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: const Color(0xFF2E86AB).withOpacity(0.1),
+        backgroundColor: const Color(0xFF2E86AB).withValues(alpha: 0.1),
         child: Text(
           customer.name.isNotEmpty ? customer.name[0].toUpperCase() : 'C',
           style: const TextStyle(
@@ -650,7 +648,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: _getStatusColor(quote.status).withOpacity(0.1),
+          color: _getStatusColor(quote.status).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
@@ -915,7 +913,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: color),

@@ -3,7 +3,7 @@
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 import 'quote.dart'; // For QuoteItem
-
+import 'quote_extras.dart';
 part 'simplified_quote.g.dart';
 
 // NEW: Discount/Voucher model
@@ -99,6 +99,10 @@ class QuoteDiscount extends HiveObject {
     return 'QuoteDiscount(type: $type, value: $value, code: $code)';
   }
 }
+
+
+
+
 
 @HiveType(typeId: 9) // Keep existing type ID
 class QuoteLevel extends HiveObject {
@@ -263,6 +267,10 @@ class SimplifiedMultiLevelQuote extends HiveObject {
   @HiveField(20)
   DateTime? pdfGeneratedAt; // When the PDF was last generated
 
+  List<PermitItem> permits = [];
+  bool noPermitsRequired = false;
+  List<CustomLineItem> customLineItems = [];
+
   SimplifiedMultiLevelQuote({
     String? id,
     required this.customerId,
@@ -285,10 +293,15 @@ class SimplifiedMultiLevelQuote extends HiveObject {
     this.pdfPath, // NEW
     this.pdfTemplateId, // NEW
     this.pdfGeneratedAt, // NEW
+    List<PermitItem>? permits, // NEW
+    this.noPermitsRequired = false, // NEW
+    List<CustomLineItem>? customLineItems, // NEW
   })  : levels = levels ?? [],
         addons = addons ?? [],
         discounts = discounts ?? [], // NEW
         nonDiscountableProductIds = nonDiscountableProductIds ?? [], // NEW
+        permits = permits ?? [], // NEW
+        customLineItems = customLineItems ?? [], // NEW
         createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now() {
     this.id = id ?? const Uuid().v4();
@@ -416,6 +429,9 @@ class SimplifiedMultiLevelQuote extends HiveObject {
       'baseProductUnit': baseProductUnit,
       'discounts': discounts.map((d) => d.toMap()).toList(), // NEW
       'nonDiscountableProductIds': nonDiscountableProductIds, // NEW
+      'permits': permits.map((p) => p.toMap()).toList(), // NEW
+      'noPermitsRequired': noPermitsRequired, // NEW
+      'customLineItems': customLineItems.map((c) => c.toMap()).toList(), // NEW
     };
   }
 
@@ -448,6 +464,15 @@ class SimplifiedMultiLevelQuote extends HiveObject {
           .toList() ??
           [], // NEW
       nonDiscountableProductIds: List<String>.from(map['nonDiscountableProductIds'] ?? []), // NEW
+      permits: (map['permits'] as List<dynamic>?)
+          ?.map((permitData) => PermitItem.fromMap(permitData as Map<String, dynamic>))
+          .toList() ??
+          [], // NEW
+      noPermitsRequired: map['noPermitsRequired'] ?? false, // NEW
+      customLineItems: (map['customLineItems'] as List<dynamic>?)
+          ?.map((customData) => CustomLineItem.fromMap(customData as Map<String, dynamic>))
+          .toList() ??
+          [], // NEW
     );
   }
 

@@ -1,7 +1,6 @@
 // lib/screens/email_template_editor_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/email_template.dart';
 import '../providers/app_state_provider.dart';
@@ -27,45 +26,18 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
   final _subjectController = TextEditingController();
   final _emailContentController = TextEditingController();
 
-  String _selectedCategory = 'quote_emails';
+  String? _selectedCategoryKey;
   bool _isActive = true;
   bool _isHtml = false;
   List<String> _detectedPlaceholders = [];
-
-  final List<String> _categories = [
-    'quote_emails',
-    'contract_emails',
-    'invoice_emails',
-    'follow_up_emails',
-    'appointment_emails',
-    'marketing_newsletter',
-  ];
-
-  final Map<String, String> _categoryNames = {
-    'quote_emails': 'Quote Emails',
-    'contract_emails': 'Contract Emails',
-    'invoice_emails': 'Invoice Emails',
-    'follow_up_emails': 'Follow-up Emails',
-    'appointment_emails': 'Appointment Emails',
-    'marketing_newsletter': 'Marketing/Newsletter',
-  };
-
-  final Map<String, IconData> _categoryIcons = {
-    'quote_emails': Icons.email,
-    'contract_emails': Icons.assignment,
-    'invoice_emails': Icons.receipt,
-    'follow_up_emails': Icons.reply,
-    'appointment_emails': Icons.event,
-    'marketing_newsletter': Icons.campaign,
-  };
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _selectedCategoryKey = widget.existingTemplate?.userCategoryKey ?? widget.initialCategory;
     if (widget.existingTemplate != null) {
       _loadExistingTemplate();
-    } else if (widget.initialCategory != null) {
-      _selectedCategory = widget.initialCategory!;
     }
     _subjectController.addListener(_onContentChanged);
     _emailContentController.addListener(_onContentChanged);
@@ -86,10 +58,11 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
     _descriptionController.text = template.description;
     _subjectController.text = template.subject;
     _emailContentController.text = template.emailContent;
-    _selectedCategory = template.category;
+    _selectedCategoryKey = template.userCategoryKey;
     _isActive = template.isActive;
     _isHtml = template.isHtml;
     _detectedPlaceholders = List.from(template.placeholders);
+    debugPrint('📝 Loaded existing email template: ${template.templateName}');
   }
 
   void _onContentChanged() {
@@ -141,7 +114,7 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
                     _buildPlaceholdersSection(),
                     const SizedBox(height: 24),
                     _buildPreviewSection(),
-                    const SizedBox(height: 100), // Extra space for FAB
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
@@ -150,10 +123,19 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _saveTemplate,
-        icon: const Icon(Icons.save),
+        onPressed: _isLoading ? null : _saveTemplate,
+        icon: _isLoading
+            ? const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        )
+            : const Icon(Icons.save),
         label: Text(isEditing ? 'Update Template' : 'Create Template'),
-        backgroundColor: Colors.orange,
+        backgroundColor: _isLoading ? Colors.grey : Colors.orange,
       ),
     );
   }
@@ -180,7 +162,6 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Template Name
             TextFormField(
               controller: _templateNameController,
               decoration: const InputDecoration(
@@ -198,36 +179,65 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Category
-            DropdownButtonFormField<String>(
-              value: _selectedCategory,
-              decoration: const InputDecoration(
-                labelText: 'Category *',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.category),
-              ),
-              items: _categories.map((category) {
-                return DropdownMenuItem(
-                  value: category,
-                  child: Row(
-                    children: [
-                      Icon(_categoryIcons[category], size: 18),
-                      const SizedBox(width: 8),
-                      Text(_categoryNames[category] ?? category),
-                    ],
+            FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
+              future: context.read<AppStateProvider>().getAllTemplateCategories(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: const LinearProgressIndicator(),
+                  );
+                }
+
+                if (!snapshot.hasData) {
+                  return const SizedBox.shrink();
+                }
+
+                final allCategories = snapshot.data!;
+                final emailCategories = allCategories['email_templates'] ?? [];
+
+                return DropdownButtonFormField<String>(
+                  value: _selectedCategoryKey,
+                  decoration: const InputDecoration(
+                    labelText: 'Email Category',
+                    hintText: 'Select a category (optional)',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.category),
                   ),
+                  items: [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      child: Row(
+                        children: [
+                          Icon(Icons.clear, size: 18),
+                          SizedBox(width: 8),
+                          Text('No Category'),
+                        ],
+                      ),
+                    ),
+                    ...emailCategories.map<DropdownMenuItem<String>>((category) {
+                      return DropdownMenuItem<String>(
+                        value: category['key'] as String,
+                        child: Row(
+                          children: [
+                            Icon(Icons.email, size: 18),
+                            SizedBox(width: 8),
+                            Text(category['name'] as String),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedCategoryKey = newValue;
+                    });
+                  },
                 );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedCategory = value!;
-                });
               },
-              validator: (value) => value == null ? 'Please select a category' : null,
             ),
             const SizedBox(height: 16),
 
-            // Description
             TextFormField(
               controller: _descriptionController,
               decoration: const InputDecoration(
@@ -240,7 +250,6 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Active and HTML toggles
             Row(
               children: [
                 Expanded(
@@ -398,7 +407,6 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
             ),
             const SizedBox(height: 8),
 
-            // Character count and format info
             Row(
               children: [
                 Icon(
@@ -602,7 +610,8 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
     final template = EmailTemplate(
       templateName: 'Preview',
       description: '',
-      category: _selectedCategory,
+      category: _selectedCategoryKey ?? 'uncategorized',
+      userCategoryKey: _selectedCategoryKey,
       subject: _subjectController.text,
       emailContent: _emailContentController.text,
       placeholders: _detectedPlaceholders,
@@ -616,25 +625,21 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
     final now = DateTime.now();
     final sampleData = <String, String>{};
 
-    // Customer sample data
     sampleData['customerName'] = 'John Smith';
     sampleData['customerPhone'] = '(555) 123-4567';
     sampleData['customerEmail'] = 'john.smith@email.com';
     sampleData['customerFullAddress'] = '123 Main Street, Seattle, WA 98101';
 
-    // Company data from app settings
     final appSettings = appState.appSettings;
     sampleData['companyName'] = appSettings?.companyName ?? 'Your Roofing Company';
     sampleData['companyPhone'] = appSettings?.companyPhone ?? '(555) 987-6543';
     sampleData['companyEmail'] = appSettings?.companyEmail ?? 'info@yourcompany.com';
 
-    // Quote sample data
     sampleData['quoteNumber'] = 'Q-${now.year}-001';
     sampleData['quoteDate'] = '${now.month}/${now.day}/${now.year}';
     sampleData['quoteStatus'] = 'READY';
     sampleData['grandTotal'] = '\$13,508.25';
 
-    // Custom app data fields
     for (final field in appState.customAppDataFields) {
       final fieldName = field.fieldName;
       final currentValue = field.currentValue;
@@ -797,7 +802,6 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
   }
 
   void _insertPlaceholder(String placeholder, String targetField) {
-    // Choose controller based on targetField
     final targetController = targetField == 'subject' ? _subjectController : _emailContentController;
 
     final currentPosition = targetController.selection.baseOffset;
@@ -808,13 +812,11 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
     int newCursorPosition;
 
     if (currentPosition >= 0) {
-      // Insert at cursor position
       newText = currentText.substring(0, currentPosition) +
           placeholderText +
           currentText.substring(currentPosition);
       newCursorPosition = currentPosition + placeholderText.length;
     } else {
-      // Append to end
       newText = currentText + placeholderText;
       newCursorPosition = newText.length;
     }
@@ -873,20 +875,26 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
     );
   }
 
-  void _saveTemplate() async {
+  Future<void> _saveTemplate() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       final appState = context.read<AppStateProvider>();
 
       if (widget.existingTemplate != null) {
-        // Update existing template
+        debugPrint('💾 Updating existing email template: ${widget.existingTemplate!.id}');
+
         final updatedTemplate = widget.existingTemplate!.copyWith(
           templateName: _templateNameController.text.trim(),
           description: _descriptionController.text.trim(),
-          category: _selectedCategory,
+          category: _selectedCategoryKey ?? 'uncategorized',
+          userCategoryKey: _selectedCategoryKey,
           subject: _subjectController.text.trim(),
           emailContent: _emailContentController.text.trim(),
           placeholders: _detectedPlaceholders,
@@ -896,6 +904,7 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
         );
 
         await appState.updateEmailTemplate(updatedTemplate);
+        debugPrint('✅ Email template updated successfully');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -904,22 +913,24 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
               backgroundColor: Colors.orange,
             ),
           );
-          Navigator.pop(context);
+          Navigator.pop(context, true); // Return true to indicate success
         }
       } else {
-        // Create new template
+        debugPrint('🆕 Creating new email template');
+
         final newTemplate = EmailTemplate(
           templateName: _templateNameController.text.trim(),
           description: _descriptionController.text.trim(),
-          category: _selectedCategory,
+          category: _selectedCategoryKey ?? 'uncategorized',
+          userCategoryKey: _selectedCategoryKey,
           subject: _subjectController.text.trim(),
           emailContent: _emailContentController.text.trim(),
           placeholders: _detectedPlaceholders,
           isActive: _isActive,
           isHtml: _isHtml,
         );
-
         await appState.addEmailTemplate(newTemplate);
+        debugPrint('✅ Email template created successfully');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -928,10 +939,12 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
               backgroundColor: Colors.orange,
             ),
           );
-          Navigator.pop(context);
+          Navigator.pop(context, true); // Return true to indicate success
         }
       }
     } catch (e) {
+      debugPrint('❌ Error saving email template: $e');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -939,6 +952,12 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }

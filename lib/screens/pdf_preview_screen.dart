@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
@@ -15,7 +16,7 @@ import '../models/simplified_quote.dart';
 import '../models/customer.dart';
 import '../models/project_media.dart';
 import 'package:intl/intl.dart';
-
+import 'package:share_plus/share_plus.dart';
 // Model for form fields
 class PDFFormField {
   final String name;
@@ -155,11 +156,11 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
     setState(() => _isLoadingFields = true);
 
     try {
-      print('🔍 Loading form fields from: $_currentPdfPath');
+      debugPrint('🔍 Loading form fields from: $_currentPdfPath');
 
       final file = File(_currentPdfPath);
       if (!await file.exists()) {
-        print('❌ PDF file does not exist');
+        debugPrint('❌ PDF file does not exist');
         return;
       }
 
@@ -168,8 +169,8 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
       final List<PDFFormField> fields = [];
 
-      print('📄 PDF loaded, checking for form fields...');
-      print('📊 Form fields count: ${document.form.fields.count}');
+      debugPrint('📄 PDF loaded, checking for form fields...');
+      debugPrint('📊 Form fields count: ${document.form.fields.count}');
 
       // Extract form fields using Syncfusion PDF
       if (document.form.fields.count > 0) {
@@ -177,7 +178,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
           final field = document.form.fields[i];
           final fieldName = field.name ?? 'field_$i';
 
-          print('🔍 Processing field $i: "$fieldName" (${field.runtimeType})');
+          debugPrint('🔍 Processing field $i: "$fieldName" (${field.runtimeType})');
 
           // Get field bounds (this is approximate - exact positioning needs more work)
           final bounds = Rect.fromLTWH(
@@ -194,16 +195,16 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
           // Determine field type and get current value
           if (field is sf_pdf.PdfTextBoxField) {
             fieldType = 'text';
-            currentValue = field.text ?? '';
-            print('   📝 Text field: "$currentValue"');
+            currentValue = field.text;
+            debugPrint('   📝 Text field: "$currentValue"');
           } else if (field is sf_pdf.PdfComboBoxField) {
             fieldType = 'dropdown';
-            currentValue = field.selectedValue ?? '';
+            currentValue = field.selectedValue;
             options = [];
             for (int j = 0; j < field.items.count; j++) {
               options.add(field.items[j].text);
             }
-            print('   📋 Dropdown field: "$currentValue" (${options.length} options)');
+            debugPrint('   📋 Dropdown field: "$currentValue" (${options.length} options)');
           } else if (field is sf_pdf.PdfListBoxField) {
             fieldType = 'listbox';
             currentValue = field.selectedValues.isNotEmpty ? field.selectedValues.first : '';
@@ -211,21 +212,21 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
             for (int j = 0; j < field.items.count; j++) {
               options.add(field.items[j].text);
             }
-            print('   📋 Listbox field: "$currentValue" (${options.length} options)');
+            debugPrint('   📋 Listbox field: "$currentValue" (${options.length} options)');
           } else if (field is sf_pdf.PdfCheckBoxField) {
             fieldType = 'checkbox';
             currentValue = field.isChecked ? 'true' : 'false';
-            print('   ☑️ Checkbox field: $currentValue');
+            debugPrint('   ☑️ Checkbox field: $currentValue');
           } else if (field is sf_pdf.PdfRadioButtonListField) {
             fieldType = 'radio';
-            currentValue = field.selectedValue ?? '';
+            currentValue = field.selectedValue;
             options = [];
             for (int j = 0; j < field.items.count; j++) {
               options.add(field.items[j].value);
             }
-            print('   🔘 Radio field: "$currentValue" (${options.length} options)');
+            debugPrint('   🔘 Radio field: "$currentValue" (${options.length} options)');
           } else {
-            print('   ❓ Unknown field type: ${field.runtimeType}');
+            debugPrint('   ❓ Unknown field type: ${field.runtimeType}');
           }
 
           fields.add(PDFFormField(
@@ -239,7 +240,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
           ));
         }
       } else {
-        print('⚠️ No form fields found in PDF');
+        debugPrint('⚠️ No form fields found in PDF');
       }
 
       document.dispose();
@@ -248,14 +249,14 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
         _formFields = fields;
       });
 
-      print('✅ Loaded ${fields.length} form fields:');
+      debugPrint('✅ Loaded ${fields.length} form fields:');
       for (final field in fields) {
-        print('   - "${field.name}" (${field.type}) = "${field.currentValue}"');
+        debugPrint('   - "${field.name}" (${field.type}) = "${field.currentValue}"');
       }
 
     } catch (e) {
-      print('❌ Error loading form fields: $e');
-      print('📍 Stack trace: ${StackTrace.current}');
+      debugPrint('❌ Error loading form fields: $e');
+      debugPrint('📍 Stack trace: ${StackTrace.current}');
     } finally {
       setState(() => _isLoadingFields = false);
     }
@@ -288,7 +289,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
     setState(() => _hasEdits = true);
 
-    print('📝 Edit: ${action.fieldName} "${action.oldValue}" → "${action.newValue}"');
+    debugPrint('📝 Edit: ${action.fieldName} "${action.oldValue}" → "${action.newValue}"');
   }
 
   // Undo last edit
@@ -303,7 +304,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
       _hasEdits = _editedValues.values.any((v) => v.isNotEmpty);
     });
 
-    print('↶ Undo: ${action.fieldName} → "${action.oldValue}"');
+    debugPrint('↶ Undo: ${action.fieldName} → "${action.oldValue}"');
   }
 
   // Redo last undone edit
@@ -316,19 +317,19 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
     setState(() => _hasEdits = true);
 
-    print('↷ Redo: ${action.fieldName} → "${action.newValue}"');
+    debugPrint('↷ Redo: ${action.fieldName} → "${action.newValue}"');
   }
 
   // Handle form field tap
   void _onFormFieldTapped(PDFFormField field) {
-    print('👆 Form field tapped: "${field.name}" (${field.type})');
-    print('📝 Current value: "${field.currentValue}"');
-    print('🔍 Existing edit: "${_editedValues[field.name] ?? 'none'}"');
+    debugPrint('👆 Form field tapped: "${field.name}" (${field.type})');
+    debugPrint('📝 Current value: "${field.currentValue}"');
+    debugPrint('🔍 Existing edit: "${_editedValues[field.name] ?? 'none'}"');
 
     setState(() => _selectedField = field);
 
     final currentValue = _editedValues[field.name] ?? field.currentValue;
-    print('💡 Opening edit dialog with value: "$currentValue"');
+    debugPrint('💡 Opening edit dialog with value: "$currentValue"');
 
     _showFieldEditDialog(field, currentValue);
   }
@@ -339,7 +340,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
     String selectedValue = currentValue;
     bool isChecked = currentValue.toLowerCase() == 'true';
 
-    print('🔧 Opening edit dialog for: "${field.name}" (${field.type}) = "$currentValue"');
+    debugPrint('🔧 Opening edit dialog for: "${field.name}" (${field.type}) = "$currentValue"');
 
     Widget content;
 
@@ -356,7 +357,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                 value: isChecked,
                 onChanged: (value) {
                   setDialogState(() => isChecked = value ?? false);
-                  print('🔄 Checkbox changed to: $isChecked');
+                  debugPrint('🔄 Checkbox changed to: $isChecked');
                 },
               ),
             ],
@@ -379,7 +380,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                   groupValue: selectedValue,
                   onChanged: (value) {
                     setDialogState(() => selectedValue = value ?? '');
-                    print('🔄 Selection changed to: $selectedValue');
+                    debugPrint('🔄 Selection changed to: $selectedValue');
                   },
                 ))
               else
@@ -391,7 +392,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                   ),
                   onChanged: (value) {
                     selectedValue = value;
-                    print('🔄 Text changed to: $selectedValue');
+                    debugPrint('🔄 Text changed to: $selectedValue');
                   },
                 ),
             ],
@@ -413,7 +414,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                   groupValue: selectedValue,
                   onChanged: (value) {
                     setDialogState(() => selectedValue = value ?? '');
-                    print('🔄 Radio changed to: $selectedValue');
+                    debugPrint('🔄 Radio changed to: $selectedValue');
                   },
                 ))
               else
@@ -425,7 +426,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                   ),
                   onChanged: (value) {
                     selectedValue = value;
-                    print('🔄 Text changed to: $selectedValue');
+                    debugPrint('🔄 Text changed to: $selectedValue');
                   },
                 ),
             ],
@@ -449,7 +450,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
               maxLines: field.name.toLowerCase().contains('note') ? 3 : 1,
               autofocus: true,
               onChanged: (value) {
-                print('🔄 Text field changed to: "$value"');
+                debugPrint('🔄 Text field changed to: "$value"');
               },
             ),
           ],
@@ -465,7 +466,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              print('❌ Edit cancelled for: ${field.name}');
+              debugPrint('❌ Edit cancelled for: ${field.name}');
               Navigator.pop(context);
             },
             child: const Text('Cancel'),
@@ -489,18 +490,18 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                   break;
               }
 
-              print('💾 Saving field edit: "${field.name}" = "$newValue" (was "$currentValue")');
+              debugPrint('💾 Saving field edit: "${field.name}" = "$newValue" (was "$currentValue")');
 
               final oldValue = _editedValues[field.name] ?? field.currentValue;
               if (newValue != oldValue) {
                 _addEditAction(field.name, oldValue, newValue);
                 setState(() {
                   _editedValues[field.name] = newValue;
-                  print('✅ Edit saved to memory: ${_editedValues.length} total edits');
-                  print('📝 All edits: ${_editedValues.keys.join(', ')}');
+                  debugPrint('✅ Edit saved to memory: ${_editedValues.length} total edits');
+                  debugPrint('📝 All edits: ${_editedValues.keys.join(', ')}');
                 });
               } else {
-                print('⚠️ No change detected, not saving');
+                debugPrint('⚠️ No change detected, not saving');
               }
 
               Navigator.pop(context);
@@ -526,7 +527,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
           .map((mapping) => mapping.appDataType)
           .toList();
 
-      print('🔍 Found ${_editableFields.length} editable template fields');
+      debugPrint('🔍 Found ${_editableFields.length} editable template fields');
     }
   }
 
@@ -637,6 +638,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -668,76 +670,33 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
             onPressed: _currentHistoryIndex < _editHistory.length - 1 ? _redoEdit : null,
             tooltip: 'Redo',
           ),
-          // Toggle field overlays
           IconButton(
-            icon: Icon(_showFieldOverlays ? Icons.visibility_off : Icons.visibility),
-            onPressed: () {
-              setState(() => _showFieldOverlays = !_showFieldOverlays);
-            },
-            tooltip: _showFieldOverlays ? 'Hide Form Fields' : 'Show Form Fields',
+            icon: const Icon(Icons.close),
+            onPressed: _discardPdf,
+            tooltip: 'Discard PDF',
           ),
+          // Share button
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: _sharePdf,
             tooltip: 'Share PDF',
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
-            onSelected: _handleMenuAction,
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'zoom_fit',
-                child: Row(
-                  children: [
-                    Icon(Icons.fit_screen, size: 18),
-                    SizedBox(width: 8),
-                    Text('Fit to Screen'),
-                  ],
-                ),
+          // Save button
+          IconButton(
+            icon: _isSaving
+                ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
               ),
-              const PopupMenuItem(
-                value: 'zoom_width',
-                child: Row(
-                  children: [
-                    Icon(Icons.fit_screen_outlined, size: 18),
-                    SizedBox(width: 8),
-                    Text('Fit Width'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'reload_fields',
-                child: Row(
-                  children: [
-                    Icon(Icons.refresh, size: 18),
-                    SizedBox(width: 8),
-                    Text('Reload Form Fields'),
-                  ],
-                ),
-              ),
-              if (widget.templateId != null && widget.quote != null && widget.customer != null)
-                const PopupMenuItem(
-                  value: 'regenerate',
-                  child: Row(
-                    children: [
-                      Icon(Icons.refresh, size: 18),
-                      SizedBox(width: 8),
-                      Text('Regenerate from Template'),
-                    ],
-                  ),
-                ),
-              const PopupMenuItem(
-                value: 'open_external',
-                child: Row(
-                  children: [
-                    Icon(Icons.open_in_new, size: 18),
-                    SizedBox(width: 8),
-                    Text('Open Externally'),
-                  ],
-                ),
-              ),
-            ],
+            )
+                : const Icon(Icons.save),
+            onPressed: _isSaving ? null : _savePdf,
+            tooltip: 'Save PDF',
           ),
+          // Discard button
         ],
       ),
       body: Column(
@@ -796,7 +755,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
             ),
           ),
 
-          // PDF Viewer with Overlays
+          // PDF Viewer - Takes all remaining space
           Expanded(
             child: Container(
               key: _pdfViewerContainerKey,
@@ -804,7 +763,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -815,22 +774,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                 child: _buildPdfViewerWithOverlays(),
               ),
             ),
-          ),
-
-          // Action Buttons
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: _buildActionButtons(),
           ),
         ],
       ),
@@ -883,11 +826,11 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
           enableTextSelection: true,
           onFormFieldValueChanged: (PdfFormFieldValueChangedDetails details) {
             // Direct field mapping like template system
-            final fieldName = details.formField.name ?? '';
+            final fieldName = details.formField.name;
             final newValue = details.newValue?.toString() ?? '';
             final oldValue = details.oldValue?.toString() ?? '';
 
-            print('📝 Direct field edit: "$fieldName" = "$newValue"');
+            debugPrint('📝 Direct field edit: "$fieldName" = "$newValue"');
 
             setState(() {
               _editedValues[fieldName] = newValue;
@@ -898,12 +841,12 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
           },
           onDocumentLoaded: (details) {
             if (kDebugMode) {
-              print('📄 PDF loaded: ${details.document.pages.count} pages');
+              debugPrint('📄 PDF loaded: ${details.document.pages.count} pages');
             }
           },
           onDocumentLoadFailed: (details) {
             if (kDebugMode) {
-              print('❌ PDF load failed: ${details.error}');
+              debugPrint('❌ PDF load failed: ${details.error}');
             }
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -921,7 +864,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
             left: 0,
             right: 0,
             child: Container(
-              color: Colors.orange.shade600.withOpacity(0.9),
+              color: Colors.orange.shade600.withValues(alpha: 0.9),
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
@@ -960,7 +903,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -999,7 +942,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
     return Positioned.fill(
       child: GestureDetector(
         onTapDown: (details) {
-          print('👆 Tap detected at: ${details.localPosition}');
+          debugPrint('👆 Tap detected at: ${details.localPosition}');
           _handleFormFieldTap(details.localPosition);
         },
         child: CustomPaint(
@@ -1016,24 +959,24 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
   // Handle tap on form field overlays
   void _handleFormFieldTap(Offset tapPosition) {
-    print('🔍 Checking tap at ${tapPosition.dx}, ${tapPosition.dy} against ${_formFields.length} fields');
+    debugPrint('🔍 Checking tap at ${tapPosition.dx}, ${tapPosition.dy} against ${_formFields.length} fields');
 
     // Get the PDF viewer size for scaling calculations
     final RenderBox? renderBox = _pdfViewerContainerKey.currentContext?.findRenderObject() as RenderBox?;
     if (renderBox == null) {
-      print('❌ Could not get PDF viewer render box');
+      debugPrint('❌ Could not get PDF viewer render box');
       return;
     }
 
     final viewerSize = renderBox.size;
-    print('📐 PDF viewer size: ${viewerSize.width} x ${viewerSize.height}');
+    debugPrint('📐 PDF viewer size: ${viewerSize.width} x ${viewerSize.height}');
 
     // Simple scaling based on approximate PDF dimensions
     // This is a rough calculation - in production you'd need proper page-to-screen transformation
     final scaleX = viewerSize.width / 612; // Standard PDF width
     final scaleY = viewerSize.height / 792; // Standard PDF height
 
-    print('📏 Scale factors: x=$scaleX, y=$scaleY');
+    debugPrint('📏 Scale factors: x=$scaleX, y=$scaleY');
 
     // Check each form field
     for (int i = 0; i < _formFields.length; i++) {
@@ -1047,17 +990,17 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
         field.bounds.height * scaleY,
       );
 
-      print('🔍 Field "${field.name}": PDF bounds=${field.bounds} → Screen bounds=$scaledBounds');
+      debugPrint('🔍 Field "${field.name}": PDF bounds=${field.bounds} → Screen bounds=$scaledBounds');
 
       // Check if tap is within this field
       if (scaledBounds.contains(tapPosition)) {
-        print('✅ HIT! Tapped on field: "${field.name}"');
+        debugPrint('✅ HIT! Tapped on field: "${field.name}"');
         _onFormFieldTapped(field);
         return;
       }
     }
 
-    print('❌ No field hit at tap position');
+    debugPrint('❌ No field hit at tap position');
   }
 
   // Build quick edit button for template fields
@@ -1217,27 +1160,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
     );
   }
 
-  // Handle menu actions
-  void _handleMenuAction(String action) {
-    switch (action) {
-      case 'zoom_fit':
-        _pdfController.zoomLevel = 1.0;
-        break;
-      case 'zoom_width':
-        _pdfController.zoomLevel = 1.25;
-        break;
-      case 'reload_fields':
-        _loadFormFields();
-        break;
-      case 'regenerate':
-        _regeneratePdf();
-        break;
-      case 'open_external':
-        OpenFilex.open(_currentPdfPath);
-        break;
-    }
-  }
-
   // Regenerate PDF with template edits
   Future<void> _regeneratePdf() async {
     if (widget.templateId == null || widget.quote == null || widget.customer == null) {
@@ -1253,7 +1175,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
     setState(() => _isRegenerating = true);
 
     try {
-      print('🔄 Starting PDF regeneration with ${_editedValues.length} template edits');
+      debugPrint('🔄 Starting PDF regeneration with ${_editedValues.length} template edits');
 
       // Merge original custom data with edited values
       final customDataWithEdits = <String, String>{
@@ -1299,7 +1221,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
       );
 
     } catch (e) {
-      print('❌ Error regenerating PDF: $e');
+      debugPrint('❌ Error regenerating PDF: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Column(
@@ -1327,16 +1249,16 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
     setState(() => _isSaving = true);
 
     try {
-      print('💾 Starting PDF save with ${_editedValues.length} edits');
+      debugPrint('💾 Starting PDF save with ${_editedValues.length} edits');
 
       File pdfToSave;
 
       // If we have form field edits, apply them first
       if (_editedValues.isNotEmpty && _formFields.isNotEmpty) {
-        print('🔧 Applying edits using template-style field mapping approach...');
+        debugPrint('🔧 Applying edits using template-style field mapping approach...');
         pdfToSave = await _applyEditsUsingTemplateApproach();
       } else {
-        print('📄 Using original file (no edits to apply)');
+        debugPrint('📄 Using original file (no edits to apply)');
         pdfToSave = File(_currentPdfPath);
       }
 
@@ -1396,9 +1318,9 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
           );
 
           await appState.addProjectMedia(projectMedia);
-          print('✅ PDF added to customer media: ${widget.customer!.name}');
+          debugPrint('✅ PDF added to customer media: ${widget.customer!.name}');
         } catch (e) {
-          print('⚠️ Failed to add PDF to customer media: $e');
+          debugPrint('⚠️ Failed to add PDF to customer media: $e');
           // Don't fail the save operation if media addition fails
         }
       }
@@ -1419,7 +1341,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
       }
 
     } catch (e) {
-      print('❌ Error: $e');
+      debugPrint('❌ Error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('❌ Error: $e'), backgroundColor: Colors.red),
@@ -1432,7 +1354,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
   // Apply edits using PDF mapping (same as template system)
   Future<File> _applyEditsUsingTemplateApproach() async {
-    print('🗂️ Applying ${_editedValues.length} field mappings...');
+    debugPrint('🗂️ Applying ${_editedValues.length} field mappings...');
 
     final originalFile = File(_currentPdfPath);
     final bytes = await originalFile.readAsBytes();
@@ -1446,7 +1368,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
         if (_editedValues.containsKey(fieldName)) {
           final value = _editedValues[fieldName]!;
-          print('🗂️ Mapping: $fieldName = "$value"');
+          debugPrint('🗂️ Mapping: $fieldName = "$value"');
 
           field.readOnly = false;
 
@@ -1472,7 +1394,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
       final pdfBytes = await document.save();
       await tempFile.writeAsBytes(pdfBytes);
 
-      print('✅ PDF mapping complete');
+      debugPrint('✅ PDF mapping complete');
       return tempFile;
 
     } finally {
@@ -1482,15 +1404,15 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
   // Apply form field edits to PDF
   Future<File> _applyFormFieldEditsToPdf() async {
-    print('🔧 Applying ${_editedValues.length} form field edits to PDF...');
-    print('📝 Edits to apply: ${_editedValues.keys.join(', ')}');
+    debugPrint('🔧 Applying ${_editedValues.length} form field edits to PDF...');
+    debugPrint('📝 Edits to apply: ${_editedValues.keys.join(', ')}');
 
     final originalFile = File(_currentPdfPath);
     final bytes = await originalFile.readAsBytes();
     final document = sf_pdf.PdfDocument(inputBytes: bytes);
 
     try {
-      print('📄 PDF has ${document.form.fields.count} form fields');
+      debugPrint('📄 PDF has ${document.form.fields.count} form fields');
 
       int editsApplied = 0;
 
@@ -1499,11 +1421,11 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
         final field = document.form.fields[i];
         final fieldName = field.name ?? 'field_$i';
 
-        print('🔍 Checking field: "$fieldName" (type: ${field.runtimeType})');
+        debugPrint('🔍 Checking field: "$fieldName" (type: ${field.runtimeType})');
 
         if (_editedValues.containsKey(fieldName)) {
           final newValue = _editedValues[fieldName]!;
-          print('✏️ Applying edit: $fieldName = "$newValue"');
+          debugPrint('✏️ Applying edit: $fieldName = "$newValue"');
 
           bool success = false;
 
@@ -1511,26 +1433,26 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
           if (field is sf_pdf.PdfTextBoxField) {
             field.text = newValue;
             success = true;
-            print('   ✅ Text field updated');
+            debugPrint('   ✅ Text field updated');
           } else if (field is sf_pdf.PdfComboBoxField) {
             field.selectedValue = newValue;
             success = true;
-            print('   ✅ Combo box updated');
+            debugPrint('   ✅ Combo box updated');
           } else if (field is sf_pdf.PdfCheckBoxField) {
             field.isChecked = newValue.toLowerCase() == 'true';
             success = true;
-            print('   ✅ Checkbox updated to ${field.isChecked}');
+            debugPrint('   ✅ Checkbox updated to ${field.isChecked}');
           } else if (field is sf_pdf.PdfRadioButtonListField) {
             field.selectedValue = newValue;
             success = true;
-            print('   ✅ Radio button updated');
+            debugPrint('   ✅ Radio button updated');
           } else if (field is sf_pdf.PdfListBoxField) {
             // Handle list box
             field.selectedValues = [newValue];
             success = true;
-            print('   ✅ List box updated');
+            debugPrint('   ✅ List box updated');
           } else {
-            print('   ⚠️ Unknown field type: ${field.runtimeType}');
+            debugPrint('   ⚠️ Unknown field type: ${field.runtimeType}');
           }
 
           if (success) {
@@ -1539,7 +1461,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
         }
       }
 
-      print('✅ Applied $editsApplied edits successfully');
+      debugPrint('✅ Applied $editsApplied edits successfully');
 
       // IMPORTANT: Set form field properties to ensure changes are saved
       for (int i = 0; i < document.form.fields.count; i++) {
@@ -1559,13 +1481,13 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
       final List<int> pdfBytes = await document.save();
       await tempFile.writeAsBytes(pdfBytes);
 
-      print('💾 Saved edited PDF to: ${tempFile.path}');
-      print('📊 File size: ${await tempFile.length()} bytes');
+      debugPrint('💾 Saved edited PDF to: ${tempFile.path}');
+      debugPrint('📊 File size: ${await tempFile.length()} bytes');
 
       // Verify the changes were saved by re-reading the file
       try {
         final verifyDocument = sf_pdf.PdfDocument(inputBytes: await tempFile.readAsBytes());
-        print('🔍 Verifying saved changes...');
+        debugPrint('🔍 Verifying saved changes...');
 
         for (int i = 0; i < verifyDocument.form.fields.count; i++) {
           final field = verifyDocument.form.fields[i];
@@ -1574,33 +1496,33 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
           if (_editedValues.containsKey(fieldName)) {
             String savedValue = '';
             if (field is sf_pdf.PdfTextBoxField) {
-              savedValue = field.text ?? '';
+              savedValue = field.text;
             } else if (field is sf_pdf.PdfComboBoxField) {
-              savedValue = field.selectedValue ?? '';
+              savedValue = field.selectedValue;
             } else if (field is sf_pdf.PdfCheckBoxField) {
               savedValue = field.isChecked ? 'true' : 'false';
             } else if (field is sf_pdf.PdfRadioButtonListField) {
-              savedValue = field.selectedValue ?? '';
+              savedValue = field.selectedValue;
             }
 
             final expectedValue = _editedValues[fieldName]!;
             if (savedValue == expectedValue) {
-              print('   ✅ $fieldName: "$savedValue" (correct)');
+              debugPrint('   ✅ $fieldName: "$savedValue" (correct)');
             } else {
-              print('   ❌ $fieldName: expected "$expectedValue", got "$savedValue"');
+              debugPrint('   ❌ $fieldName: expected "$expectedValue", got "$savedValue"');
             }
           }
         }
 
         verifyDocument.dispose();
       } catch (e) {
-        print('⚠️ Could not verify changes: $e');
+        debugPrint('⚠️ Could not verify changes: $e');
       }
 
       return tempFile;
 
     } catch (e) {
-      print('❌ Error applying form field edits: $e');
+      debugPrint('❌ Error applying form field edits: $e');
       rethrow;
     } finally {
       document.dispose();
@@ -1608,6 +1530,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
   }
 
   // Share PDF
+  // Enhanced unified share functionality
   Future<void> _sharePdf() async {
     if (_isSharing) return;
     setState(() => _isSharing = true);
@@ -1626,18 +1549,312 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
         throw Exception('PDF file not found');
       }
 
-      await Share.shareXFiles(
-        [XFile(fileToShare.path)],
-        text: 'PDF: ${widget.suggestedFileName}${_editHistory.isNotEmpty ? ' (edited)' : ''}',
-        subject: widget.suggestedFileName,
-      );
+      setState(() => _isSharing = false);
+
+      // Show unified share options dialog
+      _showUnifiedShareDialog(fileToShare);
 
     } catch (e) {
-      if (kDebugMode) print('❌ Error sharing PDF: $e');
+      if (kDebugMode) debugPrint('❌ Error preparing PDF for sharing: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to share PDF: ${e.toString()}'),
+            content: Text('Failed to prepare PDF: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isSharing = false);
+      }
+    }
+  }
+
+// Show unified share options dialog
+  void _showUnifiedShareDialog(File fileToShare) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8, // Limit height
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView( // Make entire dialog scrollable
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  const Icon(Icons.share, size: 24, color: Color(0xFF2E86AB)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Share PDF',
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          widget.suggestedFileName,
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // File info card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf, size: 40, color: Colors.red[600]),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            fileToShare.path.split('/').last,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          FutureBuilder<int>(
+                            future: fileToShare.length(),
+                            builder: (context, snapshot) {
+                              return Text(
+                                'Size: ${snapshot.hasData ? _formatFileSize(snapshot.data!) : 'Calculating...'}',
+                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                              );
+                            },
+                          ),
+                          if (_editedValues.isNotEmpty)
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[100],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${_editedValues.length} edits applied',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.orange[800],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Share options grid
+              const Text(
+                'Choose sharing method:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 16),
+
+              // Share options in a more responsive grid
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final cardWidth = (constraints.maxWidth - 12) / 2; // Account for spacing
+                  final cardHeight = cardWidth * 0.7; // Responsive height
+
+                  return GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: cardWidth / cardHeight, // Dynamic aspect ratio
+                    children: [
+                      _buildShareOptionCard(
+                        icon: Icons.email,
+                        title: 'Email',
+                        subtitle: 'Send via email',
+                        color: Colors.blue,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _handleShareAction(fileToShare, 'email');
+                        },
+                      ),
+                      _buildShareOptionCard(
+                        icon: Icons.bluetooth,
+                        title: 'Bluetooth',
+                        subtitle: 'Share via Bluetooth',
+                        color: Colors.indigo,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _handleShareAction(fileToShare, 'bluetooth');
+                        },
+                      ),
+                      _buildShareOptionCard(
+                        icon: Icons.folder_open,
+                        title: 'Save to Folder',
+                        subtitle: 'Choose location',
+                        color: Colors.green,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _handleShareAction(fileToShare, 'folder');
+                        },
+                      ),
+                      _buildShareOptionCard(
+                        icon: Icons.apps,
+                        title: 'More Apps',
+                        subtitle: 'Other apps',
+                        color: Colors.purple,
+                        onTap: () {
+                          Navigator.pop(context);
+                          _handleShareAction(fileToShare, 'system');
+                        },
+                      ),
+                    ],
+                  );
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // Quick share button for system default
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _handleShareAction(fileToShare, 'quick');
+                  },
+                  icon: const Icon(Icons.share, color: Colors.white),
+                  label: const Text(
+                    'Quick Share (System Default)',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E86AB),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+            ],        // Closes children array
+          ),          // Closes Column
+        ),            // Closes SingleChildScrollView
+      ),             // Closes Container
+    );              // Closes showModalBottomSheet
+  }                 // Closes method
+
+// Build share option card
+// Build share option card - FIXED LAYOUT
+  Widget _buildShareOptionCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(8), // Reduced padding
+        decoration: BoxDecoration(
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+          borderRadius: BorderRadius.circular(12),
+          color: color.withValues(alpha: 0.05),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min, // Important: minimize height
+          children: [
+            Icon(icon, color: color, size: 20), // Smaller icon
+            const SizedBox(height: 2), // Reduced spacing
+            Flexible( // Wrap text in Flexible
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12, // Smaller font
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Flexible( // Wrap subtitle in Flexible
+              child: Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 10, // Smaller font
+                  color: Colors.grey[600],
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+// Handle different share actions
+  Future<void> _handleShareAction(File fileToShare, String action) async {
+    setState(() => _isSharing = true);
+
+    try {
+      switch (action) {
+        case 'email':
+          await _shareViaEmail(fileToShare);
+          break;
+        case 'bluetooth':
+          await _shareViaBluetooth(fileToShare);
+          break;
+        case 'folder':
+          await _saveToSpecificFolder(fileToShare);
+          break;
+        case 'system':
+          await _shareViaSystemApps(fileToShare);
+          break;
+        case 'quick':
+        default:
+          await _shareViaQuickShare(fileToShare);
+          break;
+      }
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ Error in share action "$action": $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to share: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -1647,6 +1864,507 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
         setState(() => _isSharing = false);
       }
     }
+  }
+
+// Share via email
+  Future<void> _shareViaEmail(File fileToShare) async {
+    try {
+      final customerName = widget.customer?.name ?? 'Customer';
+      final subject = 'Quote PDF: ${widget.suggestedFileName}';
+      final body = '''
+Hello $customerName,
+
+Please find your quote attached as a PDF document.
+
+${widget.quote != null ? '''
+Quote Details:
+- Quote Number: ${widget.quote!.quoteNumber}
+- Date: ${DateFormat('MM/dd/yyyy').format(widget.quote!.createdAt)}
+- Status: ${widget.quote!.status}
+''' : ''}
+
+Best regards,
+${_getCompanyName()}
+    ''';
+
+      await SharePlus.instance.share(
+        ShareParams(
+          subject: subject,
+          text: body,
+          files: [XFile(fileToShare.path)],
+        ),
+      );
+
+      _showShareSuccessMessage('Email app opened');
+    } catch (e) {
+      throw Exception('Failed to open email app: $e');
+    }
+  }
+
+// Share via Bluetooth - UPDATED
+  Future<void> _shareViaBluetooth(File fileToShare) async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: 'PDF Document: ${widget.suggestedFileName}',
+          files: [XFile(fileToShare.path, mimeType: 'application/pdf')],
+        ),
+      );
+
+      _showShareSuccessMessage('Bluetooth sharing initiated');
+    } catch (e) {
+      throw Exception('Failed to share via Bluetooth: $e');
+    }
+  }
+
+// Share via system apps - UPDATED
+  Future<void> _shareViaSystemApps(File fileToShare) async {
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: 'PDF Document: ${widget.suggestedFileName}',
+          files: [XFile(fileToShare.path)],
+        ),
+      );
+
+      _showShareSuccessMessage('Share menu opened');
+    } catch (e) {
+      throw Exception('Failed to open share menu: $e');
+    }
+  }
+
+// Quick share (system default) - UPDATED
+  Future<void> _shareViaQuickShare(File fileToShare) async {
+    try {
+      final customerInfo = widget.customer != null ? '\nCustomer: ${widget.customer!.name}' : '';
+      final quoteInfo = widget.quote != null ? '\nQuote: ${widget.quote!.quoteNumber}' : '';
+
+      await SharePlus.instance.share(
+        ShareParams(
+          text: 'PDF: ${widget.suggestedFileName}$customerInfo$quoteInfo',
+          subject: widget.suggestedFileName,
+          files: [XFile(fileToShare.path)],
+        ),
+      );
+
+      _showShareSuccessMessage('Shared successfully');
+    } catch (e) {
+      throw Exception('Failed to share: $e');
+    }
+  }
+// Save to specific folder with folder selection
+  Future<void> _saveToSpecificFolder(File fileToShare) async {
+    try {
+      debugPrint('📁 Starting folder selection for PDF save...');
+
+      // Show folder selection dialog
+      final selectedPath = await _showFolderSelectionDialog();
+
+      if (selectedPath == null) {
+        _showShareSuccessMessage('Save cancelled');
+        return;
+      }
+
+      debugPrint('📁 Selected save path: $selectedPath');
+
+      // Save to selected folder
+      await _saveFileToDirectory(fileToShare, selectedPath);
+
+    } catch (e) {
+      debugPrint('❌ Error saving to folder: $e');
+      throw Exception('Failed to save to folder: $e');
+    }
+  }
+
+// Show folder selection dialog
+  Future<String?> _showFolderSelectionDialog() async {
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.folder_open, color: Color(0xFF2E86AB)),
+            SizedBox(width: 8),
+            Text('Choose Save Location'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Select where you want to save the PDF:'),
+              const SizedBox(height: 16),
+
+              // Common folder options
+              _buildFolderOption(
+                icon: Icons.download,
+                title: 'Downloads',
+                subtitle: 'Default downloads folder',
+                onTap: () async {
+                  try {
+                    final directory = await getExternalStorageDirectory();
+                    if (directory != null) {
+                      final downloadsPath = '${directory.parent.parent.parent.parent.path}/Download';
+                      final downloadsDir = Directory(downloadsPath);
+                      if (await downloadsDir.exists()) {
+                        Navigator.pop(context, downloadsPath);
+                      } else {
+                        // Fallback to app documents directory
+                        final appDir = await getApplicationDocumentsDirectory();
+                        Navigator.pop(context, appDir.path);
+                      }
+                    } else {
+                      final appDir = await getApplicationDocumentsDirectory();
+                      Navigator.pop(context, appDir.path);
+                    }
+                  } catch (e) {
+                    final appDir = await getApplicationDocumentsDirectory();
+                    Navigator.pop(context, appDir.path);
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+
+              _buildFolderOption(
+                icon: Icons.folder,
+                title: 'Documents',
+                subtitle: 'Documents folder',
+                onTap: () async {
+                  final directory = await getApplicationDocumentsDirectory();
+                  Navigator.pop(context, directory.path);
+                },
+              ),
+              const SizedBox(height: 8),
+
+              _buildFolderOption(
+                icon: Icons.business,
+                title: 'Rufko Quotes',
+                subtitle: 'App quotes folder',
+                onTap: () async {
+                  final directory = await getApplicationDocumentsDirectory();
+                  final quotesDir = Directory('${directory.path}/quotes');
+                  if (!await quotesDir.exists()) {
+                    await quotesDir.create(recursive: true);
+                  }
+                  Navigator.pop(context, quotesDir.path);
+                },
+              ),
+              const SizedBox(height: 8),
+
+              if (widget.customer != null)
+                _buildFolderOption(
+                  icon: Icons.person,
+                  title: 'Customer Folder',
+                  subtitle: 'Folder for ${widget.customer!.name}',
+                  onTap: () async {
+                    final directory = await getApplicationDocumentsDirectory();
+                    final customerName = widget.customer!.name.replaceAll(RegExp(r'[^\w\s-]'), '');
+                    final customerDir = Directory('${directory.path}/customers/$customerName');
+                    if (!await customerDir.exists()) {
+                      await customerDir.create(recursive: true);
+                    }
+                    Navigator.pop(context, customerDir.path);
+                  },
+                ),
+              const SizedBox(height: 16),
+
+              // Custom folder option
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _selectCustomFolder();
+                },
+                icon: const Icon(Icons.folder_special),
+                label: const Text('Choose Custom Folder'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF2E86AB),
+                  side: const BorderSide(color: Color(0xFF2E86AB)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Build folder option widget - FIXED LAYOUT
+  Widget _buildFolderOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: const Color(0xFF2E86AB), size: 24),
+            const SizedBox(width: 12),
+            Expanded( // Wrap in Expanded to prevent overflow
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+// Select custom folder using file picker
+  Future<void> _selectCustomFolder() async {
+    try {
+      String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+
+      if (selectedDirectory != null && mounted) {
+        debugPrint('📁 Custom folder selected: $selectedDirectory');
+
+        // Get the file to save again
+        File fileToSave;
+        if (_editedValues.isNotEmpty && _formFields.isNotEmpty) {
+          fileToSave = await _applyFormFieldEditsToPdf();
+        } else {
+          fileToSave = File(_currentPdfPath);
+        }
+
+        // Save to the selected custom directory
+        await _saveFileToDirectory(fileToSave, selectedDirectory);
+      } else {
+        _showShareSuccessMessage('Folder selection cancelled');
+      }
+    } catch (e) {
+      debugPrint('❌ Error selecting custom folder: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to select folder: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+// Save file to specific directory
+  Future<void> _saveFileToDirectory(File sourceFile, String directoryPath) async {
+    try {
+      String fileName = widget.suggestedFileName;
+      if (_editedValues.isNotEmpty && !fileName.contains('_edited')) {
+        fileName = fileName.replaceAll('.pdf', '_edited.pdf');
+      }
+
+      File targetFile = File('$directoryPath/$fileName');
+      int counter = 1;
+
+      while (await targetFile.exists()) {
+        final baseName = fileName.replaceAll('.pdf', '');
+        final newFileName = '${baseName}_$counter.pdf';
+        targetFile = File('$directoryPath/$newFileName');
+        counter++;
+      }
+
+      await sourceFile.copy(targetFile.path);
+
+      if (mounted) {
+        _showSaveSuccessDialog(targetFile.path, directoryPath);
+      }
+    } catch (e) {
+      throw Exception('Failed to save file: $e');
+    }
+  }
+// Show save success dialog with actions - FIXED LAYOUT (NO EXPANDED IN ACTIONS)
+  void _showSaveSuccessDialog(String filePath, String directoryPath) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 28),
+            SizedBox(width: 8),
+            Expanded( // This Expanded is fine - it's in a Row
+              child: Text(
+                'PDF Saved Successfully!',
+                style: TextStyle(fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Your PDF has been saved to:'),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'File: ',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        Expanded( // This Expanded is fine - it's in a Row
+                          child: Text(
+                            filePath.split('/').last,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Location: ',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        Expanded( // This Expanded is fine - it's in a Row
+                          child: Text(
+                            directoryPath,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              if (_editedValues.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.green[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, size: 16, color: Colors.green[700]),
+                      const SizedBox(width: 6),
+                      Expanded( // This Expanded is fine - it's in a Row
+                        child: Text(
+                          '${_editedValues.length} edits were applied to this PDF',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+          // REMOVED Expanded wrapper - AlertDialog actions don't support Expanded
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(context);
+              OpenFilex.open(filePath);
+            },
+            icon: const Icon(Icons.open_in_new, size: 18),
+            label: const Text('Open PDF'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2E86AB),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+// Helper method to get company name
+  String _getCompanyName() {
+    // You can get this from app settings or use a default
+    return 'Your Company Name';
+  }
+
+// Show share success message
+  void _showShareSuccessMessage(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text('✅ $message'),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+// Format file size helper
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
   // Discard PDF
@@ -1690,8 +2408,8 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
       return;
     }
 
-    print('🔧 Opening field selector with ${_formFields.length} fields');
-    print('📝 Current edits: ${_editedValues.keys.join(', ')}');
+    debugPrint('🔧 Opening field selector with ${_formFields.length} fields');
+    debugPrint('📝 Current edits: ${_editedValues.keys.join(', ')}');
 
     showDialog(
       context: context,
@@ -1737,7 +2455,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                     : const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   Navigator.pop(context);
-                  print('📝 Selected field for editing: "${field.name}"');
+                  debugPrint('📝 Selected field for editing: "${field.name}"');
                   _onFormFieldTapped(field);
                 },
               );
@@ -1828,7 +2546,7 @@ class FormFieldOverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    print('🎨 Painting ${formFields.length} form field overlays on canvas ${size.width}x${size.height}');
+    debugPrint('🎨 Painting ${formFields.length} form field overlays on canvas ${size.width}x${size.height}');
 
     // Calculate scale factors based on standard PDF dimensions
     final scaleX = size.width / 612; // Standard PDF width
@@ -1852,16 +2570,16 @@ class FormFieldOverlayPainter extends CustomPainter {
       Color borderColor;
 
       if (isSelected) {
-        overlayColor = Colors.blue.withOpacity(0.3);
+        overlayColor = Colors.blue.withValues(alpha: 0.3);
         borderColor = Colors.blue;
       } else if (hasEdit) {
-        overlayColor = Colors.green.withOpacity(0.2);
+        overlayColor = Colors.green.withValues(alpha: 0.2);
         borderColor = Colors.green;
       } else if (field.isRequired) {
-        overlayColor = Colors.red.withOpacity(0.2);
+        overlayColor = Colors.red.withValues(alpha: 0.2);
         borderColor = Colors.red;
       } else {
-        overlayColor = Colors.purple.withOpacity(0.15);
+        overlayColor = Colors.purple.withValues(alpha: 0.15);
         borderColor = Colors.purple;
       }
 
@@ -1884,7 +2602,7 @@ class FormFieldOverlayPainter extends CustomPainter {
       final textSpan = TextSpan(
         text: field.type.toUpperCase(),
         style: TextStyle(
-          color: borderColor.withOpacity(0.8),
+          color: borderColor.withValues(alpha: 0.8),
           fontSize: 8,
           fontWeight: FontWeight.bold,
         ),

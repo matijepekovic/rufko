@@ -103,7 +103,7 @@ class TemplateValidator {
     } catch (e) {
       result.addError('An unexpected error occurred during validation: $e');
       if (kDebugMode) {
-        print('Template Validation Exception for ${template.id}: $e');
+        debugPrint('Template Validation Exception for ${template.id}: $e');
       }
     }
     return result;
@@ -205,17 +205,17 @@ class TemplateValidationResult {
 
   void addError(String message) {
     errors.add(message);
-    if (kDebugMode) print('❌ Validation Error ($templateName): $message');
+    if (kDebugMode) debugPrint('❌ Validation Error ($templateName): $message');
   }
 
   void addWarning(String message) {
     warnings.add(message);
-    if (kDebugMode) print('⚠️ Validation Warning ($templateName): $message');
+    if (kDebugMode) debugPrint('⚠️ Validation Warning ($templateName): $message');
   }
 
   void addSuccess(String message) {
     successes.add(message);
-    if (kDebugMode) print('✅ Validation Success ($templateName): $message');
+    if (kDebugMode) debugPrint('✅ Validation Success ($templateName): $message');
   }
 
   bool get isUsable => errors.isEmpty;

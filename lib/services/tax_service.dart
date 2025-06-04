@@ -14,11 +14,11 @@ class TaxService {
     try {
       await _loadTaxDatabase();
       if (kDebugMode) {
-        print('✅ Tax database loaded with ${_getTotalRecords()} records');
-        print('📅 Last updated: ${_lastUpdated ?? 'Never'}');
+        debugPrint('✅ Tax database loaded with ${_getTotalRecords()} records');
+        debugPrint('📅 Last updated: ${_lastUpdated ?? 'Never'}');
       }
     } catch (e) {
-      if (kDebugMode) print('⚠️ Tax database not found - user must set up manually');
+      if (kDebugMode) debugPrint('⚠️ Tax database not found - user must set up manually');
       _taxDatabase = null;
       _lastUpdated = null;
     }
@@ -54,7 +54,7 @@ class TaxService {
     await file.writeAsString(json.encode(data));
     _lastUpdated = DateTime.now();
 
-    if (kDebugMode) print('💾 Tax database saved');
+    if (kDebugMode) debugPrint('💾 Tax database saved');
   }
 
   /// Get tax rate by ZIP code (most accurate)
@@ -157,7 +157,7 @@ class TaxService {
     zipRates[zipCode] = taxRate;
 
     await _saveTaxDatabase();
-    if (kDebugMode) print('✏️ Set tax rate for ZIP $zipCode: ${taxRate.toStringAsFixed(2)}%');
+    if (kDebugMode) debugPrint('✏️ Set tax rate for ZIP $zipCode: ${taxRate.toStringAsFixed(2)}%');
   }
 
   /// Manually set tax rate for a state
@@ -176,7 +176,7 @@ class TaxService {
     stateRates[stateAbbreviation.toUpperCase()] = taxRate;
 
     await _saveTaxDatabase();
-    if (kDebugMode) print('✏️ Set tax rate for state $stateAbbreviation: ${taxRate.toStringAsFixed(2)}%');
+    if (kDebugMode) debugPrint('✏️ Set tax rate for state $stateAbbreviation: ${taxRate.toStringAsFixed(2)}%');
   }
 
   /// Get all ZIP code rates (for settings display)
@@ -206,6 +206,6 @@ class TaxService {
       'states': {},
     };
     await _saveTaxDatabase();
-    if (kDebugMode) print('🗑️ Cleared all tax rates');
+    if (kDebugMode) debugPrint('🗑️ Cleared all tax rates');
   }
 }

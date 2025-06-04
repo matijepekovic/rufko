@@ -15,7 +15,8 @@ import '../models/custom_app_data.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/message_template.dart';
 import '../models/email_template.dart';
-import '../models/template_category.dart'; // Ensure this is imported
+import '../models/template_category.dart';
+import '../models/inspection_document.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -37,7 +38,8 @@ class DatabaseService {
   late Box<PDFTemplate> _pdfTemplateBox;
   late Box<MessageTemplate> _messageTemplateBox;
   late Box<EmailTemplate> _emailTemplateBox;
-  late Box<TemplateCategory> _categoriesBox; // Should store TemplateCategory objects
+  late Box<dynamic> _categoriesBox; // MODIFIED: Changed to Box<dynamic>
+  late Box<InspectionDocument> _inspectionDocumentBox;
   bool _isInitialized = false;
 
   Future<void> init() async {
@@ -46,38 +48,41 @@ class DatabaseService {
     try {
       _customerBox = await Hive.openBox<Customer>('customers');
       _productBox = await Hive.openBox<Product>('products');
-      _simplifiedQuoteBox = await Hive.openBox<SimplifiedMultiLevelQuote>(
-          'simplified_quotes_v3'); // Updated version for enhanced features
+      _simplifiedQuoteBox = await Hive.openBox<SimplifiedMultiLevelQuote>('simplified_quotes_v3');
       _roofScopeBox = await Hive.openBox<RoofScopeData>('roofscope_data');
       _mediaBox = await Hive.openBox<ProjectMedia>('project_media');
       _settingsBox = await Hive.openBox<AppSettings>('app_settings');
       _pdfTemplateBox = await Hive.openBox<PDFTemplate>('pdf_templates');
-      _customAppDataFieldBox =
-      await Hive.openBox<CustomAppDataField>('custom_app_data_fields');
-      _messageTemplateBox =
-      await Hive.openBox<MessageTemplate>('message_templates');
+      _customAppDataFieldBox = await Hive.openBox<CustomAppDataField>('custom_app_data_fields');
+      _messageTemplateBox = await Hive.openBox<MessageTemplate>('message_templates');
       _emailTemplateBox = await Hive.openBox<EmailTemplate>('email_templates');
-      // Explicitly tell Hive to use TemplateCategoryAdapter for this box
-      _categoriesBox = await Hive.openBox<TemplateCategory>('template_categories');
+      _categoriesBox = await Hive.openBox<dynamic>('template_categories');
+      _inspectionDocumentBox = await Hive.openBox<InspectionDocument>('inspection_documents');
+
       _isInitialized = true;
       if (kDebugMode) {
-        print('Database initialized successfully with enhanced models');
-        print('- Customers: ${_customerBox.length}');
-        print('- Products: ${_productBox.length}');
-        print('- Quotes: ${_simplifiedQuoteBox.length}');
-        print('- RoofScope Data: ${_roofScopeBox.length}');
-        print('- Media Files: ${_mediaBox.length}');
-        print('- Settings: ${_settingsBox.length}');
-        print('- PDF Templates: ${_pdfTemplateBox.length}');
-        print('- Template Categories: ${_categoriesBox.length}'); // Log category box length
+        debugPrint('Database initialized successfully with enhanced models');
+        debugPrint('- Customers: ${_customerBox.length}');
+        debugPrint('- Products: ${_productBox.length}');
+        debugPrint('- Quotes: ${_simplifiedQuoteBox.length}');
+        debugPrint('- RoofScope Data: ${_roofScopeBox.length}');
+        debugPrint('- Media Files: ${_mediaBox.length}');
+        debugPrint('- Settings: ${_settingsBox.length}');
+        debugPrint('- PDF Templates: ${_pdfTemplateBox.length}');
+        debugPrint('- Message Templates: ${_messageTemplateBox.length}');
+        debugPrint('- Email Templates: ${_emailTemplateBox.length}');
+        debugPrint('- Template Categories: ${_categoriesBox.length}');
+        debugPrint('- Inspection Documents: ${_inspectionDocumentBox.length}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error initializing database: $e');
+        debugPrint('Error initializing database: $e');
       }
       rethrow;
     }
   }
+
+
 
   void _ensureInitialized() {
     if (!_isInitialized) {
@@ -641,17 +646,23 @@ class DatabaseService {
           templateMap['originalFileName'] = file.path
               .split('/')
               .last;
-          if (kDebugMode) print(
+          if (kDebugMode) {
+            debugPrint(
               '📦 Exported PDF file: ${template.templateName} (${(bytes.length /
                   1024).toStringAsFixed(1)} KB)');
+          }
         } else {
-          if (kDebugMode) print(
+          if (kDebugMode) {
+            debugPrint(
               '⚠️ PDF file not found for template: ${template.templateName}');
+          }
           templateMap['pdfFileContent'] = null;
         }
       } catch (e) {
-        if (kDebugMode) print(
+        if (kDebugMode) {
+          debugPrint(
             '❌ Error reading PDF file for ${template.templateName}: $e');
+        }
         templateMap['pdfFileContent'] = null;
       }
       pdfTemplatesWithFiles.add(templateMap);
@@ -674,6 +685,7 @@ class DatabaseService {
       'appSettings': (await getAppSettings())?.toMap(),
       'analytics': await getQuoteAnalytics(),
       'exportDate': DateTime.now().toIso8601String(),
+      'inspectionDocuments': (await getAllInspectionDocuments()).map((d) => d.toMap()).toList(),
       'version': '2.2', // Updated version for complete export
     };
   }
@@ -690,6 +702,7 @@ class DatabaseService {
       await _settingsBox.clear();
       await _pdfTemplateBox.clear();
       await _customAppDataFieldBox.clear(); // ADDED: Clear custom fields
+      await _inspectionDocumentBox.clear(); // ADDED: Clear custom fields
       await _categoriesBox.clear(); // Clear template categories
       await _messageTemplateBox.clear();
       await _emailTemplateBox.clear();
@@ -739,8 +752,10 @@ class DatabaseService {
         for (final itemData in data['customAppDataFields']) {
           await saveCustomAppDataField(CustomAppDataField.fromMap(itemData));
         }
-        if (kDebugMode) print('✅ Imported ${data['customAppDataFields']
+        if (kDebugMode) {
+          debugPrint('✅ Imported ${data['customAppDataFields']
             .length} custom app data fields');
+        }
       }
 
       // ENHANCED: Import PDF templates with actual files
@@ -777,21 +792,27 @@ class DatabaseService {
               template.pdfFilePath = newPath;
               template.updatedAt = DateTime.now();
 
-              if (kDebugMode) print(
+              if (kDebugMode) {
+                debugPrint(
                   '📄 Restored PDF file: ${template.templateName} to $newPath');
+              }
             } else {
-              if (kDebugMode) print(
+              if (kDebugMode) {
+                debugPrint(
                   '⚠️ No PDF file content for template: ${template
                       .templateName}');
+              }
             }
 
             await savePDFTemplate(template);
           } catch (e) {
-            if (kDebugMode) print('❌ Error importing PDF template: $e');
+            if (kDebugMode) debugPrint('❌ Error importing PDF template: $e');
           }
         }
-        if (kDebugMode) print(
+        if (kDebugMode) {
+          debugPrint(
             '✅ Imported ${data['pdfTemplates'].length} PDF templates');
+        }
       }
 
       // Import Message Templates
@@ -799,7 +820,7 @@ class DatabaseService {
         for (final itemData in data['message_templates']) {
           await saveMessageTemplate(MessageTemplate.fromJson(itemData));
         }
-        if (kDebugMode) print('✅ Imported ${data['message_templates'].length} Message templates');
+        if (kDebugMode) debugPrint('✅ Imported ${data['message_templates'].length} Message templates');
       }
 
       // Import Email Templates
@@ -807,7 +828,7 @@ class DatabaseService {
         for (final itemData in data['email_templates']) {
           await saveEmailTemplate(EmailTemplate.fromJson(itemData));
         }
-        if (kDebugMode) print('✅ Imported ${data['email_templates'].length} Email templates');
+        if (kDebugMode) debugPrint('✅ Imported ${data['email_templates'].length} Email templates');
       }
 
       // Import Template Categories
@@ -815,17 +836,19 @@ class DatabaseService {
         for (final itemData in data['template_categories']) {
           await _categoriesBox.add(TemplateCategory.fromMap(itemData));
         }
-        if (kDebugMode) print('✅ Imported ${data['template_categories'].length} Template Categories');
-      }
-
-
-      if (kDebugMode) {
-        print('🎉 COMPLETE data import finished successfully');
-        print('Imported version: ${data['version'] ?? 'legacy'}');
+        // Import Inspection Documents
+        if (data['inspectionDocuments'] != null) {
+          for (final itemData in data['inspectionDocuments']) {
+            await saveInspectionDocument(InspectionDocument.fromMap(itemData));
+          }
+          if (kDebugMode) debugPrint('✅ Imported ${data['inspectionDocuments'].length} Inspection Documents');
+        }
+        debugPrint('🎉 COMPLETE data import finished successfully');
+        debugPrint('Imported version: ${data['version'] ?? 'legacy'}');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error importing complete data: $e');
+        debugPrint('Error importing complete data: $e');
       }
       rethrow;
     }
@@ -875,13 +898,14 @@ class DatabaseService {
       await _messageTemplateBox.compact();
       await _emailTemplateBox.compact();
       await _categoriesBox.compact();
+      await _inspectionDocumentBox.compact();
 
       if (kDebugMode) {
-        print('Database compaction completed');
+        debugPrint('Database compaction completed');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error during database compaction: $e');
+        debugPrint('Error during database compaction: $e');
       }
     }
   }
@@ -899,16 +923,69 @@ class DatabaseService {
       'emailTemplates': _emailTemplateBox.length,
       'templateCategories': _categoriesBox.length,
       'settings': _settingsBox.length,
+      'inspectionDocuments': _inspectionDocumentBox.length,
     };
   }
 
   // --- Template Category Management (DatabaseService) ---
 
-  /// Retrieves raw values from the categories box. Used by AppStateProvider for its internal list.
-  List<dynamic> getRawCategoriesBoxValues() {
+  // --- Template Category Management (DatabaseService) ---
+
+  // In lib/services/database_service.dart
+  List<TemplateCategory> getRawCategoriesBoxValues() {
     _ensureInitialized();
-    return _categoriesBox.values.toList();
+    final List<TemplateCategory> typedCategories = [];
+
+    if (_categoriesBox.isEmpty) {
+      if (kDebugMode) {
+        debugPrint("Category box is empty in getRawCategoriesBoxValues.");
+      }
+      return typedCategories;
+    }
+
+    for (var key in _categoriesBox.keys) {
+      dynamic item;
+      try {
+        // Since _categoriesBox is Box<dynamic>, .get(key) returns dynamic.
+        item = _categoriesBox.get(key);
+      } catch (e, s) {
+        if (kDebugMode) {
+          debugPrint("CRITICAL ERROR getting item with key '$key' from _categoriesBox: $e");
+          debugPrint("Stack trace for _categoriesBox.get(key) error: $s");
+        }
+        continue; // Skip this problematic entry
+      }
+
+      if (item is TemplateCategory) {
+        typedCategories.add(item);
+      } else if (item is Map) {
+        try {
+          // Attempt to convert from map using the robust fromMap factory
+          typedCategories.add(TemplateCategory.fromMap(Map<String, dynamic>.from(item)));
+        } catch (e, s) {
+          if (kDebugMode) {
+            debugPrint("Error converting map to TemplateCategory in getRawCategoriesBoxValues (key: $key): $e. Map: $item");
+            debugPrint("Stack trace for fromMap error: $s");
+          }
+        }
+      } else if (item != null) {
+        if (kDebugMode) {
+          debugPrint("Skipping unexpected data type in _categoriesBox (key: $key) in getRawCategoriesBoxValues: ${item.runtimeType}. Value: $item");
+        }
+      } else {
+        if (kDebugMode) {
+          debugPrint("Item with key '$key' is null in _categoriesBox.");
+        }
+      }
+    }
+    if (kDebugMode) {
+      debugPrint("getRawCategoriesBoxValues returning ${typedCategories.length} categories.");
+    }
+    return typedCategories;
   }
+
+
+
 
   /// Saves a TemplateCategory object to the database.
   Future<void> saveTemplateCategory(TemplateCategory category) async {
@@ -917,71 +994,51 @@ class DatabaseService {
     // TemplateCategory constructor now always assigns an ID, so direct put is fine.
     await _categoriesBox.put(category.id, category);
     if (kDebugMode) {
-      print("Saved TemplateCategory with ID: ${category.id} and key: ${category.key} to _categoriesBox");
+      debugPrint("Saved TemplateCategory with ID: ${category.id} and key: ${category.key} to _categoriesBox");
     }
   }
 
   /// Retrieves all template categories, structured for UI display.
   /// This method is robust against data that might be stored as Maps.
+  /// Retrieves all template categories, structured for UI display, ensuring dynamic loading for all types.
   Future<Map<String, List<Map<String, dynamic>>>> getAllTemplateCategories() async {
     _ensureInitialized();
 
-    final List<dynamic> rawCategoriesData = _categoriesBox.values.toList();
-    final List<TemplateCategory> typedCategories = [];
+    // Use the now robust getRawCategoriesBoxValues() method
+    final List<TemplateCategory> typedCategories = getRawCategoriesBoxValues();
 
-    for (var item in rawCategoriesData) {
-      if (item is TemplateCategory) {
-        typedCategories.add(item);
-      } else if (item is Map) {
-        try {
-          // Attempt to convert from map if it's not already typed
-          typedCategories.add(TemplateCategory.fromMap(Map<String, dynamic>.from(item)));
-        } catch (e) {
-          if (kDebugMode) {
-            print("Error converting map to TemplateCategory in DatabaseService.getAllTemplateCategories: $e. Map: $item");
-          }
-        }
-      } else {
-        if (kDebugMode) {
-          print("Skipping unexpected data type in _categoriesBox (DatabaseService): ${item.runtimeType}");
-        }
-      }
-    }
-
-    // This predefined structure is for the UI.
     final result = <String, List<Map<String, dynamic>>>{
       'pdf_templates': [],
       'message_templates': [],
       'email_templates': [],
-      'custom_fields': [ // These are static "super-categories" for the UI, not directly from Hive TemplateCategory objects with templateType 'custom_fields'.
-        {'id': 'static_cat_company', 'key': 'company', 'name': 'Company Information'},
-        {'id': 'static_cat_contact', 'key': 'contact', 'name': 'Contact Information'},
-        {'id': 'static_cat_legal', 'key': 'legal', 'name': 'Legal Information'},
-        {'id': 'static_cat_pricing', 'key': 'pricing', 'name': 'Pricing Information'},
-        {'id': 'static_cat_custom', 'key': 'custom', 'name': 'Custom Fields'},
-      ]
+      'custom_fields': [],
     };
 
     for (final category in typedCategories) {
-      // 'category.templateType' from Hive should match keys like 'pdf_templates', 'message_templates' etc.
-      // This 'templateType' stored in TemplateCategory objects indicates what *kind* of templates this category is FOR.
       final String typeKey = category.templateType;
 
-      // Ensure the list for this typeKey exists in the result map.
-      // This means TemplateCategory objects should store templateType as 'pdf_templates', 'message_templates', or 'email_templates'.
-      // If they store something else, they won't be grouped under these predefined keys unless you add more logic.
+      final categoryDataMap = {
+        'id': category.id,
+        'key': category.key,
+        'name': category.name,
+      };
+
       if (result.containsKey(typeKey)) {
-        result[typeKey]!.add({
-          'id': category.id,       // The actual TemplateCategory object's unique ID from Hive
-          'key': category.key,     // The 'slug' or short identifier (e.g., "residential_roofing")
-          'name': category.name,   // The display name (e.g., "Residential Roofing")
-        });
+        result[typeKey]!.add(categoryDataMap);
       } else if (kDebugMode) {
-        print("Warning: TemplateCategory with templateType '${typeKey}' found in Hive, but no matching list in `result` map in `getAllTemplateCategories`. Category name: '${category.name}', key: '${category.key}'.");
+        debugPrint(
+            "Warning: TemplateCategory with templateType '$typeKey' found in Hive, "
+                "but no matching key in `result` map for dynamic loading in getAllTemplateCategories. "
+                "Category Name: '${category.name}'. This category will not be displayed if the UI relies on these specific keys.");
       }
+    }
+    if (kDebugMode) {
+      debugPrint("getAllTemplateCategories (for CategoryManagementScreen) returning: $result");
     }
     return result;
   }
+
+
 
   /// Updates an existing template category's name using its unique ID.
   Future<void> updateTemplateCategory(String categoryId, String newName) async {
@@ -992,7 +1049,7 @@ class DatabaseService {
       await _categoriesBox.put(categoryId, updatedCategory);
     } else {
       if (kDebugMode) {
-        print("Category with ID $categoryId not found or not a TemplateCategory for update in DatabaseService.");
+        debugPrint("Category with ID $categoryId not found or not a TemplateCategory for update in DatabaseService.");
       }
     }
   }
@@ -1040,17 +1097,81 @@ class DatabaseService {
             .length;
       default:
         if (kDebugMode) {
-          print("Warning: Unhandled templateTypeScreenName in getCategoryUsageCount (DatabaseService): $templateTypeScreenName");
+          debugPrint("Warning: Unhandled templateTypeScreenName in getCategoryUsageCount (DatabaseService): $templateTypeScreenName");
         }
         return 0;
     }
   }
+  Future<InspectionDocument?> getInspectionDocument(String id) async {
+    _ensureInitialized();
+    return _inspectionDocumentBox.get(id);
+  }
+
+  Future<List<InspectionDocument>> getAllInspectionDocuments() async {
+    _ensureInitialized();
+    return _inspectionDocumentBox.values.toList();
+  }
+
+  Future<List<InspectionDocument>> getInspectionDocumentsByQuote(
+      String quoteId) async {
+    _ensureInitialized();
+    return _inspectionDocumentBox.values
+        .where((doc) => doc.quoteId == quoteId)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  Future<List<InspectionDocument>> getInspectionDocumentsByType(
+      String customerId, String type) async {
+    _ensureInitialized();
+    return _inspectionDocumentBox.values
+        .where((doc) => doc.customerId == customerId && doc.type == type)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  Future<void> deleteInspectionDocumentsByCustomer(String customerId) async {
+    _ensureInitialized();
+    final keysToDelete = _inspectionDocumentBox.values
+        .where((doc) => doc.customerId == customerId)
+        .map((doc) => doc.key as String)
+        .toList();
+    await _inspectionDocumentBox.deleteAll(keysToDelete);
+  }
+
+  Future<void> updateInspectionDocumentSortOrders(
+      List<InspectionDocument> documents) async {
+    _ensureInitialized();
+    for (int i = 0; i < documents.length; i++) {
+      documents[i].updateSortOrder(i);
+    }
+  }
+  // --- Inspection Document Operations ---
+  Future<void> saveInspectionDocument(InspectionDocument document) async {
+    _ensureInitialized();
+    await _inspectionDocumentBox.put(document.id, document);
+  }
+
+  Future<List<InspectionDocument>> getInspectionDocumentsByCustomer(
+      String customerId) async {
+    _ensureInitialized();
+    return _inspectionDocumentBox.values
+        .where((doc) => doc.customerId == customerId)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  Future<void> deleteInspectionDocument(String id) async {
+    _ensureInitialized();
+    await _inspectionDocumentBox.delete(id);
+  }
+
   Future<void> close() async {
     if (!_isInitialized) return;
     await Hive.close();
     _isInitialized = false;
     if (kDebugMode) {
-      print('Database closed');
+      debugPrint('Database closed');
     }
   }
 }

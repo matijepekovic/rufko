@@ -500,18 +500,18 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
     final finalTotal = subtotalAfterDiscount + taxAmount;
 
     // 🐛 DEBUG: Print values to console
-    print('🧮 TAX CALCULATION DEBUG:');
-    print('   Level Subtotal: \$${levelSubtotal.toStringAsFixed(2)}');
-    print('   Addon Subtotal: \$${addonSubtotal.toStringAsFixed(2)}');
-    print('   Combined Subtotal: \$${combinedSubtotal.toStringAsFixed(2)}');
-    print('   Total Discount: \$${totalDiscount.toStringAsFixed(2)}');
-    print('   Subtotal After Discount: \$${subtotalAfterDiscount.toStringAsFixed(2)}');
-    print('   Tax Rate: ${taxRate.toStringAsFixed(2)}%');
-    print('   Tax Amount: \$${taxAmount.toStringAsFixed(2)}');
-    print('   Final Total: \$${finalTotal.toStringAsFixed(2)}');
+    debugPrint('🧮 TAX CALCULATION DEBUG:');
+    debugPrint('   Level Subtotal: \$${levelSubtotal.toStringAsFixed(2)}');
+    debugPrint('   Addon Subtotal: \$${addonSubtotal.toStringAsFixed(2)}');
+    debugPrint('   Combined Subtotal: \$${combinedSubtotal.toStringAsFixed(2)}');
+    debugPrint('   Total Discount: \$${totalDiscount.toStringAsFixed(2)}');
+    debugPrint('   Subtotal After Discount: \$${subtotalAfterDiscount.toStringAsFixed(2)}');
+    debugPrint('   Tax Rate: ${taxRate.toStringAsFixed(2)}%');
+    debugPrint('   Tax Amount: \$${taxAmount.toStringAsFixed(2)}');
+    debugPrint('   Final Total: \$${finalTotal.toStringAsFixed(2)}');
 
     return Card(
-      color: Theme.of(context).primaryColor.withOpacity(0.05),
+      color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -745,12 +745,12 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
           .where((t) => t.templateType == 'quote')
           .toList();
 
-      print('🔍 Found ${availableTemplates.length} available templates');
+      debugPrint('🔍 Found ${availableTemplates.length} available templates');
 
       final selectedOption = await _showTemplateSelectionDialog(availableTemplates);
 
       if (selectedOption == 'cancelled') {
-        print('👤 User cancelled PDF generation');
+        debugPrint('👤 User cancelled PDF generation');
         return;
       }
 
@@ -775,7 +775,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
 
       if (selectedOption != null && selectedOption != 'standard') {
         // Generate using selected template
-        print('📄 Generating PDF using template: $selectedOption');
+        debugPrint('📄 Generating PDF using template: $selectedOption');
         templateId = selectedOption;
         customData = {
           'generated_from': 'template',
@@ -792,7 +792,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
         );
       } else {
         // Generate using standard method
-        print('📄 Generating PDF using standard method');
+        debugPrint('📄 Generating PDF using standard method');
         customData = {
           'generated_from': 'standard',
           'generation_date': DateTime.now().toIso8601String(),
@@ -858,7 +858,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
       // If result is null, user just navigated back without action
 
     } catch (e) {
-      print('❌ Error generating PDF: $e');
+      debugPrint('❌ Error generating PDF: $e');
       Navigator.pop(context); // Close loading dialog if open
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

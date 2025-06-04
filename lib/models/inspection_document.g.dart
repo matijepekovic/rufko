@@ -1,68 +1,65 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'customer.dart';
+part of 'inspection_document.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class CustomerAdapter extends TypeAdapter<Customer> {
+class InspectionDocumentAdapter extends TypeAdapter<InspectionDocument> {
   @override
-  final int typeId = 0;
+  final int typeId = 15;
 
   @override
-  Customer read(BinaryReader reader) {
+  InspectionDocument read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return Customer(
+    return InspectionDocument(
       id: fields[0] as String?,
-      name: fields[1] as String,
-      phone: fields[2] as String?,
-      email: fields[3] as String?,
-      notes: fields[5] as String?,
-      communicationHistory: (fields[6] as List?)?.cast<String>(),
+      customerId: fields[1] as String,
+      type: fields[2] as String,
+      title: fields[3] as String,
+      content: fields[4] as String?,
+      filePath: fields[5] as String?,
+      sortOrder: fields[6] as int,
+      quoteId: fields[9] as String?,
+      fileSizeBytes: fields[10] as int?,
+      tags: (fields[11] as List?)?.cast<String>(),
       createdAt: fields[7] as DateTime?,
       updatedAt: fields[8] as DateTime?,
-      streetAddress: fields[9] as String?,
-      city: fields[10] as String?,
-      stateAbbreviation: fields[11] as String?,
-      zipCode: fields[12] as String?,
-      inspectionData: (fields[13] as Map?)?.cast<String, dynamic>(),
     );
   }
 
   @override
-  void write(BinaryWriter writer, Customer obj) {
+  void write(BinaryWriter writer, InspectionDocument obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.name)
+      ..write(obj.customerId)
       ..writeByte(2)
-      ..write(obj.phone)
+      ..write(obj.type)
       ..writeByte(3)
-      ..write(obj.email)
+      ..write(obj.title)
+      ..writeByte(4)
+      ..write(obj.content)
       ..writeByte(5)
-      ..write(obj.notes)
+      ..write(obj.filePath)
       ..writeByte(6)
-      ..write(obj.communicationHistory)
+      ..write(obj.sortOrder)
       ..writeByte(7)
       ..write(obj.createdAt)
       ..writeByte(8)
       ..write(obj.updatedAt)
       ..writeByte(9)
-      ..write(obj.streetAddress)
+      ..write(obj.quoteId)
       ..writeByte(10)
-      ..write(obj.city)
+      ..write(obj.fileSizeBytes)
       ..writeByte(11)
-      ..write(obj.stateAbbreviation)
-      ..writeByte(12)
-      ..write(obj.zipCode)
-      ..writeByte(13)
-      ..write(obj.inspectionData);
+      ..write(obj.tags);
   }
 
   @override
@@ -71,7 +68,7 @@ class CustomerAdapter extends TypeAdapter<Customer> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is CustomerAdapter &&
+      other is InspectionDocumentAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

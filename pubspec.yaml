@@ -26,7 +26,7 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^29.2.7 # From your output: (29.2.7 available)
 
   # File Handling
-  file_picker: ^10.1.9 # From your output: (10.1.9 available)
+  file_picker: ^8.1.6 # # From your output: (10.1.9 available)
   open_filex: ^4.7.0 # Latest on pub.dev
   path_provider: ^2.1.5 # Latest on pub.dev
 
@@ -45,6 +45,9 @@ dependencies:
 
   # HTTP & Networking
   http: ^1.2.1 # Latest STABLE on pub.dev (your output showed 1.4.0 for vm_service, not http directly)
+
+  url_launcher: ^6.2.4        # ← ADD THIS for phone/email/SMS
+  permission_handler: ^11.3.0 # ← ADD THIS for permissions
 
   path: any
 dev_dependencies:

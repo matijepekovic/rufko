@@ -19,6 +19,7 @@ import 'models/message_template.dart';
 import 'providers/app_state_provider.dart';
 import 'services/database_service.dart';
 import 'models/email_template.dart';
+import 'models/inspection_document.dart';
 // Your Screens
 import 'screens/home_screen.dart';
 import 'models/template_category.dart';
@@ -46,6 +47,7 @@ void main() async {
   Hive.registerAdapter(MessageTemplateAdapter());
   Hive.registerAdapter(EmailTemplateAdapter());
   Hive.registerAdapter(TemplateCategoryAdapter());
+  Hive.registerAdapter(InspectionDocumentAdapter());
   await DatabaseService.instance.init();
   await TaxService.initializeTaxDatabase();
   final appStateProvider = AppStateProvider();

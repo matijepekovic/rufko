@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
-import 'package:open_filex/open_filex.dart';
+
 
 import '../models/pdf_template.dart';
 import '../services/template_service.dart';
@@ -16,9 +16,11 @@ class TemplateEditorScreen extends StatefulWidget {
   const TemplateEditorScreen({
     super.key,
     this.existingTemplate,
+    this.preselectedCategory, // ADD THIS
   });
 
   final PDFTemplate? existingTemplate;
+  final String? preselectedCategory; // ADD THIS
 
   @override
   State<TemplateEditorScreen> createState() => _TemplateEditorScreenState();
@@ -28,7 +30,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   PDFTemplate? _currentTemplate;
   bool _isLoading = false;
   String _loadingMessage = '';
-
+  String? _selectedCategoryKey;
   final PdfViewerController _pdfViewerController = PdfViewerController();
   List<Map<String, dynamic>> _detectedPdfFieldsList = [];
 
@@ -43,7 +45,9 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       _currentTemplate = widget.existingTemplate!;
       _loadTemplateDetails();
     } else {
-      if (kDebugMode) print('🔍 NO EXISTING TEMPLATE - Creating new');
+      // For new templates, use the preselected category
+      _selectedCategoryKey = widget.preselectedCategory;
+      if (kDebugMode) debugPrint('🔍 Creating new template with category: $_selectedCategoryKey');
     }
 
     _pdfViewerController.addListener(_viewerControllerListener);
@@ -71,6 +75,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     if (_currentTemplate == null) return;
     setState(() {
       _totalPagesInPdf = _currentTemplate!.totalPages;
+      _selectedCategoryKey = _currentTemplate!.userCategoryKey;
       var detectedFieldsRaw = _currentTemplate!.metadata['detectedPdfFields'];
       if (detectedFieldsRaw is List) {
         _detectedPdfFieldsList = List<Map<String, dynamic>>.from(
@@ -104,7 +109,64 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       _loadingMessage = message;
     });
   }
+  Widget _buildCategoryDropdown() {
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, child) {
+        return FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
+          future: appState.getAllTemplateCategories(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: const LinearProgressIndicator(),
+              );
+            }
 
+            if (!snapshot.hasData) {
+              return const SizedBox.shrink();
+            }
+
+            final allCategories = snapshot.data!;
+            final pdfCategories = allCategories['pdf_templates'] ?? [];
+
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: DropdownButtonFormField<String>(
+                value: _selectedCategoryKey,
+                decoration: InputDecoration(
+                  labelText: 'Template Category',
+                  prefixIcon: const Icon(Icons.category),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  filled: true,
+                  fillColor: Colors.white,
+                ),
+                hint: const Text('Select a category (optional)'),
+                items: [
+                  // Add "None" option
+                  const DropdownMenuItem<String>(
+                    value: null,
+                    child: Text('No Category'),
+                  ),
+                  // Add user-defined categories
+                  ...pdfCategories.map<DropdownMenuItem<String>>((category) {
+                    return DropdownMenuItem<String>(
+                      value: category['key'] as String,
+                      child: Text(category['name'] as String),
+                    );
+                  }),
+                ],
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedCategoryKey = newValue;
+                  });
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -146,16 +208,8 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
           : _currentTemplate == null
           ? _buildTemplateSelector()
           : _buildMobilePdfViewer(),
-      floatingActionButton: _currentTemplate == null
-          ? FloatingActionButton.extended(
-        onPressed: _uploadAndCreateTemplate,
-        icon: const Icon(Icons.upload_file),
-        label: const Text('Upload PDF Template'),
-        backgroundColor: const Color(0xFF2E86AB),
-        foregroundColor: Colors.white,
-      )
-          : _buildMappingProgressFab(),
     );
+
   }
 
   Widget _buildTemplateSelector() {
@@ -196,21 +250,43 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
     return Column(
       children: [
-        // Mobile-friendly mapping hint
+        // Compact mapping mode banner
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          color: Colors.blue.shade50,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.orange.shade100, Colors.orange.shade50],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            border: Border.all(color: Colors.orange.shade300),
+          ),
           child: Row(
             children: [
-              Icon(Icons.touch_app, color: Colors.blue.shade700),
-              const SizedBox(width: 12),
+              Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 18),
+              const SizedBox(width: 8),
               Expanded(
-                child: Text(
-                  'Tap any field in the PDF to link it with your app data',
-                  style: TextStyle(
-                    color: Colors.blue.shade700,
-                    fontWeight: FontWeight.w500,
+                child: RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'MAPPING MODE: ',
+                        style: TextStyle(
+                          color: Colors.orange.shade800,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'Tap fields to map • Form changes not saved',
+                        style: TextStyle(
+                          color: Colors.orange.shade700,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -236,6 +312,8 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
               File(_currentTemplate!.pdfFilePath),
               controller: _pdfViewerController,
               initialZoomLevel: 0,
+              enableDocumentLinkAnnotation: false,  // Try this
+              enableTextSelection: false,
               onPageChanged: (details) {
                 if (!mounted) return;
                 setState(() {
@@ -320,16 +398,11 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
   void _handlePdfTap(PdfGestureDetails details) {
     if (_currentTemplate == null || !mounted || details.pageNumber < 1) {
-      if (kDebugMode) print("PDF Tap: Pre-conditions not met.");
       return;
     }
 
     final int tappedPageIndexZeroBased = details.pageNumber - 1;
     final Offset tapInPdfPageCoords = details.pagePosition;
-
-    if (kDebugMode) {
-      print("PDF Tap: Page ${tappedPageIndexZeroBased + 1}, PDF Coords: $tapInPdfPageCoords");
-    }
 
     Map<String, dynamic>? tappedFieldInfo;
 
@@ -349,15 +422,12 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
       if (fieldPdfBounds.contains(tapInPdfPageCoords)) {
         tappedFieldInfo = fieldInfo;
-        if (kDebugMode) print("PDF Tap HIT: ${(tappedFieldInfo['name'] as String?) ?? 'Unnamed'}");
         break;
       }
     }
 
     if (tappedFieldInfo != null) {
       _showFieldMappingDialog(tappedFieldInfo);
-    } else {
-      if (kDebugMode) print("PDF Tap MISS - no field found at tap location");
     }
   }
 
@@ -576,7 +646,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       ),
       subtitle: isAlreadyMapped
           ? Text(
-        'Already mapped to: ${existingMapping!.pdfFormFieldName}',
+        'Already mapped to: ${existingMapping.pdfFormFieldName}',
         style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
       )
           : Text(
@@ -671,7 +741,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   void _performMapping(String appDataType, Map<String, dynamic> pdfFieldInfo) {
     final String pdfFieldName = pdfFieldInfo['name'] as String;
 
-    if (kDebugMode) print("Creating mapping: $appDataType → $pdfFieldName");
+    if (kDebugMode) debugPrint("Creating mapping: $appDataType → $pdfFieldName");
 
     // Remove any existing mapping for this app data type
     _currentTemplate!.fieldMappings.removeWhere((m) => m.appDataType == appDataType);
@@ -685,7 +755,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       pdfFormFieldName: pdfFieldName,
       detectedPdfFieldType: PdfFormFieldType.values.firstWhere(
             (e) => e.toString() == pdfFieldInfo['type'],
-        orElse: () => PdfFormFieldType.UNKNOWN,
+        orElse: () => PdfFormFieldType. unknown,
       ),
       pageNumber: pdfFieldInfo['page'] as int,
     );
@@ -700,6 +770,9 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
     _currentTemplate!.addField(newMapping);
     _currentTemplate!.updatedAt = DateTime.now();
+    debugPrint('🔧 Saving template with category: $_selectedCategoryKey');
+    _currentTemplate!.userCategoryKey = _selectedCategoryKey; // Save selected category
+    debugPrint('🔧 Template userCategoryKey after save: ${_currentTemplate!.userCategoryKey}');
 
     if (mounted) {
       setState(() {}); // Refresh UI
@@ -717,7 +790,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
     setState(() {
       mapping.pdfFormFieldName = '';
-      mapping.detectedPdfFieldType = PdfFormFieldType.UNKNOWN;
+      mapping.detectedPdfFieldType = PdfFormFieldType. unknown;
       mapping.visualX = null;
       mapping.visualY = null;
       mapping.visualWidth = null;
@@ -833,25 +906,26 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
           backgroundColor: Colors.red,
         ),
       );
-      if (kDebugMode) print("Error uploading/creating template: $e");
+      if (kDebugMode) debugPrint("Error uploading/creating template: $e");
     }
   }
 
   void _saveTemplate() async {
     if (_currentTemplate == null) {
-      if (kDebugMode) print('❌ No template to save');
+      if (kDebugMode) debugPrint('❌ No template to save');
       return;
     }
     if (!mounted) return;
 
     if (kDebugMode) {
-      print('💾 Starting save for template: ${_currentTemplate!.templateName}');
-      print('📍 Template ID: ${_currentTemplate!.id}');
-      print('📍 Field mappings: ${_currentTemplate!.fieldMappings.length}');
+      debugPrint('💾 Starting save for template: ${_currentTemplate!.templateName}');
+      debugPrint('📍 Template ID: ${_currentTemplate!.id}');
+      debugPrint('📍 Field mappings: ${_currentTemplate!.fieldMappings.length}');
     }
 
     try {
       _currentTemplate!.updatedAt = DateTime.now();
+      _currentTemplate!.userCategoryKey = _selectedCategoryKey;
       final appState = context.read<AppStateProvider>();
       await appState.updatePDFTemplate(_currentTemplate!);
 
@@ -866,7 +940,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       Navigator.pop(context);
 
     } catch (e) {
-      if (kDebugMode) print('❌ Error saving template: $e');
+      if (kDebugMode) debugPrint('❌ Error saving template: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.red),

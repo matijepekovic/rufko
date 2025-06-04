@@ -29,13 +29,14 @@ class EmailTemplateAdapter extends TypeAdapter<EmailTemplate> {
       createdAt: fields[9] as DateTime?,
       updatedAt: fields[10] as DateTime?,
       isHtml: fields[11] as bool,
+      userCategoryKey: fields[12] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, EmailTemplate obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +60,9 @@ class EmailTemplateAdapter extends TypeAdapter<EmailTemplate> {
       ..writeByte(10)
       ..write(obj.updatedAt)
       ..writeByte(11)
-      ..write(obj.isHtml);
+      ..write(obj.isHtml)
+      ..writeByte(12)
+      ..write(obj.userCategoryKey);
   }
 
   @override

@@ -47,18 +47,18 @@ class TemplateService {
         final totalPages = document.pages.count;
 
         if (kDebugMode) {
-          print('📄 PDF Template Analysis for: $templateName');
-          print('   Original Path: $uploadedPdfPath');
-          print('   Pages: $totalPages');
+          debugPrint('📄 PDF Template Analysis for: $templateName');
+          debugPrint('   Original Path: $uploadedPdfPath');
+          debugPrint('   Pages: $totalPages');
           // FIX: Removed unnecessary braces
-          print('   First Page Size: ${pageWidth.toStringAsFixed(1)} x ${pageHeight.toStringAsFixed(1)} pts');
+          debugPrint('   First Page Size: ${pageWidth.toStringAsFixed(1)} x ${pageHeight.toStringAsFixed(1)} pts');
         }
 
         // FIX: Simplified null check for form and fields
         if (document.form.fields.count > 0) {
           if (kDebugMode) {
             // FIX: Removed unnecessary braces
-            print('   Found ${document.form.fields.count} potential form fields in PDF.');
+            debugPrint('   Found ${document.form.fields.count} potential form fields in PDF.');
           }
           for (int i = 0; i < document.form.fields.count; i++) {
             // FIX: Removed '!' as fields collection is not null if form is not null
@@ -71,7 +71,7 @@ class TemplateService {
             if (field.page != null) {
               pageIndex = document.pages.indexOf(field.page!); // field.page is non-null if field.page != null
             } else {
-              if (kDebugMode) print("Warning: Could not determine page for field ${field.name}. Defaulting to page 0.");
+              if (kDebugMode) debugPrint("Warning: Could not determine page for field ${field.name}. Defaulting to page 0.");
             }
             if (pageIndex < 0) pageIndex = 0; // Ensure it's a valid index
 
@@ -86,19 +86,19 @@ class TemplateService {
             final relativeWidth = fieldBounds.width / sPageWidth;
             final relativeHeight = fieldBounds.height / sPageHeight;
 
-            PdfFormFieldType detectedType = PdfFormFieldType.UNKNOWN;
+            PdfFormFieldType detectedType = PdfFormFieldType.unknown;
             if (field is syncfusion.PdfTextBoxField) {
-              detectedType = PdfFormFieldType.TEXT_BOX;
+              detectedType = PdfFormFieldType.textBox;
             } else if (field is syncfusion.PdfCheckBoxField) {
-              detectedType = PdfFormFieldType.CHECK_BOX;
+              detectedType = PdfFormFieldType.checkBox;
             } else if (field is syncfusion.PdfRadioButtonListField) {
-              detectedType = PdfFormFieldType.RADIO_BUTTON_GROUP;
+              detectedType = PdfFormFieldType.radioButtonGroup;
             } else if (field is syncfusion.PdfComboBoxField) {
-              detectedType = PdfFormFieldType.COMBO_BOX;
+              detectedType = PdfFormFieldType.comboBox;
             } else if (field is syncfusion.PdfListBoxField) {
-              detectedType = PdfFormFieldType.LIST_BOX;
+              detectedType = PdfFormFieldType.listBox;
             } else if (field is syncfusion.PdfSignatureField) {
-              detectedType = PdfFormFieldType.SIGNATURE_FIELD;
+              detectedType = PdfFormFieldType.signatureField;
             }
 
             detectedPdfFieldsInfo.add({
@@ -122,11 +122,11 @@ class TemplateService {
 
             if (kDebugMode) {
               // FIX: Typo 'AcroForm', unnecessary braces
-              print('     - Detected: "$fieldName" (Type: $detectedType, Page: $pageIndex, Bounds: $fieldBounds)');
+              debugPrint('     - Detected: "$fieldName" (Type: $detectedType, Page: $pageIndex, Bounds: $fieldBounds)');
             }
           }
         } else {
-          if (kDebugMode) print('   No AcroForm fields detected in this PDF.');
+          if (kDebugMode) debugPrint('   No AcroForm fields detected in this PDF.');
         }
 
         final appDir = await getApplicationDocumentsDirectory();
@@ -157,7 +157,7 @@ class TemplateService {
         );
 
         await DatabaseService.instance.savePDFTemplate(template);
-        if (kDebugMode) print('✅ PDFTemplate object created and saved: ${template.templateName}');
+        if (kDebugMode) debugPrint('✅ PDFTemplate object created and saved: ${template.templateName}');
         return template;
 
       } finally {
@@ -165,7 +165,7 @@ class TemplateService {
       }
 
     } catch (e) {
-      if (kDebugMode) print('❌ Error in createTemplateFromPDF: $e');
+      if (kDebugMode) debugPrint('❌ Error in createTemplateFromPDF: $e');
       rethrow;
     }
   }
@@ -232,7 +232,7 @@ class TemplateService {
               }
             }
           } catch (e) {
-            if (kDebugMode) print('Error setting PDF field "$pdfFieldName": $e');
+            if (kDebugMode) debugPrint('Error setting PDF field "$pdfFieldName": $e');
           }
         }
       }
@@ -248,18 +248,18 @@ class TemplateService {
       return outputFile.path;
 
     } catch (e) {
-      if (kDebugMode) print('Error in generatePDFFromTemplate: $e');
+      if (kDebugMode) debugPrint('Error in generatePDFFromTemplate: $e');
       rethrow;
     }
   }
 
   Future<String> generateTemplatePreview(PDFTemplate template) async {
     if (kDebugMode) {
-      print('🎬 PREVIEW DEBUG START');
-      print('   Template: ${template.templateName}');
-      print('   Template mappings: ${template.fieldMappings.length}');
+      debugPrint('🎬 PREVIEW DEBUG START');
+      debugPrint('   Template: ${template.templateName}');
+      debugPrint('   Template mappings: ${template.fieldMappings.length}');
       for (final mapping in template.fieldMappings) {
-        print('      - ${mapping.appDataType} → ${mapping.pdfFormFieldName}');
+        debugPrint('      - ${mapping.appDataType} → ${mapping.pdfFormFieldName}');
       }
     }
 
@@ -300,13 +300,13 @@ class TemplateService {
     };
 
     if (kDebugMode) {
-      print('📋 SAMPLE DATA DEBUG:');
-      print('   Customer name: ${sampleCustomer.name}');
-      print('   Quote number: ${sampleQuote.quoteNumber}');
-      print('   Level 1 name: ${sampleQuote.levels.first.name}');
-      print('   Level 1 base price: ${sampleQuote.levels.first.basePrice}');
-      print('   Custom data: $customData');
-      print('👁️ Generating preview for template: ${template.templateName}');
+      debugPrint('📋 SAMPLE DATA DEBUG:');
+      debugPrint('   Customer name: ${sampleCustomer.name}');
+      debugPrint('   Quote number: ${sampleQuote.quoteNumber}');
+      debugPrint('   Level 1 name: ${sampleQuote.levels.first.name}');
+      debugPrint('   Level 1 base price: ${sampleQuote.levels.first.basePrice}');
+      debugPrint('   Custom data: $customData');
+      debugPrint('👁️ Generating preview for template: ${template.templateName}');
     }
 
     return generatePDFFromTemplate(
@@ -326,26 +326,27 @@ class TemplateService {
       List<dynamic>? customAppDataFields,
       ) async {
     final map = <String, String>{};
+    final isPreviewMode = customDataOverrides?['preview_mode'] == 'true';
 
     if (kDebugMode) {
-      print('🗺️ PREPARE DATA MAP DEBUG START:');
-      print('   Quote: ${quote.quoteNumber}');
-      print('   Customer: ${customer.name}');
-      print('   Selected Level ID: $selectedLevelId');
-      print('   Custom Data Overrides: $customDataOverrides');
-      print('   Custom App Data Fields: ${customAppDataFields?.length ?? 0}');
+      debugPrint('🗺️ PREPARE DATA MAP DEBUG START:');
+      debugPrint('   Quote: ${quote.quoteNumber}');
+      debugPrint('   Customer: ${customer.name}');
+      debugPrint('   Selected Level ID: $selectedLevelId');
+      debugPrint('   Custom Data Overrides: $customDataOverrides');
+      debugPrint('   Custom App Data Fields: ${customAppDataFields?.length ?? 0}');
     }
 
     // 🔧 GET APP SETTINGS FOR COMPANY INFO
     final appSettings = await DatabaseService.instance.getAppSettings();
 
     if (kDebugMode) {
-      print('🏢 APP SETTINGS DEBUG:');
-      print('   Company Name: "${appSettings?.companyName ?? 'NULL'}"');
-      print('   Company Address: "${appSettings?.companyAddress ?? 'NULL'}"');
-      print('   Company Phone: "${appSettings?.companyPhone ?? 'NULL'}"');
-      print('   Company Email: "${appSettings?.companyEmail ?? 'NULL'}"');
-      print('   Preview mode: ${customDataOverrides?['preview_mode']}');
+      debugPrint('🏢 APP SETTINGS DEBUG:');
+      debugPrint('   Company Name: "${appSettings?.companyName ?? 'NULL'}"');
+      debugPrint('   Company Address: "${appSettings?.companyAddress ?? 'NULL'}"');
+      debugPrint('   Company Phone: "${appSettings?.companyPhone ?? 'NULL'}"');
+      debugPrint('   Company Email: "${appSettings?.companyEmail ?? 'NULL'}"');
+      debugPrint('   Preview mode: ${customDataOverrides?['preview_mode']}');
     }
 
     // === CUSTOMER INFORMATION ===
@@ -367,9 +368,9 @@ class TemplateService {
     map['companyEmail'] = appSettings?.companyEmail ?? '[your@companyemail.com]';
 
     if (kDebugMode) {
-      print('🔍 DEBUG 2 - AFTER COMPANY INFO SET:');
-      print('   map[companyPhone]: "${map['companyPhone']}"');
-      print('   map[companyEmail]: "${map['companyEmail']}"');
+      debugPrint('🔍 DEBUG 2 - AFTER COMPANY INFO SET:');
+      debugPrint('   map[companyPhone]: "${map['companyPhone']}"');
+      debugPrint('   map[companyEmail]: "${map['companyEmail']}"');
     }
 
     // === QUOTE BASIC INFORMATION ===
@@ -407,6 +408,7 @@ class TemplateService {
     }
 
     // === PRODUCT-SPECIFIC INFORMATION ===
+    // === PRODUCT-SPECIFIC INFORMATION ===
     final allProducts = <legacy_quote_model.QuoteItem>[];
 
     QuoteLevel? targetLevel;
@@ -431,11 +433,15 @@ class TemplateService {
         map['${productKey}Qty'] = product.quantity.toString();
         map['${productKey}UnitPrice'] = _currencyFormat.format(product.unitPrice);
         map['${productKey}Total'] = _currencyFormat.format(product.totalPrice);
+        // NEW: Add product description mapping
+        map['${productKey}Description'] = product.description ?? '';
       } else {
         map['${productKey}Name'] = '';
         map['${productKey}Qty'] = '';
         map['${productKey}UnitPrice'] = '';
         map['${productKey}Total'] = '';
+        // NEW: Add empty product description
+        map['${productKey}Description'] = '';
       }
     }
 
@@ -494,10 +500,10 @@ class TemplateService {
       }
 
       if (kDebugMode) {
-        print('🔧 CUSTOM OVERRIDES APPLIED:');
+        debugPrint('🔧 CUSTOM OVERRIDES APPLIED:');
         for (final entry in customDataOverrides.entries) {
           final wasApplied = !companyFields.contains(entry.key) || entry.value.isNotEmpty;
-          print('   ${entry.key}: "${entry.value}" ${wasApplied ? "✅ APPLIED" : "❌ SKIPPED (empty company field)"}');
+          debugPrint('   ${entry.key}: "${entry.value}" ${wasApplied ? "✅ APPLIED" : "❌ SKIPPED (empty company field)"}');
         }
       }
     }
@@ -512,49 +518,68 @@ class TemplateService {
     };
 
     if (kDebugMode) {
-      print('💾 BACKUP company fields before custom fields:');
+      debugPrint('💾 BACKUP company fields before custom fields:');
       for (final entry in companyFieldsBackup.entries) {
-        print('   ${entry.key}: "${entry.value}"');
+        debugPrint('   ${entry.key}: "${entry.value}"');
       }
     }
     // =======================================
 
     // === CUSTOM APP DATA FIELDS ===
+    // === CUSTOM APP DATA FIELDS ===
     if (customAppDataFields != null) {
       for (final field in customAppDataFields) {
         final String fieldName;
-        final String currentValue;
+        final String fieldCategory;
+        final String fieldType;
 
         if (field is Map<String, dynamic>) {
           fieldName = field['fieldName'] as String? ?? '';
-          currentValue = field['currentValue'] as String? ?? '';
+          fieldCategory = field['category'] as String? ?? '';
+          fieldType = field['fieldType'] as String? ?? '';
         } else {
           fieldName = field.fieldName as String? ?? '';
-          currentValue = field.currentValue as String? ?? '';
+          fieldCategory = field.category as String? ?? '';
+          fieldType = field.fieldType as String? ?? '';
         }
 
         if (fieldName.isNotEmpty) {
-          // ============= CRITICAL FIX =============
-          // Don't override company fields from app settings with empty custom field values
-          final isCompanyField = companyFieldsBackup.containsKey(fieldName);
-          final hasNonEmptyValue = currentValue.isNotEmpty;
-          final isPreviewMode = customDataOverrides?['preview_mode'] == 'true';
+          String valueToUse = '';
 
-          if (isCompanyField && !hasNonEmptyValue) {
-            // Skip empty custom company fields - keep app settings value
-            if (kDebugMode) {
-              print('   🚫 SKIPPING custom field "$fieldName" (empty value, keeping app settings)');
+          // 🚀 Use customer inspection data for inspection fields
+          if (fieldCategory == 'inspection') {
+            final inspectionValue = customer.getInspectionValue(fieldName);
+
+            if (inspectionValue != null) {
+              if (fieldType == 'checkbox') {
+                valueToUse = (inspectionValue == true || inspectionValue == 'true') ? 'true' : 'false';
+              } else {
+                valueToUse = inspectionValue.toString();
+              }
             }
+          } else {
+            // For non-inspection fields, use the default value
+            final String currentValue;
+            if (field is Map<String, dynamic>) {
+              currentValue = field['currentValue'] as String? ?? '';
+            } else {
+              currentValue = field.currentValue as String? ?? '';
+            }
+            valueToUse = currentValue;
+          }
+
+          // Don't override company fields with empty values
+          final isCompanyField = companyFieldsBackup.containsKey(fieldName);
+          if (isCompanyField && valueToUse.isEmpty) {
             continue;
           }
-          // =======================================
 
-          map[fieldName] = currentValue.isNotEmpty ? currentValue :
+          map[fieldName] = valueToUse.isNotEmpty ? valueToUse :
           (isPreviewMode ? '[${PDFTemplate.getFieldDisplayName(fieldName, customAppDataFields)}]' : '');
         }
       }
 
-      if (kDebugMode) print('📝 Added ${customAppDataFields.length} custom app data fields to PDF data map');
+      if (kDebugMode) debugPrint('📝 Added ${customAppDataFields.length} custom app data fields to PDF data map');
     }
 
     // ============= CRITICAL FIX =============
@@ -566,19 +591,19 @@ class TemplateService {
       if (map[fieldName]?.isEmpty == true && backupValue.isNotEmpty) {
         map[fieldName] = backupValue;
         if (kDebugMode) {
-          print('🔧 RESTORED $fieldName from app settings: "$backupValue"');
+          debugPrint('🔧 RESTORED $fieldName from app settings: "$backupValue"');
         }
       }
     }
 
     if (kDebugMode) {
-      print('✅ FINAL company field check:');
+      debugPrint('✅ FINAL company field check:');
       for (final entry in companyFieldsBackup.entries) {
-        print('   ${entry.key}: "${map[entry.key]}"');
+        debugPrint('   ${entry.key}: "${map[entry.key]}"');
       }
     }
     // =======================================
-    String _generateSampleValueForField(String fieldType) {
+    String generateSampleValueForField(String fieldType) {
       // Handle specific field patterns
       if (fieldType.contains('Name') && !fieldType.contains('company') && !fieldType.contains('customer')) {
         return '[Sample Product Name]';
@@ -651,7 +676,7 @@ class TemplateService {
       }
     }
     // === ENSURE ALL FIELD TYPES HAVE VALUES ===
-    final isPreviewMode = customDataOverrides?['preview_mode'] == 'true';
+
 
     for (final fieldTypeKey in PDFTemplate.getQuoteFieldTypes()) {
       final existingValue = map[fieldTypeKey];
@@ -659,7 +684,7 @@ class TemplateService {
       // Generate better sample data for preview mode
       String sampleValue = '';
       if (isPreviewMode) {
-        sampleValue = _generateSampleValueForField(fieldTypeKey);
+        sampleValue = generateSampleValueForField(fieldTypeKey);
       }
 
       final defaultValue = isPreviewMode ? sampleValue : '';
@@ -678,13 +703,13 @@ class TemplateService {
     }
 
     if (kDebugMode) {
-      print('🔍 FINAL DEBUG - BEFORE RETURN:');
-      print('   Final map[companyPhone]: "${map['companyPhone']}"');
-      print('   Final map[companyEmail]: "${map['companyEmail']}"');
-      print('   Total map size: ${map.length}');
+      debugPrint('🔍 FINAL DEBUG - BEFORE RETURN:');
+      debugPrint('   Final map[companyPhone]: "${map['companyPhone']}"');
+      debugPrint('   Final map[companyEmail]: "${map['companyEmail']}"');
+      debugPrint('   Total map size: ${map.length}');
     }
 
-    if (kDebugMode) print('🗺️ Prepared Data Map for PDF with ${map.length} fields');
+    if (kDebugMode) debugPrint('🗺️ Prepared Data Map for PDF with ${map.length} fields');
     return map;
   }
 
@@ -716,18 +741,18 @@ class TemplateService {
         final file = File(template.pdfFilePath);
         if (await file.exists()) {
           await file.delete();
-          if (kDebugMode) print('🗑️ Deleted PDF file: ${template.pdfFilePath}');
+          if (kDebugMode) debugPrint('🗑️ Deleted PDF file: ${template.pdfFilePath}');
         } else {
-          if (kDebugMode) print('⚠️ PDF file not found for deletion: ${template.pdfFilePath}');
+          if (kDebugMode) debugPrint('⚠️ PDF file not found for deletion: ${template.pdfFilePath}');
         }
         await DatabaseService.instance.deletePDFTemplate(templateId);
-        if (kDebugMode) print('✅ Template record deleted from DB: ${template.templateName}');
+        if (kDebugMode) debugPrint('✅ Template record deleted from DB: ${template.templateName}');
         return true;
       }
-      if (kDebugMode) print('⚠️ Template record not found in DB for deletion: $templateId');
+      if (kDebugMode) debugPrint('⚠️ Template record not found in DB for deletion: $templateId');
       return false;
     } catch (e) {
-      if (kDebugMode) print('❌ Error deleting template $templateId: $e');
+      if (kDebugMode) debugPrint('❌ Error deleting template $templateId: $e');
       return false;
     }
   }
@@ -744,7 +769,7 @@ class TemplateService {
   Future<bool> validateTemplate(PDFTemplate template) async {
     final file = File(template.pdfFilePath);
     if (!await file.exists()) {
-      if (kDebugMode) print('Validation Fail: PDF file for template "${template.templateName}" not found at ${template.pdfFilePath}');
+      if (kDebugMode) debugPrint('Validation Fail: PDF file for template "${template.templateName}" not found at ${template.pdfFilePath}');
       return false;
     }
     return true;

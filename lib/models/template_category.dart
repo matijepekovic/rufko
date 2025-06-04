@@ -1,5 +1,6 @@
 // lib/models/template_category.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
@@ -10,6 +11,7 @@ class TemplateCategory extends HiveObject {
   @HiveField(0)
   final String id;
 
+  @override
   @HiveField(1)
   final String key;
 
@@ -65,15 +67,79 @@ class TemplateCategory extends HiveObject {
   }
 
   factory TemplateCategory.fromMap(Map<String, dynamic> map) {
+    String? id = map['id'] is String ? map['id'] as String : null;
+    String? key = map['key'] is String ? map['key'] as String : null;
+    String? name = map['name'] is String ? map['name'] as String : null;
+    String? templateType = map['templateType'] is String ? map['templateType'] as String : null;
+
+    DateTime createdAt;
+    if (map['createdAt'] != null) {
+      if (map['createdAt'] is String) {
+        try {
+          createdAt = DateTime.parse(map['createdAt'] as String);
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint("Error parsing createdAt string: ${map['createdAt']}. Using current time. Error: $e");
+          }
+          createdAt = DateTime.now();
+        }
+      } else if (map['createdAt'] is DateTime) {
+        createdAt = map['createdAt'] as DateTime;
+      } else {
+        if (kDebugMode) {
+          debugPrint("Unexpected type for createdAt: ${map['createdAt'].runtimeType}. Using current time.");
+        }
+        createdAt = DateTime.now();
+      }
+    } else {
+      createdAt = DateTime.now();
+    }
+
+    DateTime updatedAt;
+    if (map['updatedAt'] != null) {
+      if (map['updatedAt'] is String) {
+        try {
+          updatedAt = DateTime.parse(map['updatedAt'] as String);
+        } catch (e) {
+          if (kDebugMode) {
+            debugPrint("Error parsing updatedAt string: ${map['updatedAt']}. Using current time. Error: $e");
+          }
+          updatedAt = DateTime.now();
+        }
+      } else if (map['updatedAt'] is DateTime) {
+        updatedAt = map['updatedAt'] as DateTime;
+      } else {
+        if (kDebugMode) {
+          debugPrint("Unexpected type for updatedAt: ${map['updatedAt'].runtimeType}. Using current time.");
+        }
+        updatedAt = DateTime.now();
+      }
+    } else {
+      updatedAt = DateTime.now();
+    }
+
+    if (key == null || name == null || templateType == null) {
+      String missingFields = [
+        if (key == null) 'key',
+        if (name == null) 'name',
+        if (templateType == null) 'templateType'
+      ].join(', ');
+      final errorMessage = "TemplateCategory.fromMap: Critical fields missing ($missingFields) in map: $map. Providing defaults.";
+      if (kDebugMode) {
+        debugPrint("ERROR: $errorMessage");
+      }
+    }
+
     return TemplateCategory(
-      id: map['id'],
-      key: map['key'] ?? '',
-      name: map['name'] ?? '',
-      templateType: map['templateType'] ?? '',
-      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
-      updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
+      id: id, // The constructor handles null ID by generating a new one
+      key: key ?? 'error_key_${const Uuid().v4().substring(0, 8)}',
+      name: name ?? 'Error Name',
+      templateType: templateType ?? 'error_type',
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
+
 
   @override
   String toString() {

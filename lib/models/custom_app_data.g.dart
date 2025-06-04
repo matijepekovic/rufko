@@ -27,6 +27,7 @@ class CustomAppDataFieldAdapter extends TypeAdapter<CustomAppDataField> {
       placeholder: fields[7] as String?,
       description: fields[8] as String?,
       sortOrder: fields[9] as int,
+      dropdownOptions: (fields[12] as List?)?.cast<String>(),
       createdAt: fields[10] as DateTime?,
       updatedAt: fields[11] as DateTime?,
     );
@@ -35,7 +36,7 @@ class CustomAppDataFieldAdapter extends TypeAdapter<CustomAppDataField> {
   @override
   void write(BinaryWriter writer, CustomAppDataField obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -59,7 +60,9 @@ class CustomAppDataFieldAdapter extends TypeAdapter<CustomAppDataField> {
       ..writeByte(10)
       ..write(obj.createdAt)
       ..writeByte(11)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(12)
+      ..write(obj.dropdownOptions);
   }
 
   @override

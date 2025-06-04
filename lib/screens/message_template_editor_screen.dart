@@ -1,11 +1,9 @@
 // lib/screens/message_template_editor_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/message_template.dart';
 import '../providers/app_state_provider.dart';
-
 
 class MessageTemplateEditorScreen extends StatefulWidget {
   const MessageTemplateEditorScreen({
@@ -27,44 +25,17 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
   final _descriptionController = TextEditingController();
   final _messageContentController = TextEditingController();
 
-  String _selectedCategory = 'quote_notifications';
   bool _isActive = true;
   List<String> _detectedPlaceholders = [];
-
-  final List<String> _categories = [
-    'quote_notifications',
-    'appointment_reminders',
-    'job_status_updates',
-    'payment_reminders',
-    'follow_ups',
-    'emergency_urgent',
-  ];
-
-  final Map<String, String> _categoryNames = {
-    'quote_notifications': 'Quote Notifications',
-    'appointment_reminders': 'Appointment Reminders',
-    'job_status_updates': 'Job Status Updates',
-    'payment_reminders': 'Payment Reminders',
-    'follow_ups': 'Follow-ups',
-    'emergency_urgent': 'Emergency/Urgent',
-  };
-
-  final Map<String, IconData> _categoryIcons = {
-    'quote_notifications': Icons.notifications,
-    'appointment_reminders': Icons.schedule,
-    'job_status_updates': Icons.construction,
-    'payment_reminders': Icons.payment,
-    'follow_ups': Icons.chat,
-    'emergency_urgent': Icons.warning,
-  };
+  String? _selectedCategoryKey;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
+    _selectedCategoryKey = widget.existingTemplate?.userCategoryKey ?? widget.initialCategory;
     if (widget.existingTemplate != null) {
       _loadExistingTemplate();
-    } else if (widget.initialCategory != null) {
-      _selectedCategory = widget.initialCategory!;
     }
     _messageContentController.addListener(_onMessageContentChanged);
   }
@@ -82,18 +53,76 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
     _templateNameController.text = template.templateName;
     _descriptionController.text = template.description;
     _messageContentController.text = template.messageContent;
-    _selectedCategory = template.category;
     _isActive = template.isActive;
     _detectedPlaceholders = List.from(template.placeholders);
+    debugPrint('📝 Loaded existing message template: ${template.templateName}');
   }
 
   void _onMessageContentChanged() {
     final newPlaceholders = MessageTemplate.extractPlaceholders(_messageContentController.text);
-
-    // Always trigger setState to refresh preview, even if placeholders haven't changed
     setState(() {
       _detectedPlaceholders = newPlaceholders;
     });
+  }
+
+  Widget _buildCategoryDropdown() {
+    return FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
+      future: context.read<AppStateProvider>().getAllTemplateCategories(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            child: const LinearProgressIndicator(),
+          );
+        }
+
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        final allCategories = snapshot.data!;
+        final messageCategories = allCategories['message_templates'] ?? [];
+
+        return DropdownButtonFormField<String>(
+          value: _selectedCategoryKey,
+          decoration: const InputDecoration(
+            labelText: 'Message Category',
+            hintText: 'Select a category (optional)',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.category),
+          ),
+          items: [
+            const DropdownMenuItem<String>(
+              value: null,
+              child: Row(
+                children: [
+                  Icon(Icons.clear, size: 18),
+                  SizedBox(width: 8),
+                  Text('No Category'),
+                ],
+              ),
+            ),
+            ...messageCategories.map<DropdownMenuItem<String>>((category) {
+              return DropdownMenuItem<String>(
+                value: category['key'] as String,
+                child: Row(
+                  children: [
+                    Icon(Icons.sms, size: 18),
+                    const SizedBox(width: 8),
+                    Text(category['name'] as String),
+                  ],
+                ),
+              );
+            }),
+          ],
+          onChanged: (String? newValue) {
+            setState(() {
+              _selectedCategoryKey = newValue;
+            });
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -132,7 +161,7 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
                     _buildPlaceholdersSection(),
                     const SizedBox(height: 24),
                     _buildPreviewSection(),
-                    const SizedBox(height: 100), // Extra space for FAB
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
@@ -141,10 +170,19 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _saveTemplate,
-        icon: const Icon(Icons.save),
+        onPressed: _isLoading ? null : _saveTemplate,
+        icon: _isLoading
+            ? const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+        )
+            : const Icon(Icons.save),
         label: Text(isEditing ? 'Update Template' : 'Create Template'),
-        backgroundColor: Colors.green,
+        backgroundColor: _isLoading ? Colors.grey : Colors.green,
       ),
     );
   }
@@ -171,7 +209,6 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
             ),
             const SizedBox(height: 16),
 
-            // Template Name
             TextFormField(
               controller: _templateNameController,
               decoration: const InputDecoration(
@@ -189,36 +226,9 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
             ),
             const SizedBox(height: 16),
 
-            // Category
-            DropdownButtonFormField<String>(
-              value: _selectedCategory,
-              decoration: const InputDecoration(
-                labelText: 'Category *',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.category),
-              ),
-              items: _categories.map((category) {
-                return DropdownMenuItem(
-                  value: category,
-                  child: Row(
-                    children: [
-                      Icon(_categoryIcons[category], size: 18),
-                      const SizedBox(width: 8),
-                      Text(_categoryNames[category] ?? category),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedCategory = value!;
-                });
-              },
-              validator: (value) => value == null ? 'Please select a category' : null,
-            ),
+            _buildCategoryDropdown(),
             const SizedBox(height: 16),
 
-            // Description
             TextFormField(
               controller: _descriptionController,
               decoration: const InputDecoration(
@@ -231,7 +241,6 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
             ),
             const SizedBox(height: 16),
 
-            // Active toggle
             SwitchListTile(
               title: const Text('Active Template'),
               subtitle: const Text('Inactive templates won\'t appear in quick send options'),
@@ -309,7 +318,6 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
             ),
             const SizedBox(height: 8),
 
-            // Character count
             Row(
               children: [
                 Icon(
@@ -527,15 +535,13 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
 
   String _generateLivePreview() {
     final appState = context.read<AppStateProvider>();
-
-    // Generate comprehensive sample data using same logic as PDF templates
     final sampleData = _generateSampleAppData(appState);
 
-    // Create temporary template to generate preview
     final template = MessageTemplate(
       templateName: 'Preview',
       description: '',
-      category: _selectedCategory,
+      category: _selectedCategoryKey ?? 'uncategorized',
+      userCategoryKey: _selectedCategoryKey,
       messageContent: _messageContentController.text,
       placeholders: _detectedPlaceholders,
     );
@@ -547,7 +553,6 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
     final now = DateTime.now();
     final sampleData = <String, String>{};
 
-    // Customer sample data
     sampleData['customerName'] = 'John Smith';
     sampleData['customerStreetAddress'] = '123 Main Street';
     sampleData['customerCity'] = 'Seattle';
@@ -557,14 +562,12 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
     sampleData['customerPhone'] = '(555) 123-4567';
     sampleData['customerEmail'] = 'john.smith@email.com';
 
-    // Company data from app settings
     final appSettings = appState.appSettings;
     sampleData['companyName'] = appSettings?.companyName ?? 'Your Roofing Company';
     sampleData['companyAddress'] = appSettings?.companyAddress ?? '456 Business Ave, Seattle, WA 98102';
     sampleData['companyPhone'] = appSettings?.companyPhone ?? '(555) 987-6543';
     sampleData['companyEmail'] = appSettings?.companyEmail ?? 'info@yourcompany.com';
 
-    // Quote sample data
     sampleData['quoteNumber'] = 'Q-${now.year}-001';
     sampleData['quoteDate'] = '${now.month}/${now.day}/${now.year}';
     sampleData['validUntil'] = '${now.add(const Duration(days: 30)).month}/${now.add(const Duration(days: 30)).day}/${now.add(const Duration(days: 30)).year}';
@@ -575,7 +578,6 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
     sampleData['taxAmount'] = '\$1,058.25';
     sampleData['grandTotal'] = '\$13,508.25';
 
-    // Custom app data fields
     for (final field in appState.customAppDataFields) {
       final fieldName = field.fieldName;
       final currentValue = field.currentValue;
@@ -583,7 +585,6 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
       if (currentValue.isNotEmpty) {
         sampleData[fieldName] = currentValue;
       } else {
-        // Generate sample value based on field type/name
         sampleData[fieldName] = _generateSampleValueForField(fieldName);
       }
     }
@@ -755,13 +756,11 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
     int newCursorPosition;
 
     if (currentPosition >= 0) {
-      // Insert at cursor position
       newText = currentText.substring(0, currentPosition) +
           placeholderText +
           currentText.substring(currentPosition);
       newCursorPosition = currentPosition + placeholderText.length;
     } else {
-      // Append to end
       newText = currentText + placeholderText;
       newCursorPosition = newText.length;
     }
@@ -774,74 +773,79 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
 
   void _showPlaceholderHelp() {
     showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-      title: const Text('Placeholder Help'),
-      content: const SingleChildScrollView(
-      child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-      Text(
-      'Placeholders are replaced with real data when sending messages:',
-      style: TextStyle(fontWeight: FontWeight.bold),
-    ),
-    SizedBox(height: 12),
-    Text('• Wrap placeholder names in curly braces: {customer_name}'),
-    Text('• Use snake_case for placeholder names'),
-    Text('• Placeholders are case-sensitive'),
-    Text('• Unknown placeholders will remain'),
-        Text('• Unknown placeholders will remain unchanged in the message'),
-        SizedBox(height: 16),
-        Text(
-          'Available Placeholders:',
-          style: TextStyle(fontWeight: FontWeight.bold),
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Placeholder Help'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Placeholders are replaced with real data when sending messages:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 12),
+              Text('• Wrap placeholder names in curly braces: {customer_name}'),
+              Text('• Use snake_case for placeholder names'),
+              Text('• Placeholders are case-sensitive'),
+              Text('• Unknown placeholders will remain unchanged in the message'),
+              SizedBox(height: 16),
+              Text(
+                'Available Placeholders:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('• {customer_name} - Full customer name'),
+              Text('• {customer_phone} - Customer phone number'),
+              Text('• {quote_number} - Quote reference number'),
+              Text('• {quote_total} - Total quote amount'),
+              Text('• {appointment_date} - Scheduled appointment date'),
+              Text('• {company_name} - Your company name'),
+              Text('• {current_date} - Today\'s date'),
+              SizedBox(height: 12),
+              Text(
+                'Example:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Hello {customer_name}, your quote #{quote_number} for {quote_total} is ready!',
+                style: TextStyle(fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
         ),
-        SizedBox(height: 8),
-        Text('• {customer_name} - Full customer name'),
-        Text('• {customer_phone} - Customer phone number'),
-        Text('• {quote_number} - Quote reference number'),
-        Text('• {quote_total} - Total quote amount'),
-        Text('• {appointment_date} - Scheduled appointment date'),
-        Text('• {company_name} - Your company name'),
-        Text('• {current_date} - Today\'s date'),
-        SizedBox(height: 12),
-        Text(
-          'Example:',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        SizedBox(height: 4),
-        Text(
-          'Hello {customer_name}, your quote #{quote_number} for {quote_total} is ready!',
-          style: TextStyle(fontStyle: FontStyle.italic),
-        ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
       ),
-      ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
     );
   }
 
-  void _saveTemplate() async {
+  Future<void> _saveTemplate() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+
+    setState(() {
+      _isLoading = true;
+    });
 
     try {
       final appState = context.read<AppStateProvider>();
 
       if (widget.existingTemplate != null) {
-        // Update existing template
+        debugPrint('💾 Updating existing message template: ${widget.existingTemplate!.id}');
+
         final updatedTemplate = widget.existingTemplate!.copyWith(
           templateName: _templateNameController.text.trim(),
           description: _descriptionController.text.trim(),
-          category: _selectedCategory,
+          category: _selectedCategoryKey ?? 'uncategorized',
+          userCategoryKey: _selectedCategoryKey,
           messageContent: _messageContentController.text.trim(),
           placeholders: _detectedPlaceholders,
           isActive: _isActive,
@@ -849,6 +853,7 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
         );
 
         await appState.updateMessageTemplate(updatedTemplate);
+        debugPrint('✅ Message template updated successfully');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -857,20 +862,23 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
               backgroundColor: Colors.green,
             ),
           );
-          Navigator.pop(context);
+          Navigator.pop(context, true); // Return true to indicate success
         }
       } else {
-        // Create new template
+        debugPrint('🆕 Creating new message template');
+
         final newTemplate = MessageTemplate(
           templateName: _templateNameController.text.trim(),
           description: _descriptionController.text.trim(),
-          category: _selectedCategory,
+          category: _selectedCategoryKey ?? 'uncategorized',
+          userCategoryKey: _selectedCategoryKey,
           messageContent: _messageContentController.text.trim(),
           placeholders: _detectedPlaceholders,
           isActive: _isActive,
         );
 
         await appState.addMessageTemplate(newTemplate);
+        debugPrint('✅ Message template created successfully');
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -879,10 +887,12 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
               backgroundColor: Colors.green,
             ),
           );
-          Navigator.pop(context);
+          Navigator.pop(context, true); // Return true to indicate success
         }
       }
     } catch (e) {
+      debugPrint('❌ Error saving message template: $e');
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -890,6 +900,12 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
             backgroundColor: Colors.red,
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
