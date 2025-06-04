@@ -511,7 +511,7 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
     switch (type) {
       case ProductPricingType.mainDifferentiator:
         return 'Main';
-      case ProductPricingType. subLeveled:
+      case ProductPricingType.subLeveled:
         return 'Sub-Level';
       case ProductPricingType.simple:
         return 'Simple';
@@ -786,7 +786,7 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
     switch (type) {
       case ProductPricingType.mainDifferentiator:
         return Colors.blue.shade600;
-      case ProductPricingType. subLeveled:
+      case ProductPricingType.subLeveled:
         return Colors.orange.shade600;
       case ProductPricingType.simple:
         return Colors.green.shade600;

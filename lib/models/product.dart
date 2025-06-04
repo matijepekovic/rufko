@@ -153,7 +153,7 @@ class Product extends HiveObject {
     if (isMainDifferentiator) {
       pricingType = ProductPricingType.mainDifferentiator;
     } else if (enableLevelPricing && enhancedLevelPrices.isNotEmpty) {
-      pricingType = ProductPricingType. subLeveled;
+      pricingType = ProductPricingType.subLeveled;
     } else {
       pricingType = ProductPricingType.simple;
     }
@@ -164,7 +164,7 @@ class Product extends HiveObject {
     switch (pricingType) {
       case ProductPricingType.mainDifferentiator:
         return 'Main Differentiator';
-      case ProductPricingType. subLeveled:
+      case ProductPricingType.subLeveled:
         return 'Sub-Leveled Options';
       case ProductPricingType.simple:
         return 'Simple Product';

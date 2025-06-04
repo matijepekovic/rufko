@@ -20,6 +20,8 @@ import 'simplified_quote_detail_screen.dart';
 import '../mixins/file_sharing_mixin.dart';
 import '../models/custom_app_data.dart';
 import '../models/inspection_document.dart';
+import 'inspection_viewer_screen.dart';
+import 'inspection_viewer_screen.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final Customer customer;
@@ -3837,186 +3839,552 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       },
     );
   }
+
   Widget _buildEmptyInspectionDocuments() {
-    return Column(
-      children: [
-        Icon(
-          Icons.assignment_outlined,
-          size: 48,
-          color: Colors.grey[400],
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'No inspection documents yet',
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Add notes and PDFs to document your inspection',
-          style: TextStyle(
-            color: Colors.grey[500],
-            fontSize: 12,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    // Check if note exists
+    final existingDocs = context.read<AppStateProvider>().getInspectionDocumentsForCustomer(widget.customer.id);
+    final hasNote = existingDocs.any((doc) => doc.isNote);
+
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 300),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            ElevatedButton.icon(
-              onPressed: _showAddInspectionNoteDialog,
-              icon: const Icon(Icons.note_add, size: 18),
-              label: const Text('Add Note'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+            Icon(
+              Icons.assignment_outlined,
+              size: 40,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No inspection documents yet',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
               ),
             ),
-            OutlinedButton.icon(
-              onPressed: _showAddInspectionPdfDialog,
-              icon: const Icon(Icons.upload_file, size: 18),
-              label: const Text('Upload PDF'),
+            const SizedBox(height: 6),
+            Text(
+              'Add notes and PDFs to document your inspection',
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 11,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _showAddInspectionNoteDialog,
+                  icon: Icon(hasNote ? Icons.edit_note : Icons.note_add, size: 16),
+                  label: Text(hasNote ? 'Edit Note' : 'Add Note'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _showAddInspectionPdfDialog,
+                  icon: const Icon(Icons.upload_file, size: 16),
+                  label: const Text('Upload PDF'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-      ],
+      ),
     );
   }
-
-
 
   Widget _buildInspectionDocumentsList(List<InspectionDocument> documents) {
+    // Check if note exists
+    final hasNote = documents.any((doc) => doc.isNote);
+
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        Wrap(
+          spacing: 8,
           children: [
             ElevatedButton.icon(
               onPressed: _showAddInspectionNoteDialog,
-              icon: const Icon(Icons.note_add, size: 18),
-              label: const Text('Add Note'),
+              icon: Icon(hasNote ? Icons.edit_note : Icons.note_add, size: 16),
+              label: Text(hasNote ? 'Edit Note' : 'Add Note'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
             OutlinedButton.icon(
               onPressed: _showAddInspectionPdfDialog,
-              icon: const Icon(Icons.upload_file, size: 18),
+              icon: const Icon(Icons.upload_file, size: 16),
               label: const Text('Upload PDF'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: documents.length,
-          itemBuilder: (context, index) {
-            final doc = documents[index];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 8),
-              child: ListTile(
-                leading: Icon(
-                  doc.isNote ? Icons.note : Icons.picture_as_pdf,
-                  color: doc.isNote ? Colors.blue : Colors.red,
+        const SizedBox(height: 12),
+        Container(
+          constraints: const BoxConstraints(maxHeight: 200),
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: documents.length,
+            itemBuilder: (context, index) {
+              final doc = documents[index];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 6),
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(
+                    doc.isNote ? Icons.note : Icons.picture_as_pdf,
+                    color: doc.isNote ? Colors.blue : Colors.red,
+                    size: 20,
+                  ),
+                  title: Text(
+                    doc.displayTitle,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    doc.isNote
+                        ? 'Note • ${DateFormat('MMM dd, yyyy').format(doc.createdAt)}'
+                        : 'PDF • ${doc.formattedFileSize} • ${DateFormat('MMM dd, yyyy').format(doc.createdAt)}',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 14),
+                  onTap: () {
+                    // Find the index of this document
+                    final allDocs = context.read<AppStateProvider>().getInspectionDocumentsForCustomer(widget.customer.id);
+                    final index = allDocs.indexWhere((d) => d.id == doc.id);
+
+                    // Navigate to the viewer
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => InspectionViewerScreen(
+                          customer: widget.customer,
+                          initialIndex: index != -1 ? index : 0,
+                        ),
+                      ),
+                    );
+                  },
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 ),
-                title: Text(doc.displayTitle),
-                subtitle: Text(
-                  doc.isNote
-                      ? 'Note • ${DateFormat('MMM dd, yyyy').format(doc.createdAt)}'
-                      : 'PDF • ${doc.formattedFileSize} • ${DateFormat('MMM dd, yyyy').format(doc.createdAt)}',
-                ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () => _viewInspectionDocument(doc),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ],
     );
   }
-
   void _showAddInspectionNoteDialog() {
-    final titleController = TextEditingController();
+    // Check if a note already exists
+    final existingDocs = context.read<AppStateProvider>().getInspectionDocumentsForCustomer(widget.customer.id);
+    final existingNote = existingDocs.where((doc) => doc.isNote).toList();
+
+    if (existingNote.isNotEmpty) {
+      _showEditInspectionNoteDialog(existingNote.first);
+      return;
+    }
+
     final contentController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Inspection Note'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(
-                labelText: 'Note Title',
-                border: OutlineInputBorder(),
+      builder: (context) {
+        final screenHeight = MediaQuery.of(context).size.height;
+        final isMobile = screenHeight < 700;
+
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.note_add, color: Colors.blue),
+              const SizedBox(width: 8),
+              const Text('Inspection Note'),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            constraints: BoxConstraints(
+              maxHeight: isMobile ? screenHeight * 0.5 : 200, // Mobile gets MORE space
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: contentController,
+                    decoration: const InputDecoration(
+                      hintText: 'Document your inspection findings...',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: isMobile ? 6 : 4, // Mobile gets MORE lines
+                  ),
+                  // Quick templates ONLY on mobile
+                  if (isMobile) const SizedBox(height: 12),
+                  if (isMobile) Text(
+                    'Quick add:',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  if (isMobile) const SizedBox(height: 4),
+                  if (isMobile) Wrap(
+                    spacing: 4,
+                    runSpacing: 2,
+                    children: [
+                      _buildQuickChip('Good condition', contentController),
+                      _buildQuickChip('Minor repairs needed', contentController),
+                      _buildQuickChip('Replacement recommended', contentController),
+                      _buildQuickChip('No immediate concerns', contentController),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: contentController,
-              decoration: const InputDecoration(
-                labelText: 'Note Content',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 5,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (contentController.text.trim().isNotEmpty) {
+                  final note = InspectionDocumentHelper.createNote(
+                    customerId: widget.customer.id,
+                    title: 'Site Inspection',
+                    content: contentController.text.trim(),
+                  );
+
+                  await context.read<AppStateProvider>().addInspectionDocument(note);
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Inspection note saved!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Save'),
             ),
           ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (titleController.text.isNotEmpty && contentController.text.isNotEmpty) {
-                final note = InspectionDocumentHelper.createNote(
-                  customerId: widget.customer.id,
-                  title: titleController.text.trim(),
-                  content: contentController.text.trim(),
-                );
-
-                await context.read<AppStateProvider>().addInspectionDocument(note);
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Inspection note added!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            },
-            child: const Text('Add Note'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  void _showAddInspectionPdfDialog() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('PDF upload coming in next step!'),
-        backgroundColor: Colors.blue,
-      ),
+// Responsive helper method for quick templates
+  Widget _buildQuickChip(String text, TextEditingController controller) {
+    return ActionChip(
+      label: Text(text, style: const TextStyle(fontSize: 10)),
+      onPressed: () {
+        if (controller.text.isEmpty) {
+          controller.text = text;
+        } else {
+          controller.text += '\n$text';
+        }
+      },
+      backgroundColor: Colors.blue.shade50,
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
+  }
+
+// Responsive edit dialog
+  void _showEditInspectionNoteDialog(InspectionDocument existingNote) {
+    final contentController = TextEditingController(text: existingNote.content);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final screenHeight = MediaQuery.of(context).size.height;
+        final isSmallScreen = screenHeight < 700;
+
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.edit_note, color: Colors.orange),
+              const SizedBox(width: 8),
+              const Text('Edit Note'),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            constraints: BoxConstraints(
+              maxHeight: isSmallScreen ? screenHeight * 0.35 : 350,
+            ),
+            child: SingleChildScrollView(
+              child: TextField(
+                controller: contentController,
+                decoration: const InputDecoration(
+                  hintText: 'Update inspection notes...',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: isSmallScreen ? 6 : 8,
+              ),
+            ),
+          ),
+          actions: [
+            if (!isSmallScreen)
+              TextButton(
+                onPressed: () async {
+                  final shouldDelete = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Delete Note'),
+                      content: const Text('Delete this inspection note?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (shouldDelete == true) {
+                    await context.read<AppStateProvider>().deleteInspectionDocument(existingNote.id);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Note deleted'), backgroundColor: Colors.red),
+                    );
+                  }
+                },
+                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                existingNote.updateContent(contentController.text.trim());
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Note updated!'), backgroundColor: Colors.green),
+                );
+              },
+              child: const Text('Update'),
+            ),
+          ],
+          actionsPadding: isSmallScreen
+              ? const EdgeInsets.symmetric(horizontal: 8, vertical: 4)
+              : const EdgeInsets.all(8),
+        );
+      },
+    );
+  }
+
+  void _showAddInspectionPdfDialog() async {
+    try {
+      // Pick PDF file
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+        final fileName = result.files.single.name;
+        final fileSize = await file.length();
+
+        // Show dialog to get title
+        final titleController = TextEditingController(text: fileName.replaceAll('.pdf', ''));
+        List<String> selectedTags = ['inspection', 'pdf'];
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.picture_as_pdf, color: Colors.red),
+                const SizedBox(width: 8),
+                const Text('Add PDF Document'),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // File info
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.picture_as_pdf, color: Colors.red, size: 32),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              fileName,
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              _formatFileSize(fileSize),
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Title field
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Document Title',
+                    hintText: 'e.g., Roof Inspection Report',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final title = titleController.text.trim();
+                  if (title.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Please enter a title'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                    return;
+                  }
+
+                  // Create inspection document
+                  final document = InspectionDocumentHelper.createPdf(
+                    customerId: widget.customer.id,
+                    title: title,
+                    filePath: file.path,
+                    fileSizeBytes: fileSize,
+                    tags: selectedTags,
+                  );
+
+                  // Save to app state
+                  await context.read<AppStateProvider>().addInspectionDocument(document);
+
+                  Navigator.pop(context);
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('PDF document added!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                child: const Text('Add Document'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error selecting PDF: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
   void _viewInspectionDocument(InspectionDocument document) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Document viewer coming in next step!'),
-        backgroundColor: Colors.blue,
-      ),
-    );
+    if (document.isNote) {
+      // Show note in a dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.note, color: Colors.blue),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  document.displayTitle,
+                  style: const TextStyle(fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Text(
+              document.content ?? '',
+              style: const TextStyle(fontSize: 14, height: 1.5),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _showEditInspectionNoteDialog(document);
+              },
+              child: const Text('Edit'),
+            ),
+          ],
+        ),
+      );
+    } else if (document.isPdf && document.filePath != null) {
+      // Use the existing PDF preview screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PdfPreviewScreen(
+            pdfPath: document.filePath!,
+            suggestedFileName: document.displayTitle,
+            customer: widget.customer,
+            title: document.displayTitle,
+            isPreview: true,
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildFieldCategory(String category, List<dynamic> fields) {
