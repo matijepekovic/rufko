@@ -17,6 +17,10 @@ import 'models/custom_app_data.dart';
 import 'models/message_template.dart';
 // Your Services and Providers
 import 'providers/app_state_provider.dart';
+import 'providers/customer_provider.dart';
+import 'providers/product_provider.dart';
+import 'providers/quote_provider.dart';
+import 'providers/template_provider.dart';
 import 'services/database_service.dart';
 import 'models/email_template.dart';
 import 'models/inspection_document.dart';
@@ -50,12 +54,29 @@ void main() async {
   Hive.registerAdapter(InspectionDocumentAdapter());
   await DatabaseService.instance.init();
   await TaxService.initializeTaxDatabase();
+  final customerProvider = CustomerProvider();
+  final productProvider = ProductProvider();
+  final quoteProvider = QuoteProvider();
+  final templateProvider = TemplateProvider();
   final appStateProvider = AppStateProvider();
-  await appStateProvider.initializeApp();
+
+  await Future.wait([
+    customerProvider.loadCustomers(),
+    productProvider.loadProducts(),
+    quoteProvider.loadQuotes(),
+    templateProvider.loadTemplates(),
+    appStateProvider.initializeApp(),
+  ]);
 
   runApp(
-    ChangeNotifierProvider.value(
-      value: appStateProvider,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: appStateProvider),
+        ChangeNotifierProvider.value(value: customerProvider),
+        ChangeNotifierProvider.value(value: productProvider),
+        ChangeNotifierProvider.value(value: quoteProvider),
+        ChangeNotifierProvider.value(value: templateProvider),
+      ],
       child: const RufkoApp(),
     ),
   );
