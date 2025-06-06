@@ -1202,3 +1202,5 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
     Navigator.pop(context);
   }
 
+}
+
