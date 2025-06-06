@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/customer.dart';
+import '../utils/common_utils.dart';
 
 mixin FileSharingMixin<T extends StatefulWidget> on State<T> {
   bool _isSharing = false;
@@ -18,83 +19,13 @@ mixin FileSharingMixin<T extends StatefulWidget> on State<T> {
     return fileName.split('.').last.toLowerCase();
   }
 
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-  }
+  // Removed: _formatFileSize -> use formatFileSize from common_utils.dart
 
-  IconData _getFileIcon(String fileType) {
-    switch (fileType.toLowerCase()) {
-      case 'pdf':
-        return Icons.picture_as_pdf;
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-      case 'webp':
-        return Icons.image;
-      case 'doc':
-      case 'docx':
-        return Icons.description;
-      case 'xls':
-      case 'xlsx':
-        return Icons.table_chart;
-      default:
-        return Icons.insert_drive_file;
-    }
-  }
+  // Removed: _getFileIcon -> use getFileIcon from common_utils.dart
 
-  Color _getFileColor(String fileType) {
-    switch (fileType.toLowerCase()) {
-      case 'pdf':
-        return Colors.red;
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-      case 'webp':
-        return Colors.blue;
-      case 'doc':
-      case 'docx':
-        return Colors.indigo;
-      case 'xls':
-      case 'xlsx':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
+  // Removed: _getFileColor -> use getFileColor from common_utils.dart
 
-  String _getMimeType(String fileName) {
-    final extension = fileName.split('.').last.toLowerCase();
-    switch (extension) {
-      case 'pdf':
-        return 'application/pdf';
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'gif':
-        return 'image/gif';
-      case 'webp':
-        return 'image/webp';
-      case 'doc':
-        return 'application/msword';
-      case 'docx':
-        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      case 'xls':
-        return 'application/vnd.ms-excel';
-      case 'xlsx':
-        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      case 'txt':
-        return 'text/plain';
-      default:
-        return 'application/octet-stream';
-    }
-  }
+  // Removed: _getMimeType -> use getMimeType from common_utils.dart
 
   void _showShareSuccessMessage(String message) {
     if (mounted) {
@@ -182,7 +113,7 @@ mixin FileSharingMixin<T extends StatefulWidget> on State<T> {
               Row(
                 children: [
                   Icon(
-                    _getFileIcon(fileType ?? _getFileTypeFromExtension(fileName)),
+                    getFileIcon(fileType ?? _getFileTypeFromExtension(fileName)),
                     size: 24,
                     color: const Color(0xFF2E86AB),
                   ),
@@ -222,9 +153,9 @@ mixin FileSharingMixin<T extends StatefulWidget> on State<T> {
                 child: Row(
                   children: [
                     Icon(
-                      _getFileIcon(fileType ?? _getFileTypeFromExtension(fileName)),
+                      getFileIcon(fileType ?? _getFileTypeFromExtension(fileName)),
                       size: 40,
-                      color: _getFileColor(fileType ?? _getFileTypeFromExtension(fileName)),
+                      color: getFileColor(fileType ?? _getFileTypeFromExtension(fileName)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -240,7 +171,7 @@ mixin FileSharingMixin<T extends StatefulWidget> on State<T> {
                             future: file.length(),
                             builder: (context, snapshot) {
                               return Text(
-                                'Size: ${snapshot.hasData ? _formatFileSize(snapshot.data!) : 'Calculating...'}',
+                              'Size: ${snapshot.hasData ? formatFileSize(snapshot.data!) : 'Calculating...'}',
                                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                               );
                             },
@@ -506,7 +437,7 @@ ${_getCompanyName()}
       await SharePlus.instance.share(
         ShareParams(
           text: 'File: $fileName${customer != null ? ' - ${customer.name}' : ''}',
-          files: [XFile(file.path, mimeType: _getMimeType(fileName))],
+          files: [XFile(file.path, mimeType: getMimeType(fileName))],
         ),
       );
 
