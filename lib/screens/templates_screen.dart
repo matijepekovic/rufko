@@ -2241,8 +2241,6 @@ class _TemplatesScreenState extends State<TemplatesScreen>
     );
   }
 
-  }
-
   // NEW MESSAGE TEMPLATE CARD BUILDERS
   Widget _buildSelectableMessageCard(MessageTemplate template) {
     final isSelected = _selectedMessageIds.contains(template.id);

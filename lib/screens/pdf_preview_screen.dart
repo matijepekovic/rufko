@@ -2251,7 +2251,41 @@ ${_getCompanyName()}
     );
   }
 
-  // Show field selector dialog - DEBUGGING TOOL
+  // Clear all form field edits
+  void _discardEdits() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear All Edits?'),
+        content: const Text(
+          'This will remove all changes you have made to the PDF form fields.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _editedValues.clear();
+                _editHistory.clear();
+                _currentHistoryIndex = -1;
+                _selectedField = null;
+                _hasEdits = false;
+              });
+            },
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+}
+
+// Show field selector dialog - DEBUGGING TOOL
 
 // Custom painter for form field overlays - IMPROVED
 class FormFieldOverlayPainter extends CustomPainter {
