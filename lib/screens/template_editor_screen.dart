@@ -723,49 +723,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     );
   }
 
-  void _showMappingProgress() {
-    final totalFields = _detectedPdfFieldsList.length;
-    final mappedFields = _currentTemplate!.fieldMappings
-        .where((m) => m.pdfFormFieldName.isNotEmpty && !m.appDataType.startsWith('unmapped_'))
-        .length;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Mapping Progress'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              LinearProgressIndicator(
-                value: totalFields > 0 ? mappedFields / totalFields : 0,
-                backgroundColor: Colors.grey.shade300,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  mappedFields == totalFields ? Colors.green : Colors.blue,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text('$mappedFields of $totalFields fields mapped'),
-              if (mappedFields < totalFields) ...[
-                const SizedBox(height: 8),
-                Text(
-                  'Tap unmapped fields in the PDF to continue linking',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _uploadAndCreateTemplate() async {
     try {
       final result = await FilePicker.platform.pickFiles(

@@ -127,11 +127,9 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
   // Visual editing
   bool _showEditingTools = false;
-  bool _isRegenerating = false;
   List<String> _editableFields = [];
 
   // Form field interaction
-  PDFFormField? _selectedField;
   final GlobalKey _pdfViewerContainerKey = GlobalKey();
 
   @override
@@ -324,8 +322,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
     debugPrint('👆 Form field tapped: "${field.name}" (${field.type})');
     debugPrint('📝 Current value: "${field.currentValue}"');
     debugPrint('🔍 Existing edit: "${_editedValues[field.name] ?? 'none'}"');
-
-    setState(() => _selectedField = field);
 
     final currentValue = _editedValues[field.name] ?? field.currentValue;
     debugPrint('💡 Opening edit dialog with value: "$currentValue"');
@@ -938,52 +934,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
 
   // Build form field overlays - FIXED VISUAL SYSTEM
 
-  // Handle tap on form field overlays
-  void _handleFormFieldTap(Offset tapPosition) {
-    debugPrint('🔍 Checking tap at ${tapPosition.dx}, ${tapPosition.dy} against ${_formFields.length} fields');
-
-    // Get the PDF viewer size for scaling calculations
-    final RenderBox? renderBox = _pdfViewerContainerKey.currentContext?.findRenderObject() as RenderBox?;
-    if (renderBox == null) {
-      debugPrint('❌ Could not get PDF viewer render box');
-      return;
-    }
-
-    final viewerSize = renderBox.size;
-    debugPrint('📐 PDF viewer size: ${viewerSize.width} x ${viewerSize.height}');
-
-    // Simple scaling based on approximate PDF dimensions
-    // This is a rough calculation - in production you'd need proper page-to-screen transformation
-    final scaleX = viewerSize.width / 612; // Standard PDF width
-    final scaleY = viewerSize.height / 792; // Standard PDF height
-
-    debugPrint('📏 Scale factors: x=$scaleX, y=$scaleY');
-
-    // Check each form field
-    for (int i = 0; i < _formFields.length; i++) {
-      final field = _formFields[i];
-
-      // Scale the field bounds to screen coordinates
-      final scaledBounds = Rect.fromLTWH(
-        field.bounds.left * scaleX,
-        field.bounds.top * scaleY,
-        field.bounds.width * scaleX,
-        field.bounds.height * scaleY,
-      );
-
-      debugPrint('🔍 Field "${field.name}": PDF bounds=${field.bounds} → Screen bounds=$scaledBounds');
-
-      // Check if tap is within this field
-      if (scaledBounds.contains(tapPosition)) {
-        debugPrint('✅ HIT! Tapped on field: "${field.name}"');
-        _onFormFieldTapped(field);
-        return;
-      }
-    }
-
-    debugPrint('❌ No field hit at tap position');
-  }
-
   // Build quick edit button for template fields
   Widget _buildQuickEditButton(String fieldName, String displayName) {
     final hasEdit = _editedValues.containsKey(fieldName);
@@ -1014,89 +964,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
   }
 
   // Build action buttons
-
-  // Regenerate PDF with template edits
-  Future<void> _regeneratePdf() async {
-    if (widget.templateId == null || widget.quote == null || widget.customer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Cannot regenerate: missing template or quote information'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isRegenerating = true);
-
-    try {
-      debugPrint('🔄 Starting PDF regeneration with ${_editedValues.length} template edits');
-
-      // Merge original custom data with edited values
-      final customDataWithEdits = <String, String>{
-        ...?widget.originalCustomData,
-        ..._editedValues,
-        'regenerated_at': DateTime.now().toIso8601String(),
-        'has_edits': 'true',
-      };
-
-      final appState = context.read<AppStateProvider>();
-      final newPdfPath = await appState.regeneratePDFFromTemplate(
-        templateId: widget.templateId!,
-        quote: widget.quote!,
-        customer: widget.customer!,
-        selectedLevelId: widget.selectedLevelId,
-        customDataOverrides: customDataWithEdits,
-      );
-
-      setState(() {
-        _currentPdfPath = newPdfPath;
-        _hasEdits = false;
-        _editedValues.clear();
-        _showEditingTools = false;
-        _editHistory.clear();
-        _currentHistoryIndex = -1;
-      });
-
-      // Reload form fields from new PDF
-      _loadFormFields();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Text('✅ PDF regenerated with template changes!'),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
-        ),
-      );
-
-    } catch (e) {
-      debugPrint('❌ Error regenerating PDF: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('❌ Failed to regenerate PDF'),
-              Text('Error: ${e.toString()}', style: const TextStyle(fontSize: 12)),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isRegenerating = false);
-      }
-    }
-  }
 
   // Save PDF with form field edits - USE TEMPLATE APPROACH
   Future<void> _savePdf() async {
@@ -2272,7 +2139,6 @@ ${_getCompanyName()}
                 _editedValues.clear();
                 _editHistory.clear();
                 _currentHistoryIndex = -1;
-                _selectedField = null;
                 _hasEdits = false;
               });
             },
