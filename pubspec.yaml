@@ -54,6 +54,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0 # From your output: (6.0.0 available for lints, implying flutter_lints)
+  mocktail: ^1.0.0
 
   # Hive code generation
   hive_generator: ^2.0.1
