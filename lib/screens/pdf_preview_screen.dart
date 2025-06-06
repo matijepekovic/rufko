@@ -15,7 +15,7 @@ import '../models/simplified_quote.dart';
 import '../models/customer.dart';
 import '../models/project_media.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
+import '../mixins/file_sharing_mixin.dart';
 // Model for form fields
 class PDFFormField {
   final String name;
@@ -106,13 +106,13 @@ class PdfPreviewScreen extends StatefulWidget {
   State<PdfPreviewScreen> createState() => _PdfPreviewScreenState();
 }
 
-class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
+class _PdfPreviewScreenState extends State<PdfPreviewScreen>
+    with FileSharingMixin {
   final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
   final PdfViewerController _pdfController = PdfViewerController();
 
   String _currentPdfPath = '';
   bool _isSaving = false;
-  bool _isSharing = false;
   bool _hasEdits = false;
 
   // Enhanced editing features
@@ -1254,9 +1254,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
   // Share PDF
   // Enhanced unified share functionality
   Future<void> _sharePdf() async {
-    if (_isSharing) return;
-    setState(() => _isSharing = true);
-
     try {
       File fileToShare;
 
@@ -1271,10 +1268,11 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
         throw Exception('PDF file not found');
       }
 
-      setState(() => _isSharing = false);
-
-      // Show unified share options dialog
-      _showUnifiedShareDialog(fileToShare);
+      shareFile(
+        file: fileToShare,
+        fileName: widget.suggestedFileName,
+        customer: widget.customer,
+      );
 
     } catch (e) {
       if (kDebugMode) debugPrint('❌ Error preparing PDF for sharing: $e');
@@ -1285,418 +1283,10 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
             backgroundColor: Colors.red,
           ),
         );
-        setState(() => _isSharing = false);
       }
     }
   }
 
-// Show unified share options dialog
-  void _showUnifiedShareDialog(File fileToShare) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.8, // Limit height
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: SingleChildScrollView( // Make entire dialog scrollable
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  const Icon(Icons.share, size: 24, color: Color(0xFF2E86AB)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Share PDF',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        Text(
-                          widget.suggestedFileName,
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // File info card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.picture_as_pdf, size: 40, color: Colors.red[600]),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            fileToShare.path.split('/').last,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          FutureBuilder<int>(
-                            future: fileToShare.length(),
-                            builder: (context, snapshot) {
-                              return Text(
-                                'Size: ${snapshot.hasData ? _formatFileSize(snapshot.data!) : 'Calculating...'}',
-                                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                              );
-                            },
-                          ),
-                          if (_editedValues.isNotEmpty)
-                            Container(
-                              margin: const EdgeInsets.only(top: 4),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.orange[100],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${_editedValues.length} edits applied',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.orange[800],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Share options grid
-              const Text(
-                'Choose sharing method:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 16),
-
-              // Share options in a more responsive grid
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final cardWidth = (constraints.maxWidth - 12) / 2; // Account for spacing
-                  final cardHeight = cardWidth * 0.7; // Responsive height
-
-                  return GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: cardWidth / cardHeight, // Dynamic aspect ratio
-                    children: [
-                      _buildShareOptionCard(
-                        icon: Icons.email,
-                        title: 'Email',
-                        subtitle: 'Send via email',
-                        color: Colors.blue,
-                        onTap: () {
-                          Navigator.pop(context);
-                          _handleShareAction(fileToShare, 'email');
-                        },
-                      ),
-                      _buildShareOptionCard(
-                        icon: Icons.bluetooth,
-                        title: 'Bluetooth',
-                        subtitle: 'Share via Bluetooth',
-                        color: Colors.indigo,
-                        onTap: () {
-                          Navigator.pop(context);
-                          _handleShareAction(fileToShare, 'bluetooth');
-                        },
-                      ),
-                      _buildShareOptionCard(
-                        icon: Icons.folder_open,
-                        title: 'Save to Folder',
-                        subtitle: 'Choose location',
-                        color: Colors.green,
-                        onTap: () {
-                          Navigator.pop(context);
-                          _handleShareAction(fileToShare, 'folder');
-                        },
-                      ),
-                      _buildShareOptionCard(
-                        icon: Icons.apps,
-                        title: 'More Apps',
-                        subtitle: 'Other apps',
-                        color: Colors.purple,
-                        onTap: () {
-                          Navigator.pop(context);
-                          _handleShareAction(fileToShare, 'system');
-                        },
-                      ),
-                    ],
-                  );
-                },
-              ),
-
-              const SizedBox(height: 20),
-
-              // Quick share button for system default
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _handleShareAction(fileToShare, 'quick');
-                  },
-                  icon: const Icon(Icons.share, color: Colors.white),
-                  label: const Text(
-                    'Quick Share (System Default)',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E86AB),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-            ],        // Closes children array
-          ),          // Closes Column
-        ),            // Closes SingleChildScrollView
-      ),             // Closes Container
-    );              // Closes showModalBottomSheet
-  }                 // Closes method
-
-// Build share option card
-// Build share option card - FIXED LAYOUT
-  Widget _buildShareOptionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(8), // Reduced padding
-        decoration: BoxDecoration(
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(12),
-          color: color.withValues(alpha: 0.05),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min, // Important: minimize height
-          children: [
-            Icon(icon, color: color, size: 20), // Smaller icon
-            const SizedBox(height: 2), // Reduced spacing
-            Flexible( // Wrap text in Flexible
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12, // Smaller font
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Flexible( // Wrap subtitle in Flexible
-              child: Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 10, // Smaller font
-                  color: Colors.grey[600],
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-// Handle different share actions
-  Future<void> _handleShareAction(File fileToShare, String action) async {
-    setState(() => _isSharing = true);
-
-    try {
-      switch (action) {
-        case 'email':
-          await _shareViaEmail(fileToShare);
-          break;
-        case 'bluetooth':
-          await _shareViaBluetooth(fileToShare);
-          break;
-        case 'folder':
-          await _saveToSpecificFolder(fileToShare);
-          break;
-        case 'system':
-          await _shareViaSystemApps(fileToShare);
-          break;
-        case 'quick':
-        default:
-          await _shareViaQuickShare(fileToShare);
-          break;
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('❌ Error in share action "$action": $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to share: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSharing = false);
-      }
-    }
-  }
-
-// Share via email
-  Future<void> _shareViaEmail(File fileToShare) async {
-    try {
-      final customerName = widget.customer?.name ?? 'Customer';
-      final subject = 'Quote PDF: ${widget.suggestedFileName}';
-      final body = '''
-Hello $customerName,
-
-Please find your quote attached as a PDF document.
-
-${widget.quote != null ? '''
-Quote Details:
-- Quote Number: ${widget.quote!.quoteNumber}
-- Date: ${DateFormat('MM/dd/yyyy').format(widget.quote!.createdAt)}
-- Status: ${widget.quote!.status}
-''' : ''}
-
-Best regards,
-${_getCompanyName()}
-    ''';
-
-      await SharePlus.instance.share(
-        ShareParams(
-          subject: subject,
-          text: body,
-          files: [XFile(fileToShare.path)],
-        ),
-      );
-
-      _showShareSuccessMessage('Email app opened');
-    } catch (e) {
-      throw Exception('Failed to open email app: $e');
-    }
-  }
-
-// Share via Bluetooth - UPDATED
-  Future<void> _shareViaBluetooth(File fileToShare) async {
-    try {
-      await SharePlus.instance.share(
-        ShareParams(
-          text: 'PDF Document: ${widget.suggestedFileName}',
-          files: [XFile(fileToShare.path, mimeType: 'application/pdf')],
-        ),
-      );
-
-      _showShareSuccessMessage('Bluetooth sharing initiated');
-    } catch (e) {
-      throw Exception('Failed to share via Bluetooth: $e');
-    }
-  }
-
-// Share via system apps - UPDATED
-  Future<void> _shareViaSystemApps(File fileToShare) async {
-    try {
-      await SharePlus.instance.share(
-        ShareParams(
-          text: 'PDF Document: ${widget.suggestedFileName}',
-          files: [XFile(fileToShare.path)],
-        ),
-      );
-
-      _showShareSuccessMessage('Share menu opened');
-    } catch (e) {
-      throw Exception('Failed to open share menu: $e');
-    }
-  }
-
-// Quick share (system default) - UPDATED
-  Future<void> _shareViaQuickShare(File fileToShare) async {
-    try {
-      final customerInfo = widget.customer != null ? '\nCustomer: ${widget.customer!.name}' : '';
-      final quoteInfo = widget.quote != null ? '\nQuote: ${widget.quote!.quoteNumber}' : '';
-
-      await SharePlus.instance.share(
-        ShareParams(
-          text: 'PDF: ${widget.suggestedFileName}$customerInfo$quoteInfo',
-          subject: widget.suggestedFileName,
-          files: [XFile(fileToShare.path)],
-        ),
-      );
-
-      _showShareSuccessMessage('Shared successfully');
-    } catch (e) {
-      throw Exception('Failed to share: $e');
-    }
-  }
-// Save to specific folder with folder selection
-  Future<void> _saveToSpecificFolder(File fileToShare) async {
-    try {
-      debugPrint('📁 Starting folder selection for PDF save...');
-
-      // Show folder selection dialog
-      final selectedPath = await _showFolderSelectionDialog();
-
-      if (selectedPath == null) {
-        _showShareSuccessMessage('Save cancelled');
-        return;
-      }
-
-      debugPrint('📁 Selected save path: $selectedPath');
-
-      // Save to selected folder
-      await _saveFileToDirectory(fileToShare, selectedPath);
-
-    } catch (e) {
-      debugPrint('❌ Error saving to folder: $e');
-      throw Exception('Failed to save to folder: $e');
-    }
-  }
 
 // Show folder selection dialog
   Future<String?> _showFolderSelectionDialog() async {
@@ -2081,13 +1671,6 @@ ${_getCompanyName()}
     }
   }
 
-// Format file size helper
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-  }
 
   // Discard PDF
   void _discardPdf() {
