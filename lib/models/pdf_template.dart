@@ -290,17 +290,14 @@ class PDFTemplate extends HiveObject {
         // Handle both CustomAppDataField objects and Map representations
         final String categoryKey;
         final String fieldName;
-        final String displayName;
 
         if (field is Map<String, dynamic>) {
           categoryKey = field['category'] as String? ?? 'custom';
           fieldName = field['fieldName'] as String? ?? '';
-          displayName = field['displayName'] as String? ?? fieldName;
         } else {
           // Assume it has category, fieldName, and displayName properties
           categoryKey = field.category as String? ?? 'custom';
           fieldName = field.fieldName as String? ?? '';
-          displayName = field.displayName as String? ?? fieldName;
         }
 
         if (fieldName.isNotEmpty) {
@@ -433,16 +430,13 @@ class PDFTemplate extends HiveObject {
     if (customAppDataFields != null) {
       for (final field in customAppDataFields) {
         final String fieldName;
-        final String displayName;
         final String currentValue;
 
         if (field is Map<String, dynamic>) {
           fieldName = field['fieldName'] as String? ?? '';
-          displayName = field['displayName'] as String? ?? fieldName;
           currentValue = field['currentValue'] as String? ?? '';
         } else {
           fieldName = field.fieldName as String? ?? '';
-          displayName = field.displayName as String? ?? fieldName;
           currentValue = field.currentValue as String? ?? '';
         }
 

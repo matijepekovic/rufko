@@ -10,7 +10,7 @@ class TemplateProvider extends ChangeNotifier {
   List<PDFTemplate> _pdfTemplates = [];
   List<MessageTemplate> _messageTemplates = [];
   List<EmailTemplate> _emailTemplates = [];
-  List<TemplateCategory> _categories = [];
+  final List<TemplateCategory> _categories = [];
 
   TemplateProvider({DatabaseService? database})
       : _db = database ?? DatabaseService.instance;

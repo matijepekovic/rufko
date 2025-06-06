@@ -293,14 +293,11 @@ class MessageTemplate extends HiveObject {
 
       for (final product in products.take(10)) { // Limit to first 10 products
         final String productName;
-        final String productId;
 
         if (product is Map<String, dynamic>) {
           productName = product['name'] as String? ?? 'Unknown Product';
-          productId = product['id'] as String? ?? 'unknown';
         } else {
           productName = product.name as String? ?? 'Unknown Product';
-          productId = product.id as String? ?? 'unknown';
         }
 
         // Create dynamic field names based on actual product

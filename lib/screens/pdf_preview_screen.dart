@@ -10,7 +10,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as sf_pdf;
-import 'package:share_plus/share_plus.dart';
 import '../providers/app_state_provider.dart';
 import '../models/simplified_quote.dart';
 import '../models/customer.dart';
