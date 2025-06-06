@@ -360,10 +360,15 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   void _showFieldMappingDialog(Map<String, dynamic> pdfFieldInfo) {
     final pdfFieldName = pdfFieldInfo['name'] as String? ?? 'Unknown Field';
 
-    // Check if this PDF field is already mapped
-    FieldMapping? existingMapping;
+    // Find existing mapping for this PDF field if any
+    FieldMapping? currentMapping;
     try {
-    final pdfFieldName = pdfFieldInfo['name'] as String? ?? 'Unknown Field';
+      currentMapping = _currentTemplate!.fieldMappings.firstWhere(
+        (m) => m.pdfFormFieldName == pdfFieldName,
+      );
+    } catch (e) {
+      currentMapping = null;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -389,10 +394,11 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                           'PDF Field: $pdfFieldName',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                         ),
-                        Text(
-                          'Linked to: ${PDFTemplate.getFieldDisplayName(mapping.appDataType)}',
-                          style: TextStyle(color: Colors.green.shade700, fontSize: 14),
-                        ),
+                        if (currentMapping != null && currentMapping.pdfFormFieldName.isNotEmpty)
+                          Text(
+                            'Linked to: ${PDFTemplate.getFieldDisplayName(currentMapping.appDataType)}',
+                            style: TextStyle(color: Colors.green.shade700, fontSize: 14),
+                          ),
                       ],
                     ),
                   ),
@@ -400,23 +406,24 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Action buttons
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _unlinkField(mapping);
-                  },
-                  icon: const Icon(Icons.link_off),
-                  label: const Text('Unlink Field'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
+              if (currentMapping != null && currentMapping.pdfFormFieldName.isNotEmpty) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _unlinkField(currentMapping);
+                    },
+                    icon: const Icon(Icons.link_off),
+                    label: const Text('Unlink Field'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
+                const SizedBox(height: 8),
+              ],
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
