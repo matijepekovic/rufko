@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../../models/project_media.dart';
-class _MediaDetailsDialog extends StatefulWidget {
+class MediaDetailsDialog extends StatefulWidget {
   final File? file;
   final String? fileName;
   final String? fileType;
@@ -13,7 +13,7 @@ class _MediaDetailsDialog extends StatefulWidget {
   final Function(ProjectMedia)? onSave;
 
   // Default constructor (can remain const if customerId is the only varying part among final fields)
-  const _MediaDetailsDialog({
+  const MediaDetailsDialog({
     super.key,
     this.file,
     this.fileName,
@@ -24,7 +24,7 @@ class _MediaDetailsDialog extends StatefulWidget {
         onSave = null;
 
   // Edit constructor - REMOVE CONST HERE
-  _MediaDetailsDialog.edit({ // <<<< REMOVED 'const'
+  MediaDetailsDialog.edit({ // <<<< REMOVED 'const'
     super.key,
     required this.mediaItem,
     required this.onSave,
@@ -35,10 +35,10 @@ class _MediaDetailsDialog extends StatefulWidget {
         customerId = mediaItem!.customerId; // This is now valid in a non-const constructor
 
   @override
-  State<_MediaDetailsDialog> createState() => _MediaDetailsDialogState();
+  State<MediaDetailsDialog> createState() => _MediaDetailsDialogState();
 }
 
-class _MediaDetailsDialogState extends State<_MediaDetailsDialog> {
+class _MediaDetailsDialogState extends State<MediaDetailsDialog> {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
   final _tagController = TextEditingController();
