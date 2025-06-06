@@ -1710,28 +1710,34 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.purple.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.add_box,
+                          color: Colors.purple,
+                          size: 24,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.add_box,
-                        color: Colors.purple,
-                        size: 24,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Custom Line Items (Optional)',
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Custom Line Items (Optional)',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 ElevatedButton.icon(
                   onPressed: _showAddCustomItemDialog,
