@@ -134,3 +134,5 @@ class DiscountSettingsDialogState extends State<DiscountSettingsDialog> {
       ],
     );
   }
+
+}

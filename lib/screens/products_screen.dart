@@ -857,4 +857,3 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
 }
 
 // Enhanced Product Form Dialog with 3-Tier System (keeping the existing implementation)
-}
