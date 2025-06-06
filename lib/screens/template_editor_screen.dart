@@ -412,7 +412,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                   child: ElevatedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      _unlinkField(currentMapping);
+                      _unlinkField(currentMapping!);
                     },
                     icon: const Icon(Icons.link_off),
                     label: const Text('Unlink Field'),
