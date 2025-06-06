@@ -5,9 +5,12 @@ import '../services/database_service.dart';
 import '../services/pdf_service.dart';
 
 class QuoteProvider extends ChangeNotifier {
-  final DatabaseService _db = DatabaseService.instance;
+  final DatabaseService _db;
   final PdfService _pdfService = PdfService();
   List<SimplifiedMultiLevelQuote> _quotes = [];
+
+  QuoteProvider({DatabaseService? database})
+      : _db = database ?? DatabaseService.instance;
 
   List<SimplifiedMultiLevelQuote> get quotes => _quotes;
 

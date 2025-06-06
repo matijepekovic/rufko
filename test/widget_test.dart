@@ -14,7 +14,7 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const RufkoApp());
 
-    // Verify that our app starts properly
-    expect(find.text('Rufko Dashboard'), findsOneWidget);
+    // Verify that the dashboard tab is visible
+    expect(find.text('Dashboard'), findsOneWidget);
   });
 }

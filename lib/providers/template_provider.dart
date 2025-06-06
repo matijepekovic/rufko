@@ -6,11 +6,14 @@ import '../models/template_category.dart';
 import '../services/database_service.dart';
 
 class TemplateProvider extends ChangeNotifier {
-  final DatabaseService _db = DatabaseService.instance;
+  final DatabaseService _db;
   List<PDFTemplate> _pdfTemplates = [];
   List<MessageTemplate> _messageTemplates = [];
   List<EmailTemplate> _emailTemplates = [];
   List<TemplateCategory> _categories = [];
+
+  TemplateProvider({DatabaseService? database})
+      : _db = database ?? DatabaseService.instance;
 
   List<PDFTemplate> get pdfTemplates => _pdfTemplates;
   List<MessageTemplate> get messageTemplates => _messageTemplates;

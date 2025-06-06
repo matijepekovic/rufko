@@ -3,8 +3,11 @@ import '../models/customer.dart';
 import '../services/database_service.dart';
 
 class CustomerProvider extends ChangeNotifier {
-  final DatabaseService _db = DatabaseService.instance;
+  final DatabaseService _db;
   List<Customer> _customers = [];
+
+  CustomerProvider({DatabaseService? database})
+      : _db = database ?? DatabaseService.instance;
 
   List<Customer> get customers => _customers;
 
