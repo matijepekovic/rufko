@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
+import '../utils/common_utils.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
@@ -4232,7 +4233,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              _formatFileSize(fileSize),
+                              formatFileSize(fileSize),
                               style: TextStyle(
                                 color: Colors.grey[600],
                                 fontSize: 12,
@@ -4312,12 +4313,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     }
   }
 
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-  }
+  // Removed: _formatFileSize -> use formatFileSize from common_utils.dart
 
 
 
@@ -4533,12 +4529,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     }
   }
 
-  String _formatCategoryName(String category) {
-    return category
-        .split('_')
-        .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(' ');
-  }
+  // Removed: _formatCategoryName -> use formatCategoryName from common_utils.dart
 
   Widget _buildMediaTypeHeader(String title, IconData icon, int count, Color color) {
     return Row(
@@ -4702,7 +4693,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       case 'other_photos':
         return 'Other Photos';
       default:
-        return _formatCategoryName(category);
+        return formatCategoryName(category);
     }
   }
 

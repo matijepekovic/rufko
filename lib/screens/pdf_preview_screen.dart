@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import '../utils/common_utils.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as sf_pdf;
 import '../providers/app_state_provider.dart';
@@ -1364,7 +1365,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                             future: fileToShare.length(),
                             builder: (context, snapshot) {
                               return Text(
-                                'Size: ${snapshot.hasData ? _formatFileSize(snapshot.data!) : 'Calculating...'}',
+                                'Size: ${snapshot.hasData ? formatFileSize(snapshot.data!) : 'Calculating...'}',
                                 style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                               );
                             },
@@ -2081,13 +2082,7 @@ ${_getCompanyName()}
     }
   }
 
-// Format file size helper
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-  }
+// Removed: _formatFileSize -> use formatFileSize from common_utils.dart
 
   // Discard PDF
   void _discardPdf() {
