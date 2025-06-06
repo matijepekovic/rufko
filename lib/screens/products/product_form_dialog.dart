@@ -5,7 +5,7 @@ import '../../models/product.dart';
 import '../../providers/app_state_provider.dart';
 class ProductFormDialog extends StatefulWidget {
   final Product? product;
-  const ProductFormDialog({this.product});
+  const ProductFormDialog({Key? key, this.product}) : super(key: key);
 
   @override
   State<ProductFormDialog> createState() => _ProductFormDialogState();

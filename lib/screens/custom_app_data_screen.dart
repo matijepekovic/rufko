@@ -729,11 +729,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     ).then((returnedValue) {
       if (returnedValue != null && mounted) {
         final appState = context.read<AppStateProvider>();
-        appState.addCustomAppDataField(returnedValue).then((_) {
-          if (mounted) {
-            appState.notifyListeners();
-          }
-        }).catchError((error) {
+        appState.addCustomAppDataField(returnedValue).catchError((error) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

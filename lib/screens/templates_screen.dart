@@ -2262,7 +2262,6 @@ class _TemplatesScreenState extends State<TemplatesScreen>
       if (returnedValue != null && returnedValue is CustomAppDataField && mounted) {
         appState.addCustomAppDataField(returnedValue).then((_) {
           if (mounted) {
-            appState.notifyListeners();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Added custom field: ${returnedValue.displayName}'),

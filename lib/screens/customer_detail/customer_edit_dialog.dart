@@ -8,9 +8,10 @@ class CustomerEditDialog extends StatefulWidget {
   final Customer customer;
   final VoidCallback? onCustomerUpdated;
   const CustomerEditDialog({
+    Key? key,
     required this.customer,
     this.onCustomerUpdated,
-  });
+  }) : super(key: key);
 
   @override
   State<CustomerEditDialog> createState() => CustomerEditDialogState();
