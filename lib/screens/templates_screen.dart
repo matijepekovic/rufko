@@ -2231,16 +2231,6 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   }
 
 
-  void _createNewTextTemplateWithCategory(String category) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            MessageTemplateEditorScreen(initialCategory: category),
-      ),
-    );
-  }
-
   // NEW MESSAGE TEMPLATE CARD BUILDERS
   Widget _buildSelectableMessageCard(MessageTemplate template) {
     final isSelected = _selectedMessageIds.contains(template.id);
