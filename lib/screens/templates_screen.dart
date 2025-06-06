@@ -1343,74 +1343,6 @@ class _TemplatesScreenState extends State<TemplatesScreen>
     return const CustomAppDataScreen(); // No preview, direct content
   }
 
-  Widget _buildTextCategorySection(Map<String, dynamic> category) {
-    return Consumer<AppStateProvider>(
-      builder: (context, appState, child) {
-        final categoryKey = _getCategoryKey(category['name']);
-        final templatesInCategory = appState.messageTemplates
-            .where((t) => t.category == categoryKey)
-            .toList();
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Category Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: (category['color'] as Color).withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(8),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(category['icon'], color: category['color'], size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      category['name'],
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: category['color'],
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${templatesInCategory.length} template${templatesInCategory.length == 1 ? '' : 's'}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Show templates or empty state
-              if (templatesInCategory.isEmpty)
-                ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor:
-                        (category['color'] as Color).withValues(alpha: 0.2),
-                    child: Icon(category['icon'],
-                        color: category['color'], size: 18),
-                  ),
-                  title: Text('Create ${category['name']} templates'),
-                  subtitle: const Text('Tap to create your first template'),
-                  trailing: const Icon(Icons.add, size: 16),
-                  onTap: () => _createNewTextTemplateWithCategory(categoryKey),
-                )
-              else
-                // Show actual templates
-                ...templatesInCategory.map((template) => _isMessageSelectionMode
-                    ? _buildSelectableMessageCard(template)
-                    : _buildMessageTemplateCard(template)),
-            ],
-          ),
-        );
-      },
-    );
-  }
   String _getEmailCategoryDisplayName(String categoryKey) {
     if (categoryKey == 'uncategorized') return 'Uncategorized Templates';
     return '$categoryKey Templates';
@@ -1854,9 +1786,6 @@ class _TemplatesScreenState extends State<TemplatesScreen>
     return Icons.description;
   }
 
-  String _formatTypeName(String templateType) {
-    return '${templateType[0].toUpperCase()}${templateType.substring(1)} Templates';
-  }
 
   List<Map<String, dynamic>> _getTextMessageCategories() {
     return [
@@ -2259,7 +2188,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
         );
       },
     ).then((returnedValue) {
-      if (returnedValue != null && returnedValue is CustomAppDataField && mounted) {
+      if (returnedValue != null && mounted) {
         appState.addCustomAppDataField(returnedValue).then((_) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -2312,14 +2241,6 @@ class _TemplatesScreenState extends State<TemplatesScreen>
     );
   }
 
-  void _createNewEmailTemplateWithCategory(String category) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            EmailTemplateEditorScreen(initialCategory: category),
-      ),
-    );
   }
 
   // NEW MESSAGE TEMPLATE CARD BUILDERS

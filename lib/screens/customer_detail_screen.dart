@@ -68,18 +68,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
 
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-          Text(value),
-        ],
-      ),
-    );
-  }
 
   @override
   void dispose() {
@@ -1561,20 +1549,16 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         final noteContent = fullNote.replaceFirst('PROJECT_NOTE: ', '');
 
         // Determine note type from content
-        String noteType = 'note';
         IconData noteIcon = Icons.note;
         Color noteColor = Colors.blue;
 
         if (noteContent.toLowerCase().contains('meeting')) {
-          noteType = 'meeting';
           noteIcon = Icons.group;
           noteColor = Colors.orange;
         } else if (noteContent.toLowerCase().contains('site visit')) {
-          noteType = 'site_visit';
           noteIcon = Icons.home_work;
           noteColor = Colors.green;
         } else if (noteContent.toLowerCase().contains('follow-up')) {
-          noteType = 'follow_up';
           noteIcon = Icons.schedule;
           noteColor = Colors.purple;
         }
@@ -4335,110 +4319,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 
-  void _viewInspectionDocument(InspectionDocument document) {
-    if (document.isNote) {
-      // Show note in a dialog
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.note, color: Colors.blue),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  document.displayTitle,
-                  style: const TextStyle(fontSize: 18),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Text(
-              document.content ?? '',
-              style: const TextStyle(fontSize: 14, height: 1.5),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _showEditInspectionNoteDialog(document);
-              },
-              child: const Text('Edit'),
-            ),
-          ],
-        ),
-      );
-    } else if (document.isPdf && document.filePath != null) {
-      // Use the existing PDF preview screen
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => PdfPreviewScreen(
-            pdfPath: document.filePath!,
-            suggestedFileName: document.displayTitle,
-            customer: widget.customer,
-            title: document.displayTitle,
-            isPreview: true,
-          ),
-        ),
-      );
-    }
-  }
 
-  Widget _buildFieldCategory(String category, List<dynamic> fields) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      child: Card(
-        elevation: 2,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _formatCategoryName(category),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).primaryColor,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${fields.length} field${fields.length == 1 ? '' : 's'}',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ...fields.map((field) => Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: _buildFieldWidget(field),
-              )),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildFieldWidget(dynamic field) {
     final currentValue = widget.customer.getInspectionValue(field.fieldName);
@@ -4657,112 +4538,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         .split('_')
         .map((word) => word[0].toUpperCase() + word.substring(1))
         .join(' ');
-  }
-  Widget _buildDocumentsGrid(List<ProjectMedia> documents) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.2,
-      ),
-      itemCount: documents.length,
-      itemBuilder: (context, index) {
-        final document = documents[index];
-        final isSelected = _selectedMediaIds.contains(document.id);
-
-        return Card(
-          elevation: 1,
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
-            children: [
-              InkWell(
-                onTap: _isSelectionMode
-                    ? () => _toggleMediaSelection(document.id)
-                    : () => _viewMedia(document),
-                onLongPress: !_isSelectionMode
-                    ? () => _showMediaContextMenu(document)
-                    : null,
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.orange.withValues(alpha: 0.1) : Colors.white,
-                    border: isSelected
-                        ? Border.all(color: Colors.orange, width: 2)
-                        : null,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        document.isPdf
-                            ? Icons.picture_as_pdf_outlined
-                            : Icons.insert_drive_file_outlined,
-                        size: 40,
-                        color: document.isPdf ? Colors.red : Colors.grey[600],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        document.fileName,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isSelected ? Colors.orange.shade800 : Colors.black87,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        document.formattedFileSize,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: isSelected ? Colors.orange.shade600 : Colors.grey[600],
-                        ),
-                      ),
-                      Text(
-                        DateFormat('MMM dd').format(document.createdAt),
-                        style: TextStyle(
-                          fontSize: 9,
-                          color: isSelected ? Colors.orange.shade500 : Colors.grey[500],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (_isSelectionMode)
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 2,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: Checkbox(
-                      value: isSelected,
-                      onChanged: (bool? value) => _toggleMediaSelection(document.id),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   Widget _buildMediaTypeHeader(String title, IconData icon, int count, Color color) {
@@ -5675,30 +5450,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   }
 
   // HELPER METHODS
-  Color _getCategoryColor(String category) {
-    switch (category.toLowerCase()) {
-      case 'before_photos':
-        return Colors.blue;
-      case 'after_photos':
-        return Colors.green;
-      case 'damage_report':
-        return Colors.red;
-      case 'progress_photos':
-        return Colors.orange;
-      case 'roofscope_reports':
-        return Colors.purple;
-      case 'contracts':
-        return Colors.indigo;
-      case 'invoices':
-        return Colors.teal;
-      case 'permits':
-        return Colors.brown;
-      case 'insurance_docs':
-        return Colors.amber;
-      default:
-        return Colors.grey;
-    }
-  }
 
 
   void _showErrorSnackBar(String message) {
@@ -6167,53 +5918,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
 
-  void _showPaymentDialog() {
-    final amountController = TextEditingController();
-    String method = 'Check';
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Payment Received'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: amountController,
-                decoration: const InputDecoration(
-                  labelText: 'Amount',
-                  hintText: '1500.00',
-                  prefixText: '\$',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: method,
-                decoration: const InputDecoration(labelText: 'Payment Method'),
-                items: ['Check', 'Cash', 'Credit Card', 'Bank Transfer', 'Other']
-                    .map((m) => DropdownMenuItem(value: m, child: Text(m)))
-                    .toList(),
-                onChanged: (value) => setDialogState(() => method = value!),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                final amount = amountController.text.isNotEmpty ? '\$${amountController.text}' : 'payment';
-                _addQuickNote('💰 Payment received - $amount via $method');
-                Navigator.pop(context);
-              },
-              child: const Text('Log'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showFollowUpDialog() {
     final notesController = TextEditingController();

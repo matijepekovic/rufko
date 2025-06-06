@@ -109,64 +109,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       _loadingMessage = message;
     });
   }
-  Widget _buildCategoryDropdown() {
-    return Consumer<AppStateProvider>(
-      builder: (context, appState, child) {
-        return FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
-          future: appState.getAllTemplateCategories(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: const LinearProgressIndicator(),
-              );
-            }
-
-            if (!snapshot.hasData) {
-              return const SizedBox.shrink();
-            }
-
-            final allCategories = snapshot.data!;
-            final pdfCategories = allCategories['pdf_templates'] ?? [];
-
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: DropdownButtonFormField<String>(
-                value: _selectedCategoryKey,
-                decoration: InputDecoration(
-                  labelText: 'Template Category',
-                  prefixIcon: const Icon(Icons.category),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
-                hint: const Text('Select a category (optional)'),
-                items: [
-                  // Add "None" option
-                  const DropdownMenuItem<String>(
-                    value: null,
-                    child: Text('No Category'),
-                  ),
-                  // Add user-defined categories
-                  ...pdfCategories.map<DropdownMenuItem<String>>((category) {
-                    return DropdownMenuItem<String>(
-                      value: category['key'] as String,
-                      child: Text(category['name'] as String),
-                    );
-                  }),
-                ],
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedCategoryKey = newValue;
-                  });
-                },
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -379,22 +321,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     );
   }
 
-  Widget _buildMappingProgressFab() {
-    if (_currentTemplate == null) return const SizedBox.shrink();
-
-    final totalFields = _detectedPdfFieldsList.length;
-    final mappedFields = _currentTemplate!.fieldMappings
-        .where((m) => m.pdfFormFieldName.isNotEmpty && !m.appDataType.startsWith('unmapped_'))
-        .length;
-
-    return FloatingActionButton.extended(
-      onPressed: () => _showMappingProgress(),
-      backgroundColor: mappedFields == totalFields ? Colors.green : const Color(0xFF2E86AB),
-      foregroundColor: Colors.white,
-      icon: Icon(mappedFields == totalFields ? Icons.check_circle : Icons.link),
-      label: Text('$mappedFields / $totalFields'),
-    );
-  }
 
   void _handlePdfTap(PdfGestureDetails details) {
     if (_currentTemplate == null || !mounted || details.pageNumber < 1) {
@@ -437,22 +363,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     // Check if this PDF field is already mapped
     FieldMapping? existingMapping;
     try {
-      existingMapping = _currentTemplate!.fieldMappings
-          .firstWhere((m) => m.pdfFormFieldName == pdfFieldName);
-    } catch (e) {
-      existingMapping = null;
-    }
-
-    if (existingMapping != null && !existingMapping.appDataType.startsWith('unmapped_')) {
-      // Field is already mapped - show context menu
-      _showMappedFieldContextMenu(pdfFieldInfo, existingMapping);
-    } else {
-      // Field is not mapped - show mapping dialog
-      _showFieldSelectionDialog(pdfFieldInfo);
-    }
-  }
-
-  void _showMappedFieldContextMenu(Map<String, dynamic> pdfFieldInfo, FieldMapping mapping) {
     final pdfFieldName = pdfFieldInfo['name'] as String? ?? 'Unknown Field';
 
     showModalBottomSheet(

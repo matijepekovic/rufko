@@ -197,10 +197,24 @@ class _CustomersScreenState extends State<CustomersScreen> with TickerProviderSt
   }
 
   Widget _buildEmptyState(String filter) {
-    // ... (Content from previous correct version) ...
-    String title, subtitle; IconData icon;
-    switch (filter) { /* ... */ default: icon = Icons.people_outline; title = _searchQuery.isEmpty ? 'No customers yet' : 'No customers found'; subtitle = _searchQuery.isEmpty ? 'Add your first customer' : 'Try adjusting search'; }
-    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [ /* Icon, Title, Subtitle, Buttons */ ]));
+    final bool noQuery = _searchQuery.isEmpty;
+    String title = noQuery ? 'No customers yet' : 'No customers found';
+    String subtitle =
+        noQuery ? 'Add your first customer' : 'Try adjusting search';
+    IconData icon = noQuery ? Icons.people_outline : Icons.search_off;
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 64, color: Colors.grey),
+          const SizedBox(height: 16),
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    );
   }
 
 
