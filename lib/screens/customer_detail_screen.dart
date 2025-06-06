@@ -26,6 +26,9 @@ import 'customer_detail/media_details_dialog.dart';
 import 'customer_detail/full_screen_image_viewer.dart';
 import 'customer_detail/category_media_screen.dart';
 import 'customer_detail/customer_edit_dialog.dart';
+import 'customer_detail/quotes_tab.dart';
+import 'customer_detail/project_notes_section.dart';
+import 'customer_detail/media_tab.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final Customer customer;
@@ -199,9 +202,29 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 controller: _tabController,
                 children: [
                   _buildInfoTab(),
-                  _buildSimplifiedQuotesTab(),
+                  QuotesTab(
+                    customer: widget.customer,
+                    onCreateQuote: _navigateToCreateQuoteScreen,
+                    onOpenQuote: _navigateToSimplifiedQuoteDetail,
+                  ),
                   _buildInspectionTab(), // NEW
-                  _buildMediaTab(),
+                  MediaTab(
+                    customer: widget.customer,
+                    isProcessing: _isProcessingMedia,
+                    isSelectionMode: _isSelectionMode,
+                    selectedMediaIds: _selectedMediaIds,
+                    onEnterSelection: _enterSelectionMode,
+                    onExitSelection: _exitSelectionMode,
+                    onSelectAll: _selectAllMedia,
+                    onToggleSelection: _toggleMediaSelection,
+                    onDeleteSelected: _deleteSelectedMedia,
+                    onPickImageFromCamera: _pickImageFromCamera,
+                    onPickImageFromGallery: _pickImageFromGallery,
+                    onPickDocument: _pickDocument,
+                    onViewMedia: _viewMedia,
+                    onShowContextMenu: _showMediaContextMenu,
+                    onShowMediaOptions: _showMediaOptions,
+                  ),
                 ],
               ),
             ),
@@ -509,7 +532,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     ],
                   ),
                   const SizedBox(height: 12),
-                  _buildProjectNotes(),
+                  ProjectNotesSection(
+                    customer: widget.customer,
+                    onEditNote: _editProjectNote,
+                    formatDate: _formatCommunicationDate,
+                  ),
                 ],
               ),
             ),
