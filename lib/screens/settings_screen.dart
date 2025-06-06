@@ -2,13 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:convert';
 import 'dart:io';
-import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:image_picker/image_picker.dart';
+import '../services/file_service.dart';
 import '../providers/app_state_provider.dart';
 import '../services/database_service.dart';
 import '../models/app_settings.dart';
@@ -889,32 +885,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       setState(() => _isProcessing = true);
 
-      final appState = context.read<AppStateProvider>();
       final databaseService = DatabaseService.instance;
-
-      // Export all data
       final allData = await databaseService.exportAllData();
 
-      // Get downloads directory
-      final directory = await getApplicationDocumentsDirectory();
-      final fileName = 'rufko_backup_${DateFormat('yyyy-MM-dd_HH-mm').format(DateTime.now())}.json';
-      final file = File('${directory.path}/$fileName');
-
-      // Write JSON data
-      await file.writeAsString(
-        const JsonEncoder.withIndent('  ').convert(allData),
-      );
+      final filePath =
+          await FileService.instance.saveExportedData(allData);
 
       if (mounted) {
+        final fileName = filePath.split('/').last;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Data exported to: $fileName'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             action: SnackBarAction(
               label: 'Open',
-              onPressed: () => OpenFilex.open(file.path),
+              onPressed: () => OpenFilex.open(filePath),
             ),
           ),
         );
@@ -926,7 +914,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             content: Text('Export failed: $e'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         );
       }
@@ -937,14 +926,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _importData() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['json'],
-      );
+      final data = await FileService.instance.pickAndReadBackupFile();
 
-      if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
-
+      if (data.isNotEmpty) {
         // Show confirmation dialog
         final confirmed = await showDialog<bool>(
           context: context,
@@ -981,9 +965,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         if (confirmed == true) {
           setState(() => _isProcessing = true);
-
-          final jsonString = await file.readAsString();
-          final data = jsonDecode(jsonString) as Map<String, dynamic>;
 
           final databaseService = DatabaseService.instance;
           await databaseService.importAllData(data);
@@ -1370,31 +1351,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _selectCompanyLogo(StateSetter setDialogState, AppSettings settings, AppStateProvider appState) async {
     try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 85,
-      );
+      final newPath = await FileService.instance.pickAndSaveCompanyLogo();
 
-      if (image != null) {
-        // Get the app documents directory
-        final directory = await getApplicationDocumentsDirectory();
-        final logoDir = Directory('${directory.path}/company_logos');
-
-        // Create directory if it doesn't exist
-        if (!await logoDir.exists()) {
-          await logoDir.create(recursive: true);
-        }
-
-        // Copy image to app directory with unique name
-        final fileName = 'company_logo_${DateTime.now().millisecondsSinceEpoch}.${image.path.split('.').last}';
-        final newPath = '${logoDir.path}/$fileName';
-
-        await File(image.path).copy(newPath);
-
-        // Update settings
+      if (newPath != null) {
         settings.updateCompanyLogo(newPath);
         appState.updateAppSettings(settings);
 
@@ -1405,7 +1364,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             content: const Text('Company logo updated!'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         );
       }
