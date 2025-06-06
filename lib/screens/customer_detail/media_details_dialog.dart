@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../utils/common_utils.dart';
 
 import '../../models/project_media.dart';
 class MediaDetailsDialog extends StatefulWidget {
@@ -174,7 +175,7 @@ class _MediaDetailsDialogState extends State<MediaDetailsDialog> {
                                       ),
                                       Text(
                                         widget.fileSize != null
-                                            ? _formatFileSize(widget.fileSize!)
+                                            ? formatFileSize(widget.fileSize!)
                                             : 'Unknown size',
                                         style: TextStyle(
                                           color: Colors.grey[600],
@@ -208,7 +209,7 @@ class _MediaDetailsDialogState extends State<MediaDetailsDialog> {
                         items: _categories.map((category) {
                           return DropdownMenuItem(
                             value: category,
-                            child: Text(_formatCategoryName(category)),
+                            child: Text(formatCategoryName(category)),
                           );
                         }).toList(),
                         onChanged: (value) {
@@ -369,18 +370,8 @@ class _MediaDetailsDialogState extends State<MediaDetailsDialog> {
     }
   }
 
-  String _formatCategoryName(String category) {
-    return category
-        .split('_')
-        .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(' ');
-  }
+  // Removed: _formatCategoryName -> use formatCategoryName from common_utils.dart
 
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-  }
+  // Removed: _formatFileSize -> use formatFileSize from common_utils.dart
 }
 

@@ -7,6 +7,7 @@ import '../models/custom_app_data.dart';
 import '../providers/app_state_provider.dart';
 import '../widgets/add_custom_field_dialog.dart';
 import '../widgets/edit_custom_field_dialog.dart';
+import '../utils/common_utils.dart';
 
 class CustomAppDataScreen extends StatefulWidget {
   const CustomAppDataScreen({super.key});
@@ -374,7 +375,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     return FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
       future: context.read<AppStateProvider>().getAllTemplateCategories(),
       builder: (context, snapshot) {
-        String categoryDisplayName = _formatCategoryName(category);
+        String categoryDisplayName = formatCategoryName(category);
 
         if (snapshot.hasData) {
           final allCategories = snapshot.data!;
@@ -758,12 +759,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     super.dispose();
   }
 
-  String _formatCategoryName(String categoryKey) {
-    return categoryKey
-        .split('_')
-        .map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : '')
-        .join(' ');
-  }
+  // Removed: _formatCategoryName -> use formatCategoryName from common_utils.dart
 
   void _showEditFieldDialog(CustomAppDataField field) {
     if (!mounted) return;
@@ -788,7 +784,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
             // Build available categories including current field's category
             final availableCategories = <String>[field.category];
             final categoryNames = <String, String>{
-              field.category: _formatCategoryName(field.category)
+              field.category: formatCategoryName(field.category)
             };
 
             for (final category in customFieldCategories) {
@@ -807,7 +803,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                 availableCategories.add(defaultCat);
                 categoryNames[defaultCat] = defaultCat == 'inspection'
                     ? 'Inspection Fields'
-                    : _formatCategoryName(defaultCat);
+                    : formatCategoryName(defaultCat);
               }
             }
 
