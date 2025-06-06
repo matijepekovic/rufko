@@ -1359,52 +1359,6 @@ class _DiscountDialogState extends State<_DiscountDialog> {
       ),
     );
   }
-  Widget _buildTypeCard(String value, String label, IconData icon) {
-    final isSelected = _type == value;
-
-    return GestureDetector(
-      onTap: () => setState(() => _type = value),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.green.shade600 : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? Colors.green.shade600 : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: Colors.green.shade200,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ] : null,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.white : Colors.grey.shade600,
-              size: 24,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.grey.shade700,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
   void _addDiscount() {
     if (!_formKey.currentState!.validate()) return;
 
