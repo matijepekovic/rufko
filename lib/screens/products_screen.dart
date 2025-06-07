@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
 import '../models/product.dart';
 import 'products/product_form_dialog.dart';
+import '../mixins/search_mixin.dart';
+import '../mixins/sort_menu_mixin.dart';
+import '../mixins/empty_state_mixin.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -13,11 +16,10 @@ class ProductsScreen extends StatefulWidget {
   State<ProductsScreen> createState() => _ProductsScreenState();
 }
 
-class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStateMixin {
+class _ProductsScreenState extends State<ProductsScreen>
+    with TickerProviderStateMixin, SearchMixin, SortMenuMixin, EmptyStateMixin {
   late TabController _tabController;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-  bool _showSearch = false;
+  // SearchMixin provides searchController, searchQuery and showSearch
   String _sortBy = 'name';
   bool _sortAscending = true;
 
@@ -42,7 +44,7 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
   @override
   void dispose() {
     _tabController.dispose();
-    _searchController.dispose();
+    disposeSearch();
     super.dispose();
   }
 
@@ -57,8 +59,8 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(_showSearch ? Icons.search_off : Icons.search),
-            onPressed: _toggleSearch,
+            icon: Icon(showSearch ? Icons.search_off : Icons.search),
+            onPressed: toggleSearch,
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.sort),
@@ -73,9 +75,27 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
               });
             },
             itemBuilder: (context) => [
-              _buildSortMenuItem('Name', Icons.sort_by_alpha, 'name'),
-              _buildSortMenuItem('Category', Icons.category, 'category'),
-              _buildSortMenuItem('Price', Icons.attach_money, 'price'),
+              buildSortMenuItem(
+                label: 'Name',
+                icon: Icons.sort_by_alpha,
+                value: 'name',
+                currentSortBy: _sortBy,
+                sortAscending: _sortAscending,
+              ),
+              buildSortMenuItem(
+                label: 'Category',
+                icon: Icons.category,
+                value: 'category',
+                currentSortBy: _sortBy,
+                sortAscending: _sortAscending,
+              ),
+              buildSortMenuItem(
+                label: 'Price',
+                icon: Icons.attach_money,
+                value: 'price',
+                currentSortBy: _sortBy,
+                sortAscending: _sortAscending,
+              ),
             ],
           ),
           IconButton(
@@ -84,10 +104,10 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(_showSearch ? 120 : 60),
+          preferredSize: Size.fromHeight(showSearch ? 120 : 60),
           child: Column(
             children: [
-              if (_showSearch) _buildSearchBar(),
+              if (showSearch) _buildSearchBar(),
               Container(
                 color: Colors.white,
                 child: TabBar(
@@ -132,42 +152,26 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
           border: Border.all(color: Colors.grey[300]!),
         ),
         child: TextField(
-          controller: _searchController,
+          controller: searchController,
           decoration: InputDecoration(
             hintText: 'Search products by name, category, SKU...',
             hintStyle: TextStyle(color: Colors.grey[500]),
             prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-            suffixIcon: _searchController.text.isNotEmpty
+            suffixIcon: searchController.text.isNotEmpty
                 ? IconButton(
               icon: Icon(Icons.clear, color: Colors.grey[600]),
-              onPressed: _clearSearch,
+              onPressed: clearSearch,
             )
                 : null,
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-          onChanged: (value) => setState(() => _searchQuery = value),
+          onChanged: (value) => setState(() => searchQuery = value),
         ),
       ),
     );
   }
 
-  PopupMenuItem<String> _buildSortMenuItem(String label, IconData icon, String value) {
-    return PopupMenuItem(
-      value: value,
-      child: Row(
-        children: [
-          Icon(icon, size: 18),
-          const SizedBox(width: 8),
-          Text(label),
-          if (_sortBy == value) ...[
-            const Spacer(),
-            Icon(_sortAscending ? Icons.arrow_upward : Icons.arrow_downward, size: 16),
-          ],
-        ],
-      ),
-    );
-  }
 
   Widget _buildProductsList(AppStateProvider appState, String categoryFilter) {
     List<Product> productsToDisplay = _getFilteredProducts(appState, categoryFilter);
@@ -377,7 +381,7 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
     IconData icon;
     String title, subtitle;
 
-    if (_searchQuery.isNotEmpty) {
+    if (searchQuery.isNotEmpty) {
       icon = Icons.search_off;
       title = 'No products found';
       subtitle = 'Try adjusting your search terms';
@@ -395,51 +399,27 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 64, color: Colors.grey.shade400),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey[500],
-            ),
-            textAlign: TextAlign.center,
-          ),
+          buildEmptyState(icon: icon, title: title, subtitle: subtitle),
           const SizedBox(height: 32),
-          if (_searchQuery.isEmpty) ...[
+          if (searchQuery.isEmpty)
             ElevatedButton.icon(
               onPressed: () => _showAddProductDialog(context),
               icon: const Icon(Icons.add),
               label: const Text('Add First Product'),
-            ),
-          ] else ...[
+            )
+          else
             OutlinedButton.icon(
-              onPressed: _clearSearch,
+              onPressed: clearSearch,
               icon: const Icon(Icons.clear),
               label: const Text('Clear Search'),
             ),
-          ],
         ],
       ),
     );
   }
 
   List<Product> _getFilteredProducts(AppStateProvider appState, String categoryFilter) {
-    List<Product> products = _searchQuery.isEmpty
+    List<Product> products = searchQuery.isEmpty
         ? appState.products
         : _getSearchResults(appState.products);
 
@@ -468,7 +448,7 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
   }
 
   List<Product> _getSearchResults(List<Product> products) {
-    final lowerQuery = _searchQuery.toLowerCase();
+    final lowerQuery = searchQuery.toLowerCase();
     return products.where((product) =>
     product.name.toLowerCase().contains(lowerQuery) ||
         (product.description?.toLowerCase().contains(lowerQuery) ?? false) ||
@@ -519,19 +499,6 @@ class _ProductsScreenState extends State<ProductsScreen> with TickerProviderStat
     }
   }
 
-  void _toggleSearch() {
-    setState(() {
-      _showSearch = !_showSearch;
-      if (!_showSearch) {
-        _clearSearch();
-      }
-    });
-  }
-
-  void _clearSearch() {
-    _searchController.clear();
-    setState(() => _searchQuery = '');
-  }
 
   void _showProductDetails(Product product) {
     showDialog(

@@ -12,6 +12,9 @@ import '../models/roof_scope_data.dart'; // For creating new quotes
 // Import the new screens
 import 'simplified_quote_screen.dart';
 import 'simplified_quote_detail_screen.dart';
+import '../mixins/search_mixin.dart';
+import '../mixins/sort_menu_mixin.dart';
+import '../mixins/empty_state_mixin.dart';
 
 
 
@@ -22,11 +25,10 @@ class QuotesScreen extends StatefulWidget {
   State<QuotesScreen> createState() => _QuotesScreenState();
 }
 
-class _QuotesScreenState extends State<QuotesScreen> with TickerProviderStateMixin {
+class _QuotesScreenState extends State<QuotesScreen>
+    with TickerProviderStateMixin, SearchMixin, SortMenuMixin, EmptyStateMixin {
   late TabController _tabController;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-  bool _showSearch = false;
+  // SearchMixin provides searchController, searchQuery and showSearch
   // String _sortBy = 'date'; // 'date', 'amount', 'customer', 'status' // You can re-add sorting later
   // bool _sortAscending = false;
 
@@ -41,7 +43,7 @@ class _QuotesScreenState extends State<QuotesScreen> with TickerProviderStateMix
   @override
   void dispose() {
     _tabController.dispose();
-    _searchController.dispose();
+    disposeSearch();
     super.dispose();
   }
 
@@ -56,8 +58,8 @@ class _QuotesScreenState extends State<QuotesScreen> with TickerProviderStateMix
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(_showSearch ? Icons.search_off : Icons.search),
-            onPressed: _toggleSearch,
+            icon: Icon(showSearch ? Icons.search_off : Icons.search),
+            onPressed: toggleSearch,
           ),
           // Sorting can be re-added later if needed
           // PopupMenuButton<String>(...),
@@ -67,10 +69,10 @@ class _QuotesScreenState extends State<QuotesScreen> with TickerProviderStateMix
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(_showSearch ? 120 : 60),
+          preferredSize: Size.fromHeight(showSearch ? 120 : 60),
           child: Column(
             children: [
-              if (_showSearch) _buildSearchBar(),
+              if (showSearch) _buildSearchBar(),
               Container(
                 color: Colors.white,
                 child: TabBar(
@@ -118,20 +120,20 @@ class _QuotesScreenState extends State<QuotesScreen> with TickerProviderStateMix
           border: Border.all(color: Colors.grey[300]!),
         ),
         child: TextField(
-          controller: _searchController,
+          controller: searchController,
           decoration: InputDecoration(
             hintText: 'Search quotes by number or customer...',
             hintStyle: TextStyle(color: Colors.grey[500]),
             prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-            suffixIcon: _searchController.text.isNotEmpty
+            suffixIcon: searchController.text.isNotEmpty
                 ? IconButton(
               icon: Icon(Icons.clear, color: Colors.grey[600]),
-              onPressed: _clearSearch,
+              onPressed: clearSearch,
             ) : null,
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-          onChanged: (value) => setState(() => _searchQuery = value),
+          onChanged: (value) => setState(() => searchQuery = value),
         ),
       ),
     );
@@ -144,8 +146,8 @@ class _QuotesScreenState extends State<QuotesScreen> with TickerProviderStateMix
     List<SimplifiedMultiLevelQuote> quotes = appState.simplifiedQuotes;
 
     // Apply search filter
-    if (_searchQuery.isNotEmpty) {
-      final lowerQuery = _searchQuery.toLowerCase();
+    if (searchQuery.isNotEmpty) {
+      final lowerQuery = searchQuery.toLowerCase();
       quotes = quotes.where((quote) {
         final customer = appState.customers.firstWhere(
               (c) => c.id == quote.customerId,
@@ -209,18 +211,18 @@ class _QuotesScreenState extends State<QuotesScreen> with TickerProviderStateMix
   Widget _buildEmptyState(String status) {
     // ... (your existing _buildEmptyState or _buildEmptyStateContent can be adapted)
     // Ensure the buttons in empty state call _navigateToCreateQuoteScreen
-    String title = _searchQuery.isEmpty ? 'No quotes for "$status"' : 'No quotes found';
-    String subtitle = _searchQuery.isEmpty ? 'Create a new quote to see it here.' : 'Try a different search or filter.';
+    String title = searchQuery.isEmpty ? 'No quotes for "$status"' : 'No quotes found';
+    String subtitle = searchQuery.isEmpty ? 'Create a new quote to see it here.' : 'Try a different search or filter.';
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600])),
-          const SizedBox(height: 8),
-          Text(subtitle, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[500])),
-          if (status == 'All' && _searchQuery.isEmpty) ...[
+          buildEmptyState(
+            icon: Icons.receipt_long_outlined,
+            title: title,
+            subtitle: subtitle,
+          ),
+          if (status == 'All' && searchQuery.isEmpty) ...[
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _navigateToCreateQuoteScreen,
@@ -235,15 +237,6 @@ class _QuotesScreenState extends State<QuotesScreen> with TickerProviderStateMix
 
   // _buildStatusBadge, _getLevelColor can remain if used by an adapted QuoteCard
 
-  void _toggleSearch() {
-    setState(() => _showSearch = !_showSearch);
-    if (!_showSearch) _clearSearch();
-  }
-
-  void _clearSearch() {
-    _searchController.clear();
-    setState(() => _searchQuery = '');
-  }
 
   void _navigateToSimplifiedQuoteDetail(SimplifiedMultiLevelQuote quote, Customer customer) {
     Navigator.push(

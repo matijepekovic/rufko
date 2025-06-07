@@ -6,6 +6,9 @@ import '../providers/app_state_provider.dart';
 import '../models/customer.dart';
 import '../widgets/customer_card.dart';   // Assuming this will be adapted
 import 'customer_detail_screen.dart';
+import '../mixins/search_mixin.dart';
+import '../mixins/sort_menu_mixin.dart';
+import '../mixins/empty_state_mixin.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -14,11 +17,10 @@ class CustomersScreen extends StatefulWidget {
   State<CustomersScreen> createState() => _CustomersScreenState();
 }
 
-class _CustomersScreenState extends State<CustomersScreen> with TickerProviderStateMixin {
+class _CustomersScreenState extends State<CustomersScreen>
+    with TickerProviderStateMixin, SearchMixin, SortMenuMixin, EmptyStateMixin {
   late TabController _tabController;
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-  bool _showSearch = false;
+  // SearchMixin provides searchController, searchQuery and showSearch
   String _sortBy = 'name';
   bool _sortAscending = true;
 
@@ -33,7 +35,7 @@ class _CustomersScreenState extends State<CustomersScreen> with TickerProviderSt
   @override
   void dispose() {
     _tabController.dispose();
-    _searchController.dispose();
+    disposeSearch();
     super.dispose();
   }
 
@@ -48,8 +50,8 @@ class _CustomersScreenState extends State<CustomersScreen> with TickerProviderSt
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(_showSearch ? Icons.search_off : Icons.search),
-            onPressed: _toggleSearch,
+            icon: Icon(showSearch ? Icons.search_off : Icons.search),
+            onPressed: toggleSearch,
           ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.sort),
@@ -64,9 +66,27 @@ class _CustomersScreenState extends State<CustomersScreen> with TickerProviderSt
               });
             },
             itemBuilder: (context) => [
-              _buildSortMenuItem('Name', Icons.sort_by_alpha, 'name'),
-              _buildSortMenuItem('Date Added', Icons.calendar_today, 'date'),
-              _buildSortMenuItem('Last Activity', Icons.access_time, 'activity'),
+              buildSortMenuItem(
+                label: 'Name',
+                icon: Icons.sort_by_alpha,
+                value: 'name',
+                currentSortBy: _sortBy,
+                sortAscending: _sortAscending,
+              ),
+              buildSortMenuItem(
+                label: 'Date Added',
+                icon: Icons.calendar_today,
+                value: 'date',
+                currentSortBy: _sortBy,
+                sortAscending: _sortAscending,
+              ),
+              buildSortMenuItem(
+                label: 'Last Activity',
+                icon: Icons.access_time,
+                value: 'activity',
+                currentSortBy: _sortBy,
+                sortAscending: _sortAscending,
+              ),
             ],
           ),
           IconButton(
@@ -75,10 +95,10 @@ class _CustomersScreenState extends State<CustomersScreen> with TickerProviderSt
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(_showSearch ? 120 : 60),
+          preferredSize: Size.fromHeight(showSearch ? 120 : 60),
           child: Column(
             children: [
-              if (_showSearch) _buildSearchBar(),
+              if (showSearch) _buildSearchBar(),
               Container(
                 color: Colors.white,
                 child: TabBar(
@@ -136,41 +156,25 @@ class _CustomersScreenState extends State<CustomersScreen> with TickerProviderSt
           border: Border.all(color: Colors.grey[300]!),
         ),
         child: TextField(
-          controller: _searchController,
+          controller: searchController,
           decoration: InputDecoration(
             hintText: 'Search customers by name, phone, email...',
             hintStyle: TextStyle(color: Colors.grey[500]),
             prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-            suffixIcon: _searchController.text.isNotEmpty
+            suffixIcon: searchController.text.isNotEmpty
                 ? IconButton(
               icon: Icon(Icons.clear, color: Colors.grey[600]),
-              onPressed: _clearSearch,
+              onPressed: clearSearch,
             ) : null,
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
-          onChanged: (value) => setState(() => _searchQuery = value),
+          onChanged: (value) => setState(() => searchQuery = value),
         ),
       ),
     );
   }
 
-  PopupMenuItem<String> _buildSortMenuItem(String label, IconData icon, String value) {
-    return PopupMenuItem(
-      value: value,
-      child: Row(
-        children: [
-          Icon(icon, size: 18),
-          const SizedBox(width: 8),
-          Text(label),
-          if (_sortBy == value) ...[
-            const Spacer(),
-            Icon(_sortAscending ? Icons.arrow_upward : Icons.arrow_downward, size: 16),
-          ],
-        ],
-      ),
-    );
-  }
 
   Widget _buildCustomersList(AppStateProvider appState, String filter) {
     List<Customer> customers = _getFilteredCustomers(appState, filter);
@@ -197,31 +201,20 @@ class _CustomersScreenState extends State<CustomersScreen> with TickerProviderSt
   }
 
   Widget _buildEmptyState(String filter) {
-    final bool noQuery = _searchQuery.isEmpty;
+    final bool noQuery = searchQuery.isEmpty;
     String title = noQuery ? 'No customers yet' : 'No customers found';
     String subtitle =
         noQuery ? 'Add your first customer' : 'Try adjusting search';
     IconData icon = noQuery ? Icons.people_outline : Icons.search_off;
 
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
-        ],
-      ),
-    );
+    return buildEmptyState(icon: icon, title: title, subtitle: subtitle);
   }
 
 
   List<Customer> _getFilteredCustomers(AppStateProvider appState, String filter) {
-    List<Customer> customers = _searchQuery.isEmpty
+    List<Customer> customers = searchQuery.isEmpty
         ? appState.customers
-        : appState.searchCustomers(_searchQuery);
+        : appState.searchCustomers(searchQuery);
 
     switch (filter) {
       case 'Recent':
@@ -272,13 +265,6 @@ class _CustomersScreenState extends State<CustomersScreen> with TickerProviderSt
     return customers;
   }
 
-  void _toggleSearch() {
-    setState(() { _showSearch = !_showSearch; if (!_showSearch) _clearSearch(); });
-  }
-  void _clearSearch() {
-    _searchController.clear();
-    setState(() => _searchQuery = '');
-  }
 
   void _navigateToCustomerDetail(Customer customer) {
     Navigator.push(context, MaterialPageRoute(builder: (context) => CustomerDetailScreen(customer: customer)));
