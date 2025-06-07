@@ -28,7 +28,7 @@ class QuotesScreen extends StatefulWidget {
 class _QuotesScreenState extends State<QuotesScreen>
     with TickerProviderStateMixin, SearchMixin, SortMenuMixin, EmptyStateMixin {
   late TabController _tabController;
-  // SearchMixin provides searchController, searchQuery and showSearch
+  // SearchMixin provides searchController, searchQuery and searchVisible
   // String _sortBy = 'date'; // 'date', 'amount', 'customer', 'status' // You can re-add sorting later
   // bool _sortAscending = false;
 
@@ -58,7 +58,7 @@ class _QuotesScreenState extends State<QuotesScreen>
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(showSearch ? Icons.search_off : Icons.search),
+            icon: Icon(searchVisible ? Icons.search_off : Icons.search),
             onPressed: toggleSearch,
           ),
           // Sorting can be re-added later if needed
@@ -69,10 +69,10 @@ class _QuotesScreenState extends State<QuotesScreen>
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(showSearch ? 120 : 60),
+          preferredSize: Size.fromHeight(searchVisible ? 120 : 60),
           child: Column(
             children: [
-              if (showSearch) _buildSearchBar(),
+              if (searchVisible) _buildSearchBar(),
               Container(
                 color: Colors.white,
                 child: TabBar(

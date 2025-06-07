@@ -20,7 +20,7 @@ class CustomersScreen extends StatefulWidget {
 class _CustomersScreenState extends State<CustomersScreen>
     with TickerProviderStateMixin, SearchMixin, SortMenuMixin, EmptyStateMixin {
   late TabController _tabController;
-  // SearchMixin provides searchController, searchQuery and showSearch
+  // SearchMixin provides searchController, searchQuery and searchVisible
   String _sortBy = 'name';
   bool _sortAscending = true;
 
@@ -50,7 +50,7 @@ class _CustomersScreenState extends State<CustomersScreen>
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(showSearch ? Icons.search_off : Icons.search),
+            icon: Icon(searchVisible ? Icons.search_off : Icons.search),
             onPressed: toggleSearch,
           ),
           PopupMenuButton<String>(
@@ -95,10 +95,10 @@ class _CustomersScreenState extends State<CustomersScreen>
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: Size.fromHeight(showSearch ? 120 : 60),
+          preferredSize: Size.fromHeight(searchVisible ? 120 : 60),
           child: Column(
             children: [
-              if (showSearch) _buildSearchBar(),
+              if (searchVisible) _buildSearchBar(),
               Container(
                 color: Colors.white,
                 child: TabBar(
