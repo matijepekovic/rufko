@@ -446,6 +446,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
 
+  Widget _buildChatStyleCommunicationHistory() {
+    if (widget.customer.communicationHistory.isEmpty) {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 32),
         child: Column(
