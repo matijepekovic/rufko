@@ -3,6 +3,7 @@
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 import 'product.dart'; // 🔧 ADDED IMPORT FOR PRODUCT
+import '../utils/common_utils.dart';
 
 part 'pdf_template.g.dart'; // This will be regenerated
 
@@ -316,8 +317,9 @@ class PDFTemplate extends HiveObject {
 
       // Process each custom field category
       customFieldsByCategory.forEach((customCategoryKey, customFields) {
-        final targetCategoryName = categoryMappings[customCategoryKey] ??
-            _formatCategoryName(customCategoryKey);
+        final targetCategoryName =
+            categoryMappings[customCategoryKey] ??
+                formatCategoryName(customCategoryKey);
 
         // Check if target category already exists (case-insensitive)
         String? existingCategoryKey;
@@ -351,13 +353,6 @@ class PDFTemplate extends HiveObject {
     return categories;
   }
 
-// Helper method to format category names nicely
-  static String _formatCategoryName(String categoryKey) {
-    return '${categoryKey
-        .split('_')
-        .map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : '')
-        .join(' ')} Fields';
-  }
 
   // 🚀 UPDATED: Enhanced getFieldDisplayName method to handle dynamic product names
   // 🚀 UPDATED: Enhanced getFieldDisplayName method to handle custom fields

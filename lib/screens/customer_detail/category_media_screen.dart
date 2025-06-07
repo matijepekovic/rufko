@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/project_media.dart';
+import '../../utils/common_utils.dart';
 
 class CategoryMediaScreen extends StatelessWidget {
   final String category;
@@ -25,7 +26,7 @@ class CategoryMediaScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_formatCategoryName(category)),
+            Text(formatCategoryName(category)),
             Text(
               '$customerName • ${mediaItems.length} items',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
@@ -121,10 +122,4 @@ class CategoryMediaScreen extends StatelessWidget {
     );
   }
 
-  String _formatCategoryName(String category) {
-    return category
-        .split('_')
-        .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(' ');
-  }
 }
