@@ -2197,18 +2197,21 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(context);
+
               final rateText = taxRateController.text.trim();
               final rate = double.tryParse(rateText);
 
               if (rate == null || rate < 0 || rate > 100) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(
                     content: Text('Please enter a valid tax rate (0-100%)'),
                     backgroundColor: Colors.red,
@@ -2230,9 +2233,9 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                 _updateQuoteLevelsQuantity();
               });
 
-              Navigator.pop(context);
+              navigator.pop();
 
-              ScaffoldMessenger.of(context).showSnackBar(
+              messenger.showSnackBar(
                 SnackBar(
                   content: Text('Tax rate ${rate.toStringAsFixed(2)}% saved and applied'),
                   backgroundColor: Colors.green,
