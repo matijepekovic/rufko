@@ -3,15 +3,15 @@ import 'package:flutter/material.dart';
 mixin SearchMixin<T extends StatefulWidget> on State<T> {
   final TextEditingController searchController = TextEditingController();
   String searchQuery = '';
-  bool _showSearch = false;
+  bool _searchVisible = false;
 
   // Use a getter to ensure it always returns a bool
-  bool get showSearch => _showSearch;
+  bool get searchVisible => _searchVisible;
 
   void toggleSearch() {
     setState(() {
-      _showSearch = !_showSearch;
-      if (!_showSearch) clearSearch();
+      _searchVisible = !_searchVisible;
+      if (!_searchVisible) clearSearch();
     });
   }
 
