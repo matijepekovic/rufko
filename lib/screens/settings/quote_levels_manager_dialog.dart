@@ -3,7 +3,7 @@ class QuoteLevelsManagerDialog extends StatefulWidget {
   final List<String> levelNames;
   final Function(List<String>) onSave;
 
-  const QuoteLevelsManagerDialog({
+  const QuoteLevelsManagerDialog({super.key,
     required this.levelNames,
     required this.onSave,
   });

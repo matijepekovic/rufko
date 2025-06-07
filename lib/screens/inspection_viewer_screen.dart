@@ -76,7 +76,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
                 margin: const EdgeInsets.only(right: 16),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -123,7 +123,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
                   duration: const Duration(milliseconds: 200),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
+                      color: Colors.black.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: IconButton(
@@ -151,7 +151,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
                   duration: const Duration(milliseconds: 200),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
+                      color: Colors.black.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: IconButton(
@@ -184,7 +184,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withValues(alpha: 0.7),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -211,7 +211,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
                             decoration: BoxDecoration(
                               color: index == _currentPage
                                   ? Colors.white
-                                  : Colors.white.withOpacity(0.3),
+                                  : Colors.white.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),

@@ -4,7 +4,7 @@ class DiscountSettingsDialog extends StatefulWidget {
   final double defaultDiscountLimit;
   final Function(List<String>, double) onSave;
 
-  const DiscountSettingsDialog({
+  const DiscountSettingsDialog({super.key,
     required this.discountTypes,
     required this.defaultDiscountLimit,
     required this.onSave,

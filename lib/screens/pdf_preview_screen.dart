@@ -117,7 +117,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   // Enhanced editing features
   final Map<String, String> _editedValues = {};
   List<PDFFormField> _formFields = [];
-  bool _showFieldOverlays = false;
+  final bool _showFieldOverlays = false;
   bool _isLoadingFields = false;
 
   // Undo/Redo system

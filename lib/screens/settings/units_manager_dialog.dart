@@ -4,7 +4,7 @@ class UnitsManagerDialog extends StatefulWidget {
   final String defaultUnit;
   final Function(List<String>, String) onSave;
 
-  const UnitsManagerDialog({
+  const UnitsManagerDialog({super.key,
     required this.units,
     required this.defaultUnit,
     required this.onSave,

@@ -95,7 +95,7 @@ String getMimeType(String fileName) {
 String formatCommunicationDate(String timestamp) {
   try {
     final date = DateTime.parse(timestamp);
-    return DateFormat('MMM dd, yyyy \at h:mm a').format(date);
+    return DateFormat('MMM dd, yyyy at h:mm a').format(date);
   } catch (e) {
     return timestamp;
   }

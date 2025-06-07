@@ -5,7 +5,7 @@ import '../../models/product.dart';
 import '../../providers/app_state_provider.dart';
 class ProductFormDialog extends StatefulWidget {
   final Product? product;
-  const ProductFormDialog({Key? key, this.product}) : super(key: key);
+  const ProductFormDialog({super.key, this.product});
 
   @override
   State<ProductFormDialog> createState() => _ProductFormDialogState();
@@ -66,7 +66,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
 
         return Dialog(
           insetPadding: EdgeInsets.all(isPhone ? 8 : 16),
-          child: Container(
+          child: SizedBox(
             width: isPhone ? constraints.maxWidth * 0.98 : 600,
             height: isPhone ? constraints.maxHeight * 0.92 : constraints.maxHeight * 0.85,
             child: Column(
@@ -99,7 +99,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
     return Container(
       padding: EdgeInsets.all(isPhone ? 12 : 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withOpacity(0.05),
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(12),
           topRight: Radius.circular(12),
@@ -360,7 +360,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
               Container(
                 padding: EdgeInsets.all(isPhone ? 8 : 10),
                 decoration: BoxDecoration(
-                  color: _getPricingTypeColor().withOpacity(0.1),
+                  color: _getPricingTypeColor().withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(Icons.layers, color: _getPricingTypeColor(), size: isPhone ? 20 : 24),
@@ -429,9 +429,9 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
             return Container(
               margin: EdgeInsets.only(bottom: isPhone ? 16 : 20),
               decoration: BoxDecoration(
-                border: Border.all(color: cardColor.withOpacity(0.3)),
+                border: Border.all(color: cardColor.withValues(alpha: 0.3)),
                 borderRadius: BorderRadius.circular(12),
-                color: cardColor.withOpacity(0.05),
+                color: cardColor.withValues(alpha: 0.05),
               ),
               child: Column(
                 children: [
@@ -439,7 +439,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                   Container(
                     padding: EdgeInsets.all(isPhone ? 16 : 20),
                     decoration: BoxDecoration(
-                      color: cardColor.withOpacity(0.1),
+                      color: cardColor.withValues(alpha: 0.1),
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(12),
                         topRight: Radius.circular(12),
@@ -451,7 +451,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                           width: isPhone ? 32 : 36,
                           height: isPhone ? 32 : 36,
                           decoration: BoxDecoration(
-                            color: cardColor.withOpacity(0.2),
+                            color: cardColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Center(
@@ -703,10 +703,10 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
               width: isSelected ? 2 : 1,
             ),
             borderRadius: BorderRadius.circular(12),
-            color: isSelected ? color.withOpacity(0.05) : Colors.white,
+            color: isSelected ? color.withValues(alpha: 0.05) : Colors.white,
             boxShadow: isSelected ? [
               BoxShadow(
-                color: color.withOpacity(0.2),
+                color: color.withValues(alpha: 0.2),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -721,7 +721,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                   Container(
                     padding: EdgeInsets.all(isPhone ? 8 : 10),
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.1),
+                      color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -776,10 +776,10 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                 width: double.infinity,
                 padding: EdgeInsets.all(isPhone ? 10 : 12),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: color.withOpacity(0.3),
+                    color: color.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -850,7 +850,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
-        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withOpacity(0.7), size: isPhone ? 18 : 20),
+        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withValues(alpha: 0.7), size: isPhone ? 18 : 20),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(isPhone ? 8 : 10)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(isPhone ? 8 : 10),
@@ -883,7 +883,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
       value: value,
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withOpacity(0.7), size: isPhone ? 18 : 20),
+        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withValues(alpha: 0.7), size: isPhone ? 18 : 20),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(isPhone ? 8 : 10)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(isPhone ? 8 : 10),
@@ -926,7 +926,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
           Container(
             padding: EdgeInsets.all(isPhone ? 6 : 8),
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: Theme.of(context).primaryColor, size: isPhone ? 16 : 20),

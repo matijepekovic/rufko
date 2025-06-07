@@ -3,7 +3,7 @@ class CategoryManagerDialog extends StatefulWidget {
   final List<String> categories;
   final Function(List<String>) onSave;
 
-  const CategoryManagerDialog({
+  const CategoryManagerDialog({super.key,
     required this.categories,
     required this.onSave,
   });
