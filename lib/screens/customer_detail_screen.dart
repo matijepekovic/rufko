@@ -9,8 +9,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as path;
 import '../utils/common_utils.dart';
-import 'dart:math' as math;
-import 'package:url_launcher/url_launcher.dart';
 import '../models/customer.dart';
 import '../models/project_media.dart';
 import '../models/simplified_quote.dart';
@@ -26,10 +24,9 @@ import 'inspection_viewer_screen.dart';
 import 'customer_detail/enhanced_communication_dialog.dart';
 import 'customer_detail/media_details_dialog.dart';
 import 'customer_detail/full_screen_image_viewer.dart';
-import 'customer_detail/category_media_screen.dart';
+
 import 'customer_detail/customer_edit_dialog.dart';
 import 'customer_detail/quotes_tab.dart';
-import 'customer_detail/project_notes_section.dart';
 import 'customer_detail/media_tab.dart';
 import 'customer_detail/info_tab.dart';
 
@@ -446,6 +443,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
 
+
+
+    // Reverse the list to show newest first
+  Widget _buildChatStyleCommunicationHistory() {
+    // Check if this line is line 452
+    if (widget.customer.communicationHistory.isEmpty) {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 32),
         child: Column(
@@ -479,60 +482,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           final parts = entry.split(': ');
           final timestamp = parts.isNotEmpty ? parts[0] : '';
           final message = parts.length > 1 ? parts.sublist(1).join(': ') : entry;
-
-          // Determine message type and direction
-          final isOutgoing = _isOutgoingMessage(message);
-          final messageType = _getMessageType(message);
-          final cleanMessage = _cleanMessage(message);
-
-          return _buildChatBubble(
-            message: cleanMessage,
-            timestamp: timestamp,
-            isOutgoing: isOutgoing,
-            messageType: messageType,
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildChatStyleCommunicationHistory() {
-    if (widget.customer.communicationHistory.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.symmetric(vertical: 32),
-        child: Column(
-          children: [
-            Icon(Icons.chat_outlined, size: 48, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'No communication history yet',
-              style: TextStyle(color: Colors.grey[600], fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Start a conversation with your customer',
-              style: TextStyle(color: Colors.grey[500], fontSize: 12),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Reverse the list to show newest first
-    final communications =
-        widget.customer.communicationHistory.reversed.toList();
-
-    return Container(
-      constraints: const BoxConstraints(maxHeight: 400),
-      child: ListView.builder(
-        shrinkWrap: true,
-        itemCount: communications.length,
-        itemBuilder: (context, index) {
-          final entry = communications[index];
-          final parts = entry.split(': ');
-          final timestamp = parts.isNotEmpty ? parts[0] : '';
-          final message =
-              parts.length > 1 ? parts.sublist(1).join(': ') : entry;
 
           // Determine message type and direction
           final isOutgoing = _isOutgoingMessage(message);
@@ -4027,318 +3976,17 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   }
 
 
-  Widget _buildMediaTypeHeader(String title, IconData icon, int count, Color color) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              Text(
-                '$count ${count == 1 ? 'item' : 'items'}',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMediaSubsection(String category, List<ProjectMedia> items) {
-    if (items.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _getPhotoCategoryColor(category).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _getPhotoCategoryColor(category).withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _getPhotoCategoryIcon(category),
-                      size: 16,
-                      color: _getPhotoCategoryColor(category),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      formatPhotoCategoryName(category),
-                      style: TextStyle(
-                        color: _getPhotoCategoryColor(category),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '(${items.length})',
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: () => _showCategoryMedia(category, items),
-                icon: const Icon(Icons.fullscreen, size: 14),
-                label: const Text('View All'),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  textStyle: const TextStyle(fontSize: 12),
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 120,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: math.min(items.length, 10),
-            itemBuilder: (context, index) {
-              return Container(
-                width: 100,
-                margin: const EdgeInsets.only(right: 8),
-                child: _buildCompactMediaCard(items[index]),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-
-  Color _getPhotoCategoryColor(String category) {
-    switch (category) {
-      case 'before_photos':
-        return Colors.blue;
-      case 'after_photos':
-        return Colors.green;
-      case 'inspection_photos':
-        return Colors.purple;
-      case 'progress_photos':
-        return Colors.orange;
-      case 'damage_report':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _getPhotoCategoryIcon(String category) {
-    switch (category) {
-      case 'before_photos':
-        return Icons.photo_camera_back;
-      case 'after_photos':
-        return Icons.photo_camera_front;
-      case 'inspection_photos':
-        return Icons.search;
-      case 'progress_photos':
-        return Icons.timeline;
-      case 'damage_report':
-        return Icons.warning;
-      default:
-        return Icons.photo;
-    }
-  }
 
 
-  String _formatPhotoCategoryName(String category) {
-    switch (category) {
-      case 'before_photos':
-        return 'Before Photos';
-      case 'after_photos':
-        return 'After Photos';
-      case 'inspection_photos':
-        return 'Inspection Photos';
-      case 'progress_photos':
-        return 'Progress Photos';
-      case 'damage_report':
-        return 'Damage Photos';
-      case 'other_photos':
-        return 'Other Photos';
-      default:
-        return formatCategoryName(category);
-    }
-  }
 
 
-  Widget _buildMediaStat(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, color: Theme.of(context).primaryColor),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        Text(
-          label,
-          style: TextStyle(color: Colors.grey[600], fontSize: 12),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildCompactMediaCard(ProjectMedia mediaItem) {
-    final isSelected = _selectedMediaIds.contains(mediaItem.id);
 
-    return Card(
-      elevation: 1,
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          InkWell(
-            onTap: _isSelectionMode
-                ? () => _toggleMediaSelection(mediaItem.id)
-                : () => _viewMedia(mediaItem),
-            onLongPress: !_isSelectionMode
-                ? () => _showMediaContextMenu(mediaItem)
-                : null,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: Container(
-                    color: isSelected ? Colors.blue.withValues(alpha: 0.3) : Colors.grey[200],
-                    child: mediaItem.isImage
-                        ? Stack(
-                      children: [
-                        Icon(
-                          Icons.image_outlined,
-                          size: 32,
-                          color: Colors.grey[400],
-                        ),
-                        if (File(mediaItem.filePath).existsSync())
-                          Positioned.fill(
-                            child: Image.file(
-                              File(mediaItem.filePath),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(
-                                  Icons.broken_image,
-                                  size: 32,
-                                  color: Colors.grey[400],
-                                );
-                              },
-                            ),
-                          ),
-                      ],
-                    )
-                        : Icon(
-                      mediaItem.isPdf
-                          ? Icons.picture_as_pdf_outlined
-                          : Icons.insert_drive_file_outlined,
-                      size: 32,
-                      color: Colors.grey[400],
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  color: isSelected ? Colors.blue.withValues(alpha: 0.1) : Colors.white,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        mediaItem.fileName,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: isSelected ? Colors.blue.shade800 : null,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        mediaItem.formattedFileSize,
-                        style: TextStyle(
-                          fontSize: 8,
-                          color: isSelected ? Colors.blue.shade600 : Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
 
-          // Selection checkbox
-          if (_isSelectionMode)
-            Positioned(
-              top: 4,
-              right: 4,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: Checkbox(
-                  value: isSelected,
-                  onChanged: (bool? value) => _toggleMediaSelection(mediaItem.id),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-            ),
 
-          // Selection overlay
-          if (_isSelectionMode && isSelected)
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.2),
-                  border: Border.all(
-                    color: Colors.blue,
-                    width: 2,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+
+
+
 
   // MEDIA FUNCTIONALITY METHODS
   void _showMediaOptions() {
@@ -4925,18 +4573,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
 
-  void _showCategoryMedia(String category, List<ProjectMedia> items) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CategoryMediaScreen(
-          category: category,
-          mediaItems: items,
-          customerName: widget.customer.name,
-        ),
-      ),
-    );
-  }
+
 
   // HELPER METHODS
 
