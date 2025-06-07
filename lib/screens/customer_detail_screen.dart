@@ -4120,7 +4120,26 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     }
   }
 
-  // formatPhotoCategoryName moved to common_utils.dart
+
+  String _formatPhotoCategoryName(String category) {
+    switch (category) {
+      case 'before_photos':
+        return 'Before Photos';
+      case 'after_photos':
+        return 'After Photos';
+      case 'inspection_photos':
+        return 'Inspection Photos';
+      case 'progress_photos':
+        return 'Progress Photos';
+      case 'damage_report':
+        return 'Damage Photos';
+      case 'other_photos':
+        return 'Other Photos';
+      default:
+        return formatCategoryName(category);
+    }
+  }
+
 
   Widget _buildMediaStat(String label, String value, IconData icon) {
     return Column(

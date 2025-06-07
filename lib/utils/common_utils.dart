@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import 'package:intl/intl.dart';
+
 
 String formatFileSize(int bytes) {
   if (bytes < 1024) return '$bytes B';
@@ -89,6 +91,7 @@ String getMimeType(String fileName) {
   }
 }
 
+
 String formatCommunicationDate(String timestamp) {
   try {
     final date = DateTime.parse(timestamp);
@@ -116,3 +119,4 @@ String formatPhotoCategoryName(String category) {
       return formatCategoryName(category);
   }
 }
+
