@@ -496,6 +496,60 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
 
+  Widget _buildChatStyleCommunicationHistory() {
+    if (widget.customer.communicationHistory.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        child: Column(
+          children: [
+            Icon(Icons.chat_outlined, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'No communication history yet',
+              style: TextStyle(color: Colors.grey[600], fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Start a conversation with your customer',
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Reverse the list to show newest first
+    final communications =
+        widget.customer.communicationHistory.reversed.toList();
+
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 400),
+      child: ListView.builder(
+        shrinkWrap: true,
+        itemCount: communications.length,
+        itemBuilder: (context, index) {
+          final entry = communications[index];
+          final parts = entry.split(': ');
+          final timestamp = parts.isNotEmpty ? parts[0] : '';
+          final message =
+              parts.length > 1 ? parts.sublist(1).join(': ') : entry;
+
+          // Determine message type and direction
+          final isOutgoing = _isOutgoingMessage(message);
+          final messageType = _getMessageType(message);
+          final cleanMessage = _cleanMessage(message);
+
+          return _buildChatBubble(
+            message: cleanMessage,
+            timestamp: timestamp,
+            isOutgoing: isOutgoing,
+            messageType: messageType,
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildChatBubble({
     required String message,
     required String timestamp,
