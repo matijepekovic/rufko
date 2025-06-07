@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as syncfusion;
 import 'package:path_provider/path_provider.dart';
 import '../models/project_media.dart';
+import '../utils/common_utils.dart';
 
 enum EditingTool {
   none,
@@ -380,7 +381,7 @@ class SimplePdfEditingService {
         'hasFormFields': document.form.fields.count > 0,
         'formFieldCount': document.form.fields.count,
         'fileSize': bytes.length,
-        'fileSizeFormatted': _formatFileSize(bytes.length),
+        'fileSizeFormatted': formatFileSize(bytes.length),
         'canEdit': document.form.fields.count > 0,
       };
 
@@ -401,10 +402,4 @@ class SimplePdfEditingService {
     }
   }
 
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-  }
 }

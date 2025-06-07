@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../utils/common_utils.dart';
 
 import '../../models/customer.dart';
 import '../../models/project_media.dart';
@@ -300,7 +301,7 @@ class MediaTab extends StatelessWidget {
           child: Row(
             children: [
               Text(
-                _formatPhotoCategoryName(category),
+                formatPhotoCategoryName(category),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).primaryColor,
@@ -401,22 +402,5 @@ class MediaTab extends StatelessWidget {
     );
   }
 
-  String _formatPhotoCategoryName(String category) {
-    switch (category) {
-      case 'before_photos':
-        return 'Before Photos';
-      case 'after_photos':
-        return 'After Photos';
-      case 'inspection_photos':
-        return 'Inspection Photos';
-      case 'progress_photos':
-        return 'Progress Photos';
-      case 'damage_report':
-        return 'Damage Photos';
-      case 'other_photos':
-        return 'Other Photos';
-      default:
-        return category;
-    }
-  }
+  // formatPhotoCategoryName moved to common_utils.dart
 }
