@@ -927,9 +927,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _importData() async {
     try {
       final data = await FileService.instance.pickAndReadBackupFile();
+      if (!mounted) return;
 
       if (data.isNotEmpty) {
-        // Show confirmation dialog
         final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
@@ -943,8 +943,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             content: const Text(
               'This will replace ALL current data with the backup data. '
-                  'Are you sure you want to continue?\n\n'
-                  'This action cannot be undone.',
+              'Are you sure you want to continue?\n\n'
+              'This action cannot be undone.',
             ),
             actions: [
               TextButton(
@@ -962,40 +962,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         );
+        if (!mounted) return;
 
         if (confirmed == true) {
           setState(() => _isProcessing = true);
 
           final databaseService = DatabaseService.instance;
           await databaseService.importAllData(data);
+          if (!mounted) return;
 
-          // Reload app state
           final appState = context.read<AppStateProvider>();
           await appState.loadAllData();
+          if (!mounted) return;
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Data imported successfully!'),
-                backgroundColor: Colors.green,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-            );
-          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Data imported successfully!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          );
         }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Import failed: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Import failed: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }

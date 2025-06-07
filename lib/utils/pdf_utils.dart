@@ -38,6 +38,7 @@ class PDFUtils {
         ),
       );
     } catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error opening PDF: $e'),

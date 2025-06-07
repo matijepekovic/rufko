@@ -16,6 +16,7 @@ mixin CommunicationActionsMixin<T extends StatefulWidget> on State<T> {
       final Uri phoneUri = Uri(scheme: 'tel', path: cleanPhone);
       if (await canLaunchUrl(phoneUri)) {
         await launchUrl(phoneUri);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Phone app opened'), backgroundColor: Colors.green),
         );
@@ -36,6 +37,7 @@ mixin CommunicationActionsMixin<T extends StatefulWidget> on State<T> {
       );
       if (await canLaunchUrl(emailUri)) {
         await launchUrl(emailUri);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Email app opened'), backgroundColor: Colors.blue),
         );
@@ -57,6 +59,7 @@ mixin CommunicationActionsMixin<T extends StatefulWidget> on State<T> {
       );
       if (await canLaunchUrl(smsUri)) {
         await launchUrl(smsUri);
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('SMS app opened'), backgroundColor: Colors.purple),
         );
