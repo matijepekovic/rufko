@@ -19,6 +19,7 @@ import 'pdf_preview_screen.dart';
 import 'simplified_quote_screen.dart';
 import 'simplified_quote_detail_screen.dart';
 import '../mixins/file_sharing_mixin.dart';
+import '../mixins/communication_actions_mixin.dart';
 import '../models/custom_app_data.dart';
 import '../models/inspection_document.dart';
 import 'inspection_viewer_screen.dart';
@@ -30,6 +31,7 @@ import 'customer_detail/customer_edit_dialog.dart';
 import 'customer_detail/quotes_tab.dart';
 import 'customer_detail/project_notes_section.dart';
 import 'customer_detail/media_tab.dart';
+import 'customer_detail/info_tab.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final Customer customer;
@@ -44,7 +46,7 @@ class CustomerDetailScreen extends StatefulWidget {
 }
 
 class _CustomerDetailScreenState extends State<CustomerDetailScreen>
-    with TickerProviderStateMixin, FileSharingMixin {
+    with TickerProviderStateMixin, FileSharingMixin, CommunicationActionsMixin {
   late TabController _tabController;
   final TextEditingController _communicationController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
@@ -168,7 +170,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 );
               } catch (e) {
                 Navigator.pop(context);
-                _showErrorSnackBar('Error deleting files: $e');
+                showErrorSnackBar('Error deleting files: $e');
               }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -202,7 +204,17 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               body: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildInfoTab(),
+                  InfoTab(
+                    customer: widget.customer,
+                    onAddProjectNote: _addProjectNote,
+                    onEditProjectNote: _editProjectNote,
+                    formatDate: formatCommunicationDate,
+                    onTemplateEmail: _showTemplateEmailPicker,
+                    onTemplateSMS: _showTemplateSMSPicker,
+                    onQuickCommunication: _showQuickCommunicationOptions,
+                    onAddCommunication: _addCommunication,
+                    communicationHistory: _buildChatStyleCommunicationHistory(),
+                  ),
                   QuotesTab(
                     customer: widget.customer,
                     onCreateQuote: _navigateToCreateQuoteScreen,
@@ -434,256 +446,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
 
-  Widget _buildInfoTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.person_outline,
-                          color: Theme.of(context).primaryColor,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.customer.name,
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              'Customer since ${DateFormat('MMM yyyy').format(widget.customer.createdAt)}',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  _buildInfoRow(Icons.phone_outlined, 'Phone', widget.customer.phone ?? 'Not provided'),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(Icons.email_outlined, 'Email', widget.customer.email ?? 'Not provided'),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(
-                      Icons.location_on_outlined,
-                      'Address',
-                      widget.customer.fullDisplayAddress.isNotEmpty && widget.customer.fullDisplayAddress != 'No address provided'
-                          ? widget.customer.fullDisplayAddress
-                          : 'Not provided'
-                  ),
-                  if (widget.customer.notes != null && widget.customer.notes!.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _buildInfoRow(Icons.note_outlined, 'Notes', widget.customer.notes!),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Project Notes',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.add_task),
-                            onPressed: _addProjectNote,
-                            tooltip: 'Add Project Note',
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  ProjectNotesSection(
-                    customer: widget.customer,
-                    onEditNote: _editProjectNote,
-                    formatDate: _formatCommunicationDate,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          const SizedBox(height: 16),
-          Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Communication',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.email_outlined),
-                            onPressed: _showTemplateEmailPicker,
-                            tooltip: 'Send Template Email',
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.sms_outlined),
-                            onPressed: _showTemplateSMSPicker,
-                            tooltip: 'Send Template SMS',
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.flash_on),
-                            onPressed: _showQuickCommunicationOptions,
-                            tooltip: 'Quick Communication',
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.add_comment_outlined),
-                            onPressed: _addCommunication,
-                            tooltip: 'Add Communication',
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildChatStyleCommunicationHistory(),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSimplifiedQuotesTab() {
-    return Consumer<AppStateProvider>(
-      builder: (context, appState, child) {
-        final quotes = appState.getSimplifiedQuotesForCustomer(widget.customer.id);
-        quotes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-        if (quotes.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.receipt_long_outlined,
-                  size: 64,
-                  color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No quotes for ${widget.customer.name}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
-                  onPressed: _navigateToCreateQuoteScreen,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Create New Quote'),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: quotes.length,
-          itemBuilder: (context, index) {
-            final quote = quotes[index];
-            double representativeTotal = 0;
-            String levelSummary = "${quote.levels.length} level${quote.levels.length == 1 ? "" : "s"}";
-
-            if (quote.levels.isNotEmpty) {
-              representativeTotal = quote.getDisplayTotalForLevel(quote.levels.first.id);
-            }
-
-            return Card(
-              elevation: 1.5,
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                  child: Icon(
-                    Icons.description_outlined,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-                title: Text(
-                  'Quote #: ${quote.quoteNumber}',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: Text(
-                  'Status: ${quote.status.toUpperCase()} - $levelSummary\nCreated: ${DateFormat('MMM dd, yyyy').format(quote.createdAt)}',
-                ),
-                trailing: Text(
-                  NumberFormat.currency(symbol: '\$').format(representativeTotal),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Theme.of(context).primaryColorDark,
-                  ),
-                ),
-                onTap: () => _navigateToSimplifiedQuoteDetail(quote),
-                isThreeLine: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // Enhanced _buildMediaTab method with visible select button
-  Widget _buildChatStyleCommunicationHistory() {
-    if (widget.customer.communicationHistory.isEmpty) {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 32),
         child: Column(
@@ -828,7 +590,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _formatCommunicationDate(timestamp),
+                    formatCommunicationDate(timestamp),
                     style: TextStyle(
                       color: isOutgoing ? Colors.white70 : Colors.grey[600],
                       fontSize: 11,
@@ -941,7 +703,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _formatCommunicationDate(timestamp),
+                        formatCommunicationDate(timestamp),
                         style: TextStyle(
                           color: Colors.grey[600],
                           fontSize: 11,
@@ -1537,95 +1299,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     }
   }
 
-  Widget _buildProjectNotes() {
-    // Filter communication history for project notes
-    final projectNotes = widget.customer.communicationHistory
-        .where((entry) => entry.contains('PROJECT_NOTE:'))
-        .toList()
-        .reversed
-        .toList();
-
-    if (projectNotes.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Column(
-          children: [
-            Icon(Icons.sticky_note_2_outlined, size: 32, color: Colors.grey[400]),
-            const SizedBox(height: 8),
-            Text(
-              'No project notes yet',
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Add notes about meetings, site visits, and project details',
-              style: TextStyle(color: Colors.grey[500], fontSize: 12),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Column(
-      children: projectNotes.map((entry) {
-        final parts = entry.split(': ');
-        final timestamp = parts.isNotEmpty ? parts[0] : '';
-        final fullNote = parts.length > 1 ? parts.sublist(1).join(': ') : entry;
-
-        // Remove the PROJECT_NOTE: prefix for display
-        final noteContent = fullNote.replaceFirst('PROJECT_NOTE: ', '');
-
-        // Determine note type from content
-        IconData noteIcon = Icons.note;
-        Color noteColor = Colors.blue;
-
-        if (noteContent.toLowerCase().contains('meeting')) {
-          noteIcon = Icons.group;
-          noteColor = Colors.orange;
-        } else if (noteContent.toLowerCase().contains('site visit')) {
-          noteIcon = Icons.home_work;
-          noteColor = Colors.green;
-        } else if (noteContent.toLowerCase().contains('follow-up')) {
-          noteIcon = Icons.schedule;
-          noteColor = Colors.purple;
-        }
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: Card(
-            elevation: 0.5,
-            color: Colors.grey.shade50,
-            child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: noteColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(noteIcon, size: 20, color: noteColor),
-              ),
-              title: Text(
-                noteContent,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              subtitle: Text(
-                _formatCommunicationDate(timestamp),
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade700,
-                ),
-              ),
-              trailing: IconButton(
-                icon: Icon(Icons.edit, size: 16, color: Colors.grey[600]),
-                onPressed: () => _editProjectNote(entry, timestamp),
-                tooltip: 'Edit Note',
-              ),
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
   void _addProjectNote() {
     final noteController = TextEditingController();
     String noteType = 'note';
@@ -2535,7 +2208,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
     // Try to open SMS app if customer has phone
     if (widget.customer.phone != null) {
-      _sendSMS(widget.customer.phone!, message: message);
+      sendSMS(widget.customer.phone!, message: message);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -3351,7 +3024,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
     // Try to open email app if customer has email
     if (widget.customer.email != null) {
-      _sendEmail(widget.customer.email!, subject: subject, body: content);
+      sendEmail(widget.customer.email!, subject: subject, body: content);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -3362,262 +3035,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     }
   }
 
-  Widget _buildMediaTab() {
-    return Consumer<AppStateProvider>(
-      builder: (context, appState, child) {
-        final mediaItems = appState.getProjectMediaForCustomer(widget.customer.id);
-        mediaItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-        if (_isProcessingMedia) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Processing media...'),
-              ],
-            ),
-          );
-        }
-
-        if (mediaItems.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.perm_media_outlined,
-                  size: 64,
-                  color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No media files for this customer.',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Column(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: _pickImageFromCamera,
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Take Photo'),
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: _pickImageFromGallery,
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text('Choose from Gallery'),
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: _pickDocument,
-                      icon: const Icon(Icons.file_upload),
-                      label: const Text('Upload Document'),
-                    ),
-                  ],
-                )
-              ],
-            ),
-          );
-        }
-
-        // Separate media by type
-        final photos = mediaItems.where((m) => m.isImage).toList();
-        final documents = mediaItems.where((m) => !m.isImage).toList();
-
-        // Group photos by specific categories
-        final photoCategories = <String, List<ProjectMedia>>{
-          'before_photos': [],
-          'after_photos': [],
-          'inspection_photos': [],
-          'progress_photos': [],
-          'damage_report': [],
-          'other_photos': [],
-        };
-
-        for (final photo in photos) {
-          if (photoCategories.containsKey(photo.category)) {
-            photoCategories[photo.category]!.add(photo);
-          } else {
-            photoCategories['other_photos']!.add(photo);
-          }
-        }
-
-        // Remove empty photo categories
-        photoCategories.removeWhere((key, value) => value.isEmpty);
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // HEADER WITH SELECT BUTTON
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Media Files (${mediaItems.length})',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (!_isSelectionMode)
-                    ElevatedButton.icon(
-                      onPressed: _enterSelectionMode,
-                      icon: const Icon(Icons.checklist, size: 18),
-                      label: const Text('Select'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                    )
-                  else
-                    Wrap(
-                      spacing: 8,
-                      children: [
-                        TextButton.icon(
-                          onPressed: _selectAllMedia,
-                          icon: const Icon(Icons.select_all, size: 18),
-                          label: Text(
-                            _selectedMediaIds.length == mediaItems.length
-                                ? 'Deselect All'
-                                : 'Select All',
-                          ),
-                        ),
-                        ElevatedButton.icon(
-                          onPressed: _exitSelectionMode,
-                          icon: const Icon(Icons.close, size: 18),
-                          label: const Text('Cancel'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Quick stats
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildMediaStat('Total Files', '${mediaItems.length}', Icons.folder),
-                      _buildMediaStat('Photos', '${photos.length}', Icons.image),
-                      _buildMediaStat('Documents', '${documents.length}', Icons.description),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Selection mode info
-              if (_isSelectionMode) ...[
-                const SizedBox(height: 8),
-                Card(
-                  color: Colors.blue.shade50,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _selectedMediaIds.isEmpty
-                                ? 'Tap files to select them'
-                                : '${_selectedMediaIds.length} of ${mediaItems.length} files selected',
-                            style: TextStyle(
-                              color: Colors.blue.shade800,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        if (_selectedMediaIds.isNotEmpty)
-                          ElevatedButton.icon(
-                            onPressed: _deleteSelectedMedia,
-                            icon: const Icon(Icons.delete, size: 16),
-                            label: const Text('Delete'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 24),
-
-              // PHOTOS SECTION
-              if (photos.isNotEmpty) ...[
-                _buildMediaTypeHeader('Photos', Icons.image, photos.length, Colors.blue),
-                const SizedBox(height: 16),
-                ...photoCategories.entries.map((entry) {
-                  final category = entry.key;
-                  final items = entry.value;
-                  return _buildMediaSubsection(category, items);
-                }),
-                const SizedBox(height: 24),
-              ],
-
-              // DOCUMENTS SECTION
-              if (documents.isNotEmpty) ...[
-                _buildMediaTypeHeader('Documents', Icons.description, documents.length, Colors.orange),
-                const SizedBox(height: 8),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: documents.length,
-                  itemBuilder: (context, index) {
-                    final document = documents[index];
-                    final isSelected = _selectedMediaIds.contains(document.id);
-
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: Icon(
-                          document.isPdf ? Icons.picture_as_pdf : Icons.insert_drive_file,
-                          color: document.isPdf ? Colors.red : Colors.grey[600],
-                        ),
-                        title: Text(document.fileName),
-                        subtitle: Text('${document.formattedFileSize} • ${DateFormat('MMM dd').format(document.createdAt)}'),
-                        trailing: _isSelectionMode
-                            ? Checkbox(
-                          value: isSelected,
-                          onChanged: (value) => _toggleMediaSelection(document.id),
-                        )
-                            : null,
-                        selected: isSelected,
-                        onTap: _isSelectionMode
-                            ? () => _toggleMediaSelection(document.id)
-                            : () => _viewMedia(document),
-                        onLongPress: !_isSelectionMode ? () => _showMediaContextMenu(document) : null,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-    );
-  }
   Widget _buildInspectionTab() {
     return Consumer<AppStateProvider>(
       builder: (context, appState, child) {
@@ -4622,7 +4039,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      _formatPhotoCategoryName(category),
+                      formatPhotoCategoryName(category),
                       style: TextStyle(
                         color: _getPhotoCategoryColor(category),
                         fontWeight: FontWeight.bold,
@@ -4703,6 +4120,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     }
   }
 
+
   String _formatPhotoCategoryName(String category) {
     switch (category) {
       case 'before_photos':
@@ -4721,6 +4139,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         return formatCategoryName(category);
     }
   }
+
 
   Widget _buildMediaStat(String label, String value, IconData icon) {
     return Column(
@@ -4977,7 +4396,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           break;
         }
       } catch (e) {
-        _showErrorSnackBar('Error taking photo: $e');
+        showErrorSnackBar('Error taking photo: $e');
         break;
       }
     }
@@ -5000,7 +4419,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         await _processBulkMedia(files, 'image');
       }
     } catch (e) {
-      _showErrorSnackBar('Error selecting images: $e');
+      showErrorSnackBar('Error selecting images: $e');
     }
   }
 
@@ -5023,7 +4442,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         }
       }
     } catch (e) {
-      _showErrorSnackBar('Error selecting documents: $e');
+      showErrorSnackBar('Error selecting documents: $e');
     }
   }
 
@@ -5078,7 +4497,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         );
       }
     } catch (e) {
-      _showErrorSnackBar('Error processing files: $e');
+      showErrorSnackBar('Error processing files: $e');
     } finally {
       if (mounted) {
         setState(() => _isProcessingMedia = false);
@@ -5189,7 +4608,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         await _processSelectedMedia(File(image.path), 'image');
       }
     } catch (e) {
-      _showErrorSnackBar('Error taking photo: $e');
+      showErrorSnackBar('Error taking photo: $e');
     }
   }
 
@@ -5206,7 +4625,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         await _processSelectedMedia(File(image.path), 'image');
       }
     } catch (e) {
-      _showErrorSnackBar('Error selecting image: $e');
+      showErrorSnackBar('Error selecting image: $e');
     }
   }
 
@@ -5222,7 +4641,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         await _processSelectedMedia(file, 'document');
       }
     } catch (e) {
-      _showErrorSnackBar('Error selecting document: $e');
+      showErrorSnackBar('Error selecting document: $e');
     }
   }
 
@@ -5272,7 +4691,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         }
       }
     } catch (e) {
-      _showErrorSnackBar('Error processing media: $e');
+      showErrorSnackBar('Error processing media: $e');
     } finally {
       if (mounted) {
         setState(() => _isProcessingMedia = false);
@@ -5312,11 +4731,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         // Open other files with system default app
         final result = await OpenFilex.open(mediaItem.filePath);
         if (result.type != ResultType.done) {
-          _showErrorSnackBar('Cannot open file: ${result.message}');
+          showErrorSnackBar('Cannot open file: ${result.message}');
         }
       }
     } catch (e) {
-      _showErrorSnackBar('Error opening media: $e');
+      showErrorSnackBar('Error opening media: $e');
     }
   }
 
@@ -5442,7 +4861,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 );
               } catch (e) {
                 Navigator.pop(context);
-                _showErrorSnackBar('Error deleting media: $e');
+                showErrorSnackBar('Error deleting media: $e');
               }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
@@ -5468,58 +4887,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   // HELPER METHODS
 
 
-  void _showErrorSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    }
-  }
+  // showErrorSnackBar provided by CommunicationActionsMixin
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: Colors.grey[700]),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.3),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  String _formatCommunicationDate(String timestamp) {
-    try {
-      final date = DateTime.parse(timestamp);
-      return DateFormat('MMM dd, yyyy \'at\' h:mm a').format(date);
-    } catch (e) {
-      return timestamp;
-    }
-  }
+  
 
   void _editCustomer() {
     showDialog(
@@ -5727,7 +5098,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     widget.customer.phone != null ? 'Call ${widget.customer.phone}' : 'No phone number',
                     Icons.phone,
                     Colors.green,
-                    widget.customer.phone != null ? () => _makePhoneCall(widget.customer.phone!) : null
+                    widget.customer.phone != null ? () => makePhoneCall(widget.customer.phone!) : null
                 ),
 
                 _buildRealCommTile(
@@ -5735,7 +5106,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     widget.customer.email != null ? 'Email ${widget.customer.email}' : 'No email address',
                     Icons.email,
                     Colors.blue,
-                    widget.customer.email != null ? () => _sendEmail(widget.customer.email!) : null
+                    widget.customer.email != null ? () => sendEmail(widget.customer.email!) : null
                 ),
 
                 _buildRealCommTile(
@@ -5743,7 +5114,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     widget.customer.phone != null ? 'Text ${widget.customer.phone}' : 'No phone number',
                     Icons.sms,
                     Colors.purple,
-                    widget.customer.phone != null ? () => _sendSMS(widget.customer.phone!) : null
+                    widget.customer.phone != null ? () => sendSMS(widget.customer.phone!) : null
                 ),
 
                 const Divider(height: 32),
@@ -5987,106 +5358,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       ),
     );
   }
-  // REAL COMMUNICATION METHODS
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    try {
-      // Clean the phone number
-      final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-      final Uri phoneUri = Uri(scheme: 'tel', path: cleanPhone);
-
-      if (await canLaunchUrl(phoneUri)) {
-        await launchUrl(phoneUri);
-
-        // Log the call attempt
-        _addQuickNote('📞 Called customer at $phoneNumber');
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Phone app opened'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        _showErrorSnackBar('Cannot make phone calls on this device');
-      }
-    } catch (e) {
-      _showErrorSnackBar('Error making phone call: $e');
-    }
-  }
-
-  Future<void> _sendEmail(String emailAddress, {String? subject, String? body}) async {
-    try {
-      final Uri emailUri = Uri(
-        scheme: 'mailto',
-        path: emailAddress,
-        query: _buildEmailQuery(
-          subject: subject ?? 'Roofing Services - ${widget.customer.name}',
-          body: body ?? 'Hi ${widget.customer.name},\n\n',
-        ),
-      );
-
-      if (await canLaunchUrl(emailUri)) {
-        await launchUrl(emailUri);
-
-        // Log the email
-        _addQuickNote('📧 Opened email to $emailAddress');
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email app opened'),
-            backgroundColor: Colors.blue,
-          ),
-        );
-      } else {
-        _showErrorSnackBar('Cannot send emails on this device');
-      }
-    } catch (e) {
-      _showErrorSnackBar('Error sending email: $e');
-    }
-  }
-
-  Future<void> _sendSMS(String phoneNumber, {String? message}) async {
-    try {
-      // Clean the phone number
-      final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-
-      final Uri smsUri = Uri(
-        scheme: 'sms',
-        path: cleanPhone,
-        queryParameters: message != null ? {'body': message} : null,
-      );
-
-      if (await canLaunchUrl(smsUri)) {
-        await launchUrl(smsUri);
-
-        // Log the SMS
-        _addQuickNote('💬 Opened SMS to $phoneNumber');
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('SMS app opened'),
-            backgroundColor: Colors.purple,
-          ),
-        );
-      } else {
-        _showErrorSnackBar('Cannot send SMS on this device');
-      }
-    } catch (e) {
-      _showErrorSnackBar('Error sending SMS: $e');
-    }
-  }
-
-  String _buildEmailQuery({String? subject, String? body}) {
-    final params = <String, String>{};
-    if (subject != null) params['subject'] = subject;
-    if (body != null) params['body'] = body;
-
-    return params.entries
-        .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
-        .join('&');
-  }
-
-  }
+  // REAL COMMUNICATION METHODS MOVED TO MIXIN
 
 
 
+}

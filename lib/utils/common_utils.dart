@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:intl/intl.dart';
+
+
 String formatFileSize(int bytes) {
   if (bytes < 1024) return '$bytes B';
   if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
@@ -87,3 +90,33 @@ String getMimeType(String fileName) {
       return 'application/octet-stream';
   }
 }
+
+
+String formatCommunicationDate(String timestamp) {
+  try {
+    final date = DateTime.parse(timestamp);
+    return DateFormat('MMM dd, yyyy \at h:mm a').format(date);
+  } catch (e) {
+    return timestamp;
+  }
+}
+
+String formatPhotoCategoryName(String category) {
+  switch (category) {
+    case 'before_photos':
+      return 'Before Photos';
+    case 'after_photos':
+      return 'After Photos';
+    case 'inspection_photos':
+      return 'Inspection Photos';
+    case 'progress_photos':
+      return 'Progress Photos';
+    case 'damage_report':
+      return 'Damage Photos';
+    case 'other_photos':
+      return 'Other Photos';
+    default:
+      return formatCategoryName(category);
+  }
+}
+
