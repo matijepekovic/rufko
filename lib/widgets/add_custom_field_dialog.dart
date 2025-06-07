@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/custom_app_data.dart';
 import '../providers/app_state_provider.dart';
+import '../mixins/field_type_mixin.dart';
 
 class AddCustomFieldDialog extends StatefulWidget {
   final List<String> categories;
@@ -19,7 +20,8 @@ class AddCustomFieldDialog extends StatefulWidget {
   State<AddCustomFieldDialog> createState() => _AddCustomFieldDialogState();
 }
 
-class _AddCustomFieldDialogState extends State<AddCustomFieldDialog> {
+class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
+    with FieldTypeMixin {
   final _formKey = GlobalKey<FormState>();
   final _fieldNameController = TextEditingController();
   final _displayNameController = TextEditingController();
@@ -33,27 +35,6 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog> {
   bool _isLoading = false;
   bool _checkboxValue = false; // Add this for checkbox state
 
-  final List<String> _fieldTypes = [
-    'text',
-    'number',
-    'email',
-    'phone',
-    'multiline',
-    'date',
-    'currency',
-    'checkbox'
-  ];
-
-  final Map<String, String> _fieldTypeNames = {
-    'text': 'Text',
-    'number': 'Number',
-    'email': 'Email',
-    'phone': 'Phone',
-    'multiline': 'Multi-line Text',
-    'date': 'Date',
-    'currency': 'Currency',
-    'checkbox': 'Checkbox',
-  };
 
 
 
@@ -123,10 +104,10 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog> {
                   labelText: 'Field Type *',
                   border: OutlineInputBorder(),
                 ),
-                items: _fieldTypes.map((String fieldType) {
+                items: fieldTypes.map((String fieldType) {
                   return DropdownMenuItem<String>(
                     value: fieldType,
-                    child: Text(_fieldTypeNames[fieldType] ?? fieldType),
+                    child: Text(fieldTypeNames[fieldType] ?? fieldType),
                   );
                 }).toList(),
                 onChanged: (String? newValue) {
