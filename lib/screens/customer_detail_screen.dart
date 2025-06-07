@@ -760,7 +760,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                               ),
                             ),
                             Text(
-                              'Manually log ${widget.customer.name}\'s response',
+                              'Manually log ${ widget.customer.name}\'s response',
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: Colors.grey[600],
                               ),
