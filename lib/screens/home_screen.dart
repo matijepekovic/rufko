@@ -168,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
           ),
           Text(
-            NumberFormat.compactCurrency(symbol: r'\$').format(stats['totalRevenue'] ?? 0.0),
+            NumberFormat.compactCurrency(symbol: r'$').format(stats['totalRevenue'] ?? 0.0),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
