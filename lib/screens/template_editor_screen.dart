@@ -724,6 +724,8 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   }
 
   Future<void> _uploadAndCreateTemplate() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final appState = context.read<AppStateProvider>();
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -747,7 +749,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
         if (!mounted) return;
         if (template != null) {
-          final appState = context.read<AppStateProvider>();
           await appState.addExistingPDFTemplateToList(template);
 
           setState(() {
@@ -755,7 +756,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
             _loadTemplateDetails();
           });
 
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             const SnackBar(
               content: Text('Template created!'),
               backgroundColor: Colors.green,
@@ -763,7 +764,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             const SnackBar(
               content: Text('Failed to create template.'),
               backgroundColor: Colors.red,
@@ -774,7 +775,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     } catch (e) {
       _setLoading(false);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
           backgroundColor: Colors.red,
@@ -797,26 +798,28 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       debugPrint('📍 Field mappings: ${_currentTemplate!.fieldMappings.length}');
     }
 
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final appState = context.read<AppStateProvider>();
     try {
       _currentTemplate!.updatedAt = DateTime.now();
       _currentTemplate!.userCategoryKey = _selectedCategoryKey;
-      final appState = context.read<AppStateProvider>();
       await appState.updatePDFTemplate(_currentTemplate!);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Template saved!'),
           backgroundColor: Colors.green,
           duration: Duration(seconds: 1),
         ),
       );
-      Navigator.pop(context);
+      navigator.pop();
 
     } catch (e) {
       if (kDebugMode) debugPrint('❌ Error saving template: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(content: Text('Save failed: $e'), backgroundColor: Colors.red),
         );
       }
@@ -826,6 +829,8 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   void _previewTemplate() async {
     if (_currentTemplate == null) return;
     _setLoading(true, 'Generating preview...');
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     try {
       final previewPath = await TemplateService.instance.generateTemplatePreview(_currentTemplate!);
       _setLoading(false);
@@ -833,8 +838,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       if (!mounted) return;
 
       // Navigate to PdfPreviewScreen like templates_screen does
-      Navigator.push(
-        context,
+      navigator.push(
         MaterialPageRoute(
           builder: (context) => PdfPreviewScreen(
             pdfPath: previewPath,
@@ -848,7 +852,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     } catch (e) {
       _setLoading(false);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(content: Text('Error generating preview: $e'), backgroundColor: Colors.red),
       );
     }

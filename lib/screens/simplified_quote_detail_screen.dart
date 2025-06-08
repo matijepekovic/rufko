@@ -590,6 +590,8 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
     );
   }
   void _previewPdf() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     try {
       final appState = context.read<AppStateProvider>();
 
@@ -603,7 +605,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
 
       if (existingPdf.isEmpty) {
         // No existing PDF found
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Text('No saved PDF found. Use "Generate PDF" to create one first.'),
             backgroundColor: Colors.orange,
@@ -618,7 +620,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
       // Check if file still exists
       final file = File(latestPdf.filePath);
       if (!await file.exists()) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text('PDF file not found: ${latestPdf.fileName}'),
             backgroundColor: Colors.red,
@@ -628,8 +630,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
       }
 
       // Open existing PDF in preview screen
-      Navigator.push(
-        context,
+      navigator.push(
         MaterialPageRoute(
           builder: (context) => PdfPreviewScreen(
             pdfPath: latestPdf.filePath,
@@ -643,7 +644,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
       );
 
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Error opening PDF: $e'),
           backgroundColor: Colors.red,
@@ -737,6 +738,8 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
 // REPLACE the _generatePdf method with this fixed version:
 
   void _generatePdf() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     try {
       final appState = context.read<AppStateProvider>();
 
@@ -805,11 +808,10 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
         );
       }
 
-      Navigator.pop(context); // Close loading dialog
+      navigator.pop(); // Close loading dialog
 
       // 🚀 NEW: Navigate to PDF Preview Screen
-      final result = await Navigator.push<bool>(
-        context,
+      final result = await navigator.push<bool>(
         MaterialPageRoute(
           builder: (context) => PdfPreviewScreen(
             pdfPath: pdfPath,
@@ -826,7 +828,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
       // Handle result from preview screen
       if (result == true) {
         // PDF was saved successfully
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Row(
               children: [
@@ -841,7 +843,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
         );
       } else if (result == false) {
         // PDF was discarded
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Row(
               children: [
@@ -859,8 +861,8 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
 
     } catch (e) {
       debugPrint('❌ Error generating PDF: $e');
-      Navigator.pop(context); // Close loading dialog if open
-      ScaffoldMessenger.of(context).showSnackBar(
+      navigator.pop(); // Close loading dialog if open
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Error generating PDF: $e'),
           backgroundColor: Colors.red,
@@ -1011,9 +1013,11 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
 
 
   void _previewTemplateInDialog(PDFTemplate template) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     try {
       // Close the selection dialog first
-      Navigator.pop(context);
+      navigator.pop();
 
       // Show loading
       showDialog(
@@ -1039,9 +1043,9 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
         customData: {'preview': 'true', 'watermark': 'PREVIEW'},
       );
 
-      Navigator.pop(context); // Close loading
+      navigator.pop(); // Close loading
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Preview generated: ${previewPath.split('/').last}'),
           action: SnackBarAction(
@@ -1062,8 +1066,8 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
         _showTemplateSelectionDialog(templates);
       }
     } catch (e) {
-      Navigator.pop(context); // Close loading if open
-      ScaffoldMessenger.of(context).showSnackBar(
+      navigator.pop(); // Close loading if open
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Error generating preview: $e'),
           backgroundColor: Colors.red,

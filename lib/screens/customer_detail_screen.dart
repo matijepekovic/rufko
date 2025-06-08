@@ -4171,6 +4171,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
     if (selectedCategory == null) return; // User cancelled
 
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isProcessingMedia = true);
 
     try {
@@ -4206,7 +4207,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text('Added $successCount of ${files.length} files'),
             backgroundColor: successCount == files.length ? Colors.green : Colors.orange,
@@ -4382,6 +4383,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       }
 
       // Show media details dialog
+      final messenger = ScaffoldMessenger.of(context);
       final ProjectMedia? mediaItem = await showDialog<ProjectMedia>(
         context: context,
         barrierDismissible: false,
@@ -4399,7 +4401,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         await context.read<AppStateProvider>().addProjectMedia(mediaItem);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
               content: Text('Added ${mediaItem.fileName}'),
               backgroundColor: Colors.green,
@@ -4534,8 +4536,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       builder: (context) => MediaDetailsDialog.edit(
         mediaItem: mediaItem,
         onSave: (updatedMedia) async {
+          final messenger = ScaffoldMessenger.of(context);
           await context.read<AppStateProvider>().updateProjectMedia(updatedMedia);
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             const SnackBar(
               content: Text('Media details updated'),
               backgroundColor: Colors.green,

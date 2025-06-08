@@ -1965,6 +1965,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   }
 
   void _previewPDFTemplate(PDFTemplate template) async {
+    final navigator = Navigator.of(context);
     try {
       showDialog(
         context: context,
@@ -1983,10 +1984,9 @@ class _TemplatesScreenState extends State<TemplatesScreen>
       final previewPath =
           await TemplateService.instance.generateTemplatePreview(template);
 
-      Navigator.pop(context); // Close loading dialog
+      navigator.pop(); // Close loading dialog
 
-      Navigator.push(
-        context,
+      navigator.push(
         MaterialPageRoute(
           builder: (context) => PdfPreviewScreen(
             pdfPath: previewPath,
@@ -1997,7 +1997,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
         ),
       );
     } catch (e) {
-      Navigator.pop(context); // Close loading dialog
+      navigator.pop(); // Close loading dialog
       _showErrorSnackBar('Error generating preview: $e');
     }
   }
