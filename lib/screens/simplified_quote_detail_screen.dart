@@ -11,6 +11,7 @@ import '../providers/app_state_provider.dart';
 import '../models/pdf_template.dart';
 import 'pdf_preview_screen.dart';
 import 'simplified_quote_screen.dart';
+import '../theme/rufko_theme.dart';
 
 class SimplifiedQuoteDetailScreen extends StatefulWidget {
   final SimplifiedMultiLevelQuote quote;
@@ -48,7 +49,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
               expandedHeight: 100,
               floating: false,
               pinned: true,
-              backgroundColor: const Color(0xFF2E86AB),
+              backgroundColor: RufkoTheme.primaryColor,
               foregroundColor: Colors.white,
               elevation: 0,
               flexibleSpace: FlexibleSpaceBar(
@@ -58,8 +59,8 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Color(0xFF2E86AB),
-                        Color(0xFF1B5E7F),
+                        RufkoTheme.primaryColor,
+                        RufkoTheme.primaryDarkColor,
                       ],
                     ),
                   ),
@@ -1176,7 +1177,7 @@ class _DiscountDialogState extends State<_DiscountDialog> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
-                color: Color(0xFF2E86AB),
+                color: RufkoTheme.primaryColor,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -1350,7 +1351,7 @@ class _DiscountDialogState extends State<_DiscountDialog> {
                     child: ElevatedButton(
                       onPressed: _addDiscount,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E86AB),
+                        backgroundColor: RufkoTheme.primaryColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),

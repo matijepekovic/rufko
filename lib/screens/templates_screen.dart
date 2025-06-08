@@ -10,6 +10,7 @@ import '../services/template_service.dart';
 import 'template_editor_screen.dart';
 import 'pdf_preview_screen.dart';
 import 'custom_app_data_screen.dart';
+import '../theme/rufko_theme.dart';
 import 'message_template_editor_screen.dart';
 import 'email_template_editor_screen.dart';
 import '../models/email_template.dart';
@@ -290,7 +291,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
       expandedHeight: 100,
       floating: false,
       pinned: true,
-      backgroundColor: const Color(0xFF2E86AB),
+      backgroundColor: RufkoTheme.primaryColor,
       foregroundColor: Colors.white,
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
@@ -300,8 +301,8 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF2E86AB),
-                Color(0xFF1B5E7F),
+                RufkoTheme.primaryColor,
+                RufkoTheme.primaryDarkColor,
               ],
             ),
           ),
@@ -389,7 +390,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               onPressed: _createNewPDFTemplate,
               icon: const Icon(Icons.add),
               label: const Text('New PDF Template'),
-              backgroundColor: const Color(0xFF2E86AB),
+              backgroundColor: RufkoTheme.primaryColor,
             );
           case 1: // Message Templates tab
             return FloatingActionButton.extended(
@@ -413,7 +414,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               onPressed: _createNewCustomField,
               icon: const Icon(Icons.add),
               label: const Text('New Custom Field'),
-              backgroundColor: const Color(0xFF2E86AB),
+              backgroundColor: RufkoTheme.primaryColor,
             );
           default:
             return FloatingActionButton.extended(
@@ -421,7 +422,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               onPressed: _createNewPDFTemplate,
               icon: const Icon(Icons.add),
               label: const Text('New Template'),
-              backgroundColor: const Color(0xFF2E86AB),
+              backgroundColor: RufkoTheme.primaryColor,
             );
         }
       },
@@ -639,7 +640,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
           ],
         ),
         selected: isSelected,
-        selectedColor: const Color(0xFF2E86AB),
+        selectedColor: RufkoTheme.primaryColor,
         labelStyle: TextStyle(
           color: isSelected ? Colors.white : Colors.grey[700],
           fontSize: 12,

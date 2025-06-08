@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import '../models/customer.dart';
 import '../utils/common_utils.dart';
+import '../theme/rufko_theme.dart';
 
 mixin FileSharingMixin<T extends StatefulWidget> on State<T> {
   bool _isSharing = false;
@@ -107,7 +108,7 @@ mixin FileSharingMixin<T extends StatefulWidget> on State<T> {
                   Icon(
                     getFileIcon(fileType ?? _getFileTypeFromExtension(fileName)),
                     size: 24,
-                    color: const Color(0xFF2E86AB),
+                    color: RufkoTheme.primaryColor,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -272,7 +273,7 @@ mixin FileSharingMixin<T extends StatefulWidget> on State<T> {
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E86AB),
+                    backgroundColor: RufkoTheme.primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
