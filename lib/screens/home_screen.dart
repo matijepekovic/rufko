@@ -147,10 +147,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
+
   Widget _buildModernSliverAppBar(AppStateProvider appState) {
     final stats = appState.getDashboardStats();
+    final isNarrow = MediaQuery.of(context).size.width < 360;
+    final logoSize = isNarrow ? 80.0 : 120.0;
+    final spacing = isNarrow ? 12.0 : 24.0;
+
+    Widget buildStats() {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Total Revenue',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            NumberFormat.compactCurrency(symbol: r'\$').format(stats['totalRevenue'] ?? 0.0),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Active Quotes',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            '${stats['activeQuotes'] ?? 0}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      );
+    }
+
     return SliverAppBar(
-      expandedHeight: 200,
+      expandedHeight: isNarrow ? 160 : 200,
       floating: false,
       pinned: true,
       backgroundColor: Colors.white,
@@ -163,8 +210,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                RufkoTheme.primaryColor, // Blue from your roof
-                RufkoTheme.primaryDarkColor, // Darker blue
+                RufkoTheme.primaryColor,
+                RufkoTheme.primaryDarkColor,
               ],
             ),
           ),
@@ -176,12 +223,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 mainAxisAlignment: MainAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
+                  if (isNarrow)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Large prominent logo
                         Container(
-                          width: 120,
-                          height: 120,
+                          width: logoSize,
+                          height: logoSize,
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
@@ -200,55 +248,56 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: const Icon(Icons.roofing, color: RufkoTheme.primaryColor, size: 60),
+                                  child: const Icon(
+                                    Icons.roofing,
+                                    color: RufkoTheme.primaryColor,
+                                    size: 60,
+                                  ),
                                 );
                               },
                             ),
                           ),
                         ),
-                        const SizedBox(width: 24),
-                        // Stats positioned to the right of logo
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Total Revenue',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                NumberFormat.compactCurrency(symbol: r'$').format(stats['totalRevenue'] ?? 0.0),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Active Quotes',
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                '${stats['activeQuotes'] ?? 0}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                        SizedBox(height: spacing),
+                        buildStats(),
+                      ],
+                    )
+                  else
+                    Row(
+                      children: [
+                        Container(
+                          width: logoSize,
+                          height: logoSize,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.asset(
+                              'assets/images/logo/rufko_full_logo.png',
+                              fit: BoxFit.cover,
+                              cacheWidth: 315,
+                              cacheHeight: 315,
+                              errorBuilder: (context, error, stackTrace) {
+                                debugPrint('Logo load error: $error');
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Icon(
+                                    Icons.roofing,
+                                    color: RufkoTheme.primaryColor,
+                                    size: 60,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
+                        SizedBox(width: spacing),
+                        Expanded(child: buildStats()),
                       ],
                     ),
                 ],
@@ -307,10 +356,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         const SizedBox(height: 16),
         LayoutBuilder(
           builder: (context, constraints) {
-            final cardWidth = (constraints.maxWidth - 16) / 2;
+            final isNarrow = constraints.maxWidth < 360;
+            final crossAxisCount = isNarrow ? 1 : 2;
+            final cardWidth = (constraints.maxWidth - 16 * (crossAxisCount - 1)) / crossAxisCount;
             final aspectRatio = cardWidth > 160 ? 1.8 : 2.2;
             return GridView.count(
-              crossAxisCount: 2,
+              crossAxisCount: crossAxisCount,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisSpacing: 16,
