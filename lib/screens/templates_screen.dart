@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import '../models/message_template.dart';
 import '../models/pdf_template.dart';
 import '../providers/app_state_provider.dart';
-import '../services/template_service.dart';
 import 'template_editor_screen.dart';
 import 'pdf_preview_screen.dart';
 import 'custom_app_data_screen.dart';
@@ -1984,8 +1983,9 @@ class _TemplatesScreenState extends State<TemplatesScreen>
         ),
       );
 
+      final appState = context.read<AppStateProvider>();
       final previewPath =
-          await TemplateService.instance.generateTemplatePreview(template);
+          await appState.generateTemplatePreview(template);
 
       navigator.pop(); // Close loading dialog
 

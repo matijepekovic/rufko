@@ -16,6 +16,8 @@ import 'settings_screen.dart';
 import 'customer_detail_screen.dart';
 import 'simplified_quote_detail_screen.dart';
 import 'templates_screen.dart';
+import 'layouts/home_layout_small.dart';
+import 'layouts/home_layout_large.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -71,46 +73,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: PageView(
-        controller: _pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        children: [
-          _buildModernDashboard(),
-          const CustomersScreen(),
-          const QuotesScreen(),
-          const ProductsScreen(),
-          const TemplatesScreen(),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          currentIndex: _selectedIndex,
-          onTap: _onNavItemTapped,
-          items: _navItems,
-          selectedItemColor: RufkoTheme.primaryColor, // Blue from logo
-          unselectedItemColor: Colors.grey[600],
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-        ),
-      ),
-      floatingActionButton: _selectedIndex == 0 ? _buildFloatingActionButton() : null,
+    final pages = [
+      _buildModernDashboard(),
+      const CustomersScreen(),
+      const QuotesScreen(),
+      const ProductsScreen(),
+      const TemplatesScreen(),
+    ];
+
+    final fab = _selectedIndex == 0 ? _buildFloatingActionButton() : null;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLargeScreen = constraints.maxWidth >= 900;
+        if (isLargeScreen) {
+          return HomeLargeLayout(
+            selectedIndex: _selectedIndex,
+            navItems: _navItems,
+            onItemSelected: _onNavItemTapped,
+            pageController: _pageController,
+            pages: pages,
+            floatingActionButton: fab,
+          );
+        }
+
+        return HomeSmallLayout(
+          selectedIndex: _selectedIndex,
+          navItems: _navItems,
+          onItemSelected: _onNavItemTapped,
+          pageController: _pageController,
+          pages: pages,
+          floatingActionButton: fab,
+        );
+      },
     );
   }
 

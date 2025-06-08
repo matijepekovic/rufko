@@ -38,6 +38,16 @@ mixin RufkoTheme {
           borderRadius: BorderRadius.circular(12),
         ),
       ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: Colors.white,
+        selectedIconTheme: const IconThemeData(color: primaryColor),
+        selectedLabelTextStyle: const TextStyle(
+          color: primaryColor,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedIconTheme: IconThemeData(color: Colors.grey.shade600),
+        unselectedLabelTextStyle: TextStyle(color: Colors.grey.shade600),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
