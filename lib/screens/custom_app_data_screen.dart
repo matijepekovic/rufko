@@ -1,4 +1,3 @@
-// lib/screens/custom_app_data_screen.dart - FIXED FILTER CHIP DATA SOURCE
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -192,8 +191,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
-
-                  // 🚀 FIXED: Use the same async data source as other tabs
                   Row(
                     children: [
                       Expanded(
@@ -376,8 +373,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
       },
     );
   }
-
-  // 🚀 NEW: Consistent filter chip builder (matches other tabs)
   Widget _buildCategoryFilterChip(String label, IconData icon, bool isSelected, String categoryKey) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -406,7 +401,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
   }
 
   Widget _buildCategorySection(String category, List<CustomAppDataField> fields, bool isPhone) {
-    // 🚀 FIXED: Get category display name from async data source
     return FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
       future: context.read<AppStateProvider>().getAllTemplateCategories(),
       builder: (context, snapshot) {
@@ -730,8 +724,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
 
   void _showAddFieldDialog() {
     if (!mounted) return;
-
-    // 🚀 FIXED: Use async data source for consistency
     showDialog<CustomAppDataField?>(
       context: context,
       barrierDismissible: false,
@@ -803,8 +795,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
 
   void _showEditFieldDialog(CustomAppDataField field) {
     if (!mounted) return;
-
-    // 🚀 FIXED: Use async data source for consistency
     showDialog<CustomAppDataField?>(
       context: context,
       barrierDismissible: false,
