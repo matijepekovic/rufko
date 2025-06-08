@@ -1073,8 +1073,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(context);
+
               try {
-                Navigator.pop(context);
+                navigator.pop();
                 setState(() => _isProcessing = true);
 
                 final appState = context.read<AppStateProvider>();
@@ -1085,7 +1088,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 await appState.loadAllData();
 
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                       content: const Text('All data cleared successfully'),
                       backgroundColor: Colors.orange,
@@ -1096,7 +1099,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                       content: Text('Error clearing data: $e'),
                       backgroundColor: Colors.red,
@@ -1349,6 +1352,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _selectCompanyLogo(StateSetter setDialogState, AppSettings settings, AppStateProvider appState) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final newPath = await FileService.instance.pickAndSaveCompanyLogo();
 
@@ -1358,18 +1362,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
         setDialogState(() {});
 
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: const Text('Company logo updated!'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Error selecting logo: $e'),
           backgroundColor: Colors.red,

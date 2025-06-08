@@ -11,13 +11,14 @@ mixin CommunicationActionsMixin<T extends StatefulWidget> on State<T> {
   }
 
   Future<void> makePhoneCall(String phoneNumber) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
       final Uri phoneUri = Uri(scheme: 'tel', path: cleanPhone);
       if (await canLaunchUrl(phoneUri)) {
         await launchUrl(phoneUri);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('Phone app opened'), backgroundColor: Colors.green),
         );
       } else {
@@ -29,6 +30,7 @@ mixin CommunicationActionsMixin<T extends StatefulWidget> on State<T> {
   }
 
   Future<void> sendEmail(String emailAddress, {String? subject, String? body}) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final Uri emailUri = Uri(
         scheme: 'mailto',
@@ -38,7 +40,7 @@ mixin CommunicationActionsMixin<T extends StatefulWidget> on State<T> {
       if (await canLaunchUrl(emailUri)) {
         await launchUrl(emailUri);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('Email app opened'), backgroundColor: Colors.blue),
         );
       } else {
@@ -50,6 +52,7 @@ mixin CommunicationActionsMixin<T extends StatefulWidget> on State<T> {
   }
 
   Future<void> sendSMS(String phoneNumber, {String? message}) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
       final Uri smsUri = Uri(
@@ -60,7 +63,7 @@ mixin CommunicationActionsMixin<T extends StatefulWidget> on State<T> {
       if (await canLaunchUrl(smsUri)) {
         await launchUrl(smsUri);
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('SMS app opened'), backgroundColor: Colors.purple),
         );
       } else {

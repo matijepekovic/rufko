@@ -193,6 +193,9 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   void _deleteSelectedPDF() {
     if (_selectedPDFIds.isEmpty) return;
 
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -203,7 +206,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
             : 'Are you sure you want to delete these ${_selectedPDFIds.length} PDF templates?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => navigator.pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
@@ -217,8 +220,8 @@ class _TemplatesScreenState extends State<TemplatesScreen>
 
                 _exitPDFSelectionMode();
 
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                navigator.pop();
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text(
                         'Deleted ${_selectedPDFIds.length} template${_selectedPDFIds.length == 1 ? '' : 's'}'),
@@ -226,7 +229,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                   ),
                 );
               } catch (e) {
-                Navigator.pop(context);
+                navigator.pop();
                 _showErrorSnackBar('Error deleting templates: $e');
               }
             },
@@ -1962,6 +1965,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   }
 
   void _previewPDFTemplate(PDFTemplate template) async {
+    final navigator = Navigator.of(context);
     try {
       showDialog(
         context: context,
@@ -1980,10 +1984,9 @@ class _TemplatesScreenState extends State<TemplatesScreen>
       final previewPath =
           await TemplateService.instance.generateTemplatePreview(template);
 
-      Navigator.pop(context); // Close loading dialog
+      navigator.pop(); // Close loading dialog
 
-      Navigator.push(
-        context,
+      navigator.push(
         MaterialPageRoute(
           builder: (context) => PdfPreviewScreen(
             pdfPath: previewPath,
@@ -1994,7 +1997,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
         ),
       );
     } catch (e) {
-      Navigator.pop(context); // Close loading dialog
+      navigator.pop(); // Close loading dialog
       _showErrorSnackBar('Error generating preview: $e');
     }
   }
@@ -2100,6 +2103,9 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   }
 
   void _showPDFDeleteConfirmation(PDFTemplate template) {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -2110,18 +2116,18 @@ class _TemplatesScreenState extends State<TemplatesScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => navigator.pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              navigator.pop();
 
               try {
                 await context
                     .read<AppStateProvider>()
                     .deletePDFTemplate(template.id);
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(
                     content: Text('Template deleted successfully'),
                     backgroundColor: Colors.green,
@@ -2644,6 +2650,9 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   }
 
   void _showMessageDeleteConfirmation(MessageTemplate template) {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -2654,18 +2663,18 @@ class _TemplatesScreenState extends State<TemplatesScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => navigator.pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              navigator.pop();
 
               try {
                 await context
                     .read<AppStateProvider>()
                     .deleteMessageTemplate(template.id);
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(
                     content: Text('Message template deleted successfully'),
                     backgroundColor: Colors.green,
@@ -2823,6 +2832,9 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   }
 
   void _showEmailDeleteConfirmation(EmailTemplate template) {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -2833,18 +2845,18 @@ class _TemplatesScreenState extends State<TemplatesScreen>
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => navigator.pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context);
+              navigator.pop();
 
               try {
                 await context
                     .read<AppStateProvider>()
                     .deleteEmailTemplate(template.id);
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(
                     content: Text('Email template deleted successfully'),
                     backgroundColor: Colors.orange,

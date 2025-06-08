@@ -131,13 +131,16 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 ? 'Are you sure you want to delete this file?'
                 : 'Are you sure you want to delete these ${_selectedMediaIds.length} files?'
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(context);
+
               try {
                 final appState = context.read<AppStateProvider>();
                 final mediaItems = appState.getProjectMediaForCustomer(widget.customer.id);
@@ -158,15 +161,15 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 // Exit selection mode
                 _exitSelectionMode();
 
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                navigator.pop();
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text('Deleted ${itemsToDelete.length} file${itemsToDelete.length == 1 ? '' : 's'}'),
                     backgroundColor: Colors.red,
                   ),
                 );
               } catch (e) {
-                Navigator.pop(context);
+                navigator.pop();
                 showErrorSnackBar('Error deleting files: $e');
               }
             },
@@ -3494,6 +3497,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             ),
             ElevatedButton(
               onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final navigator = Navigator.of(context);
+
                 if (contentController.text.trim().isNotEmpty) {
                   final note = InspectionDocumentHelper.createNote(
                     customerId: widget.customer.id,
@@ -3502,9 +3508,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   );
 
                   await context.read<AppStateProvider>().addInspectionDocument(note);
-                  Navigator.pop(context);
+                  navigator.pop();
 
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     const SnackBar(
                       content: Text('Inspection note saved!'),
                       backgroundColor: Colors.green,
@@ -3575,6 +3581,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             if (!isSmallScreen)
               TextButton(
                 onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final navigator = Navigator.of(context);
+
                   final shouldDelete = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -3595,8 +3604,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
                   if (shouldDelete == true) {
                     await context.read<AppStateProvider>().deleteInspectionDocument(existingNote.id);
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    navigator.pop();
+                    messenger.showSnackBar(
                       const SnackBar(content: Text('Note deleted'), backgroundColor: Colors.red),
                     );
                   }
@@ -3609,9 +3618,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             ),
             ElevatedButton(
               onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final navigator = Navigator.of(context);
+
                 existingNote.updateContent(contentController.text.trim());
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                navigator.pop();
+                messenger.showSnackBar(
                   const SnackBar(content: Text('Note updated!'), backgroundColor: Colors.green),
                 );
               },
@@ -3712,9 +3724,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               ),
               ElevatedButton(
                 onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  final navigator = Navigator.of(context);
+
                   final title = titleController.text.trim();
                   if (title.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       const SnackBar(
                         content: Text('Please enter a title'),
                         backgroundColor: Colors.red,
@@ -3735,9 +3750,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   // Save to app state
                   await context.read<AppStateProvider>().addInspectionDocument(document);
 
-                  Navigator.pop(context);
+                  navigator.pop();
 
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     const SnackBar(
                       content: Text('PDF document added!'),
                       backgroundColor: Colors.green,
@@ -4156,6 +4171,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
     if (selectedCategory == null) return; // User cancelled
 
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isProcessingMedia = true);
 
     try {
@@ -4191,7 +4207,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text('Added $successCount of ${files.length} files'),
             backgroundColor: successCount == files.length ? Colors.green : Colors.orange,
@@ -4367,6 +4383,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       }
 
       // Show media details dialog
+      final messenger = ScaffoldMessenger.of(context);
       final ProjectMedia? mediaItem = await showDialog<ProjectMedia>(
         context: context,
         barrierDismissible: false,
@@ -4384,7 +4401,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         await context.read<AppStateProvider>().addProjectMedia(mediaItem);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
               content: Text('Added ${mediaItem.fileName}'),
               backgroundColor: Colors.green,
@@ -4519,8 +4536,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       builder: (context) => MediaDetailsDialog.edit(
         mediaItem: mediaItem,
         onSave: (updatedMedia) async {
+          final messenger = ScaffoldMessenger.of(context);
           await context.read<AppStateProvider>().updateProjectMedia(updatedMedia);
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             const SnackBar(
               content: Text('Media details updated'),
               backgroundColor: Colors.green,
@@ -4532,6 +4550,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   }
 
   void _deleteMedia(ProjectMedia mediaItem) {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -4539,7 +4560,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         content: Text('Are you sure you want to delete "${mediaItem.fileName}"?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => navigator.pop(),
             child: const Text('Cancel'),
           ),
           TextButton(
@@ -4554,15 +4575,15 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 // Remove from app state
                 await context.read<AppStateProvider>().deleteProjectMedia(mediaItem.id);
 
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                navigator.pop();
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text('Deleted ${mediaItem.fileName}'),
                     backgroundColor: Colors.red,
                   ),
                 );
               } catch (e) {
-                Navigator.pop(context);
+                navigator.pop();
                 showErrorSnackBar('Error deleting media: $e');
               }
             },
