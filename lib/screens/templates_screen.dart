@@ -9,9 +9,6 @@ import '../providers/app_state_provider.dart';
 import 'template_editor_screen.dart';
 import 'pdf_preview_screen.dart';
 import '../widgets/templates/custom_app_data_tab.dart';
-import '../widgets/templates/pdf_templates_tab.dart';
-import '../widgets/templates/message_templates_tab.dart';
-import '../widgets/templates/email_templates_tab.dart';
 import '../theme/rufko_theme.dart';
 import 'message_template_editor_screen.dart';
 import 'email_template_editor_screen.dart';
@@ -215,11 +212,11 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               },
               body: TabBarView(
                 controller: _tabController,
-                children: const [
-                  PdfTemplatesTab(),
-                  MessageTemplatesTab(),
-                  EmailTemplatesTab(),
-                  CustomAppDataScreen(),
+                children: [
+                  _buildPDFTemplatesTab(),
+                  _buildTextTemplatesTab(),
+                  _buildEmailTemplatesTab(),
+                  _buildCustomDataTab(),
                 ],
               ),
             ),
@@ -373,6 +370,1449 @@ class _TemplatesScreenState extends State<TemplatesScreen>
     );
   }
 
+  // TAB CONTENT BUILDERS
+
+  Widget _buildPDFTemplatesTab() {
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, child) {
+        final templates = _filterPDFTemplates(appState.pdfTemplates);
+
+        if (appState.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Group templates by user category
+        final groupedTemplates = <String, List<PDFTemplate>>{};
+        for (final template in templates) {
+          final categoryKey = template.userCategoryKey ?? 'uncategorized';
+          groupedTemplates.putIfAbsent(categoryKey, () => []).add(template);
+        }
+
+        return Column(
+          children: [
+            // Search and Filter Bar (ALWAYS SHOWN)
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Column(
+                children: [
+                  // Search Bar
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search PDF templates...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                    ),
+                    onChanged: (value) {
+                      setState(() => _searchQuery = value);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // Category Filter Chips + Actions
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: FutureBuilder<
+                              Map<String, List<Map<String, dynamic>>>>(
+                            future: appState.getAllTemplateCategories(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const SizedBox(
+                                    height: 40); // Placeholder while loading
+                              }
+
+                              final allCategories = snapshot.data!;
+                              final pdfCategories =
+                                  allCategories['pdf_templates'] ?? [];
+
+                              return Row(
+                                children: [
+                                  // "All Categories" chip
+                                  _buildPDFFilterChip(
+                                      'All Categories',
+                                      Icons.view_list,
+                                      _selectedPDFCategoryKey == 'all'),
+                                  // Dynamic user category chips
+                                  ...pdfCategories.map((category) {
+                                    final categoryKey =
+                                        category['key'] as String;
+                                    final categoryName =
+                                        category['name'] as String;
+                                    return _buildPDFFilterChip(
+                                        categoryName,
+                                        Icons.description,
+                                        _selectedPDFCategoryKey == categoryKey,
+                                        categoryKey);
+                                  }),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Select Button
+                      if (!_pdfSelection.isSelectionMode)
+                        ElevatedButton.icon(
+                          onPressed: _enterPDFSelectionMode,
+                          icon: const Icon(Icons.checklist, size: 18),
+                          label: const Text('Select'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                          ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            TextButton.icon(
+                              onPressed: _selectAllPDF,
+                              icon: const Icon(Icons.select_all, size: 18),
+                              label: Text(
+                                _pdfSelection.selectedIds.length == templates.length
+                                    ? 'Deselect All'
+                                    : 'Select All',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _exitPDFSelectionMode,
+                              icon: const Icon(Icons.close, size: 18),
+                              label: const Text('Cancel'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Selection mode info
+            if (_pdfSelection.isSelectionMode) ...[
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                color: Colors.blue.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.blue.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _pdfSelection.selectedIds.isEmpty
+                              ? 'Tap PDF templates to select them'
+                              : '${_pdfSelection.selectedIds.length} of ${templates.length} templates selected',
+                          style: TextStyle(
+                            color: Colors.blue.shade800,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (_pdfSelection.selectedIds.isNotEmpty)
+                        ElevatedButton.icon(
+                          onPressed: _deleteSelectedPDF,
+                          icon: const Icon(Icons.delete, size: 16),
+                          label: const Text('Delete'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Templates content or empty state
+            Expanded(
+              child: templates.isEmpty
+                  ? _buildEmptyPDFState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: groupedTemplates.length,
+                      itemBuilder: (context, index) {
+                        final categoryKey =
+                            groupedTemplates.keys.elementAt(index);
+                        final categoryTemplates =
+                            groupedTemplates[categoryKey]!;
+
+                        return _buildPDFCategorySection(
+                            categoryKey, categoryTemplates);
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPDFFilterChip(String label, IconData icon, bool isSelected,
+      [String? categoryKey]) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
+            const SizedBox(width: 4),
+            Text(label),
+          ],
+        ),
+        selected: isSelected,
+        selectedColor: RufkoTheme.primaryColor,
+        labelStyle: TextStyle(
+          color: isSelected ? Colors.white : Colors.grey[700],
+          fontSize: 12,
+        ),
+        onSelected: (selected) {
+          setState(() {
+            if (label == 'All Categories') {
+              _selectedPDFCategoryKey = 'all';
+            } else {
+              _selectedPDFCategoryKey =
+                  selected ? (categoryKey ?? label.toLowerCase()) : 'all';
+            }
+          });
+        },
+      ),
+    );
+  }
+
+  String _getCategoryDisplayName(String categoryKey) {
+    if (categoryKey == 'uncategorized') return 'Uncategorized Templates';
+
+    // For now, just use the key - we'll improve this later
+    return '$categoryKey Templates';
+  }
+
+  Widget _buildPDFCategorySection(
+      String templateType, List<PDFTemplate> typeTemplates) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Category Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: _getTypeColor(templateType).withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(_getTypeIcon(templateType),
+                    color: _getTypeColor(templateType), size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  _getCategoryDisplayName(templateType),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _getTypeColor(templateType),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${typeTemplates.length} template${typeTemplates.length == 1 ? '' : 's'}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+
+          // Templates in this category
+          ...typeTemplates.map((template) => _pdfSelection.isSelectionMode
+              ? _buildSelectablePDFCard(template)
+              : _buildPDFTemplateCard(template)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextTemplatesTab() {
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, child) {
+        // Filter templates by user categories
+        final allTemplates = appState.messageTemplates;
+        final filteredTemplates = _filterMessageTemplates(allTemplates);
+
+        if (appState.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Group templates by user category
+        final groupedTemplates = <String, List<MessageTemplate>>{};
+        for (final template in filteredTemplates) {
+          final categoryKey = template.userCategoryKey ?? 'uncategorized';
+          groupedTemplates.putIfAbsent(categoryKey, () => []).add(template);
+        }
+
+        return Column(
+          children: [
+            // Search and Filter Bar
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Column(
+                children: [
+                  // Search Bar
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search message templates...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                    ),
+                    onChanged: (value) {
+                      setState(() => _searchQuery = value);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // Dynamic Category Filter Chips + Actions
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: FutureBuilder<
+                              Map<String, List<Map<String, dynamic>>>>(
+                            future: appState.getAllTemplateCategories(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const SizedBox(height: 40);
+                              }
+
+                              final allCategories = snapshot.data!;
+                              final messageCategories =
+                                  allCategories['message_templates'] ?? [];
+
+                              return Row(
+                                children: [
+                                  _buildTextFilterChip(
+                                      'All Categories',
+                                      Icons.view_list,
+                                      _selectedMessageCategoryKey == 'all'),
+                                  ...messageCategories.map((category) {
+                                    final categoryKey =
+                                        category['key'] as String;
+                                    final categoryName =
+                                        category['name'] as String;
+                                    return _buildTextFilterChip(
+                                        categoryName,
+                                        Icons.sms,
+                                        _selectedMessageCategoryKey ==
+                                            categoryKey,
+                                        categoryKey);
+                                  }),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Select Button
+                      if (!_messageSelection.isSelectionMode)
+                        ElevatedButton.icon(
+                          onPressed: _enterMessageSelectionMode,
+                          icon: const Icon(Icons.checklist, size: 18),
+                          label: const Text('Select'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                          ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            TextButton.icon(
+                              onPressed: _selectAllMessages,
+                              icon: const Icon(Icons.select_all, size: 18),
+                              label: Text(
+                                _messageSelection.selectedIds.length ==
+                                        filteredTemplates.length
+                                    ? 'Deselect All'
+                                    : 'Select All',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _exitMessageSelectionMode,
+                              icon: const Icon(Icons.close, size: 18),
+                              label: const Text('Cancel'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Selection mode info
+            if (_messageSelection.isSelectionMode) ...[
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                color: Colors.green.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.green.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _messageSelection.selectedIds.isEmpty
+                              ? 'Tap message templates to select them'
+                              : '${_messageSelection.selectedIds.length} of ${filteredTemplates.length} templates selected',
+                          style: TextStyle(
+                            color: Colors.green.shade800,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (_messageSelection.selectedIds.isNotEmpty)
+                        ElevatedButton.icon(
+                          onPressed: _deleteSelectedMessages,
+                          icon: const Icon(Icons.delete, size: 16),
+                          label: const Text('Delete'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            // Templates content or empty state
+            Expanded(
+              child: filteredTemplates.isEmpty
+                  ? _buildEmptyMessageState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: groupedTemplates.length,
+                      itemBuilder: (context, index) {
+                        final categoryKey =
+                            groupedTemplates.keys.elementAt(index);
+                        final categoryTemplates =
+                            groupedTemplates[categoryKey]!;
+
+                        return _buildMessageCategorySection(
+                            categoryKey, categoryTemplates);
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  List<MessageTemplate> _filterMessageTemplates(
+      List<MessageTemplate> templates) {
+    var filtered = templates;
+
+    // Filter by user category
+    if (_selectedMessageCategoryKey != 'all') {
+      filtered = filtered
+          .where((template) =>
+              template.userCategoryKey == _selectedMessageCategoryKey)
+          .toList();
+    }
+
+    // Then filter by search query
+    if (_searchQuery.isNotEmpty) {
+      final lowerQuery = _searchQuery.toLowerCase();
+      filtered = filtered
+          .where((template) =>
+              template.templateName.toLowerCase().contains(lowerQuery) ||
+              template.description.toLowerCase().contains(lowerQuery) ||
+              template.messageContent.toLowerCase().contains(lowerQuery))
+          .toList();
+    }
+
+    return filtered;
+  }
+
+  Widget _buildMessageCategorySection(
+      String categoryKey, List<MessageTemplate> categoryTemplates) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Category Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.sms, color: Colors.green, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  _getMessageCategoryDisplayName(categoryKey),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${categoryTemplates.length} template${categoryTemplates.length == 1 ? '' : 's'}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+
+          // Templates in this category
+          ...categoryTemplates.map((template) => _messageSelection.isSelectionMode
+              ? _buildSelectableMessageCard(template)
+              : _buildMessageTemplateCard(template)),
+        ],
+      ),
+    );
+  }
+
+  String _getMessageCategoryDisplayName(String categoryKey) {
+    if (categoryKey == 'uncategorized') return 'Uncategorized Templates';
+    return '$categoryKey Templates';
+  }
+
+  Widget _buildEmptyMessageState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.sms_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Message Templates',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.grey[600],
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create your first message template to get started',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[500],
+                ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _createNewTextTemplate,
+            icon: const Icon(Icons.add),
+            label: const Text('Create Message Template'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextFilterChip(String label, IconData icon, bool isSelected,
+      [String? categoryKey]) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
+            const SizedBox(width: 4),
+            Text(label),
+          ],
+        ),
+        selected: isSelected,
+        selectedColor: Colors.green,
+        labelStyle: TextStyle(
+          color: isSelected ? Colors.white : Colors.grey[700],
+          fontSize: 12,
+        ),
+        onSelected: (selected) {
+          setState(() {
+            if (label == 'All Categories') {
+              _selectedMessageCategoryKey = 'all';
+            } else {
+              _selectedMessageCategoryKey =
+                  selected ? (categoryKey ?? label.toLowerCase()) : 'all';
+            }
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmailTemplatesTab() {
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, child) {
+        // Filter templates by user categories
+        final allTemplates = appState.emailTemplates;
+        final filteredTemplates = _filterEmailTemplates(allTemplates);
+
+        if (appState.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Group templates by user category
+        final groupedTemplates = <String, List<EmailTemplate>>{};
+        for (final template in filteredTemplates) {
+          final categoryKey = template.userCategoryKey ?? 'uncategorized';
+          groupedTemplates.putIfAbsent(categoryKey, () => []).add(template);
+        }
+
+        return Column(
+          children: [
+            // Search and Filter Bar
+            Container(
+              padding: const EdgeInsets.all(16),
+              color: Colors.white,
+              child: Column(
+                children: [
+                  // Search Bar
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search email templates...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                    ),
+                    onChanged: (value) {
+                      setState(() => _searchQuery = value);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // Dynamic Category Filter Chips + Actions
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: FutureBuilder<
+                              Map<String, List<Map<String, dynamic>>>>(
+                            future: appState.getAllTemplateCategories(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const SizedBox(height: 40);
+                              }
+
+                              final allCategories = snapshot.data!;
+                              final emailCategories =
+                                  allCategories['email_templates'] ?? [];
+
+                              return Row(
+                                children: [
+                                  _buildEmailFilterChip(
+                                      'All Categories',
+                                      Icons.view_list,
+                                      _selectedEmailCategoryKey == 'all'),
+                                  ...emailCategories.map((category) {
+                                    final categoryKey =
+                                        category['key'] as String;
+                                    final categoryName =
+                                        category['name'] as String;
+                                    return _buildEmailFilterChip(
+                                        categoryName,
+                                        Icons.email,
+                                        _selectedEmailCategoryKey ==
+                                            categoryKey,
+                                        categoryKey);
+                                  }),
+                                ],
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Select Button
+                      if (!_emailSelection.isSelectionMode)
+                        ElevatedButton.icon(
+                          onPressed: _enterEmailSelectionMode,
+                          icon: const Icon(Icons.checklist, size: 18),
+                          label: const Text('Select'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                          ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            TextButton.icon(
+                              onPressed: _selectAllEmails,
+                              icon: const Icon(Icons.select_all, size: 18),
+                              label: Text(
+                                _emailSelection.selectedIds.length ==
+                                        filteredTemplates.length
+                                    ? 'Deselect All'
+                                    : 'Select All',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            ElevatedButton.icon(
+                              onPressed: _exitEmailSelectionMode,
+                              icon: const Icon(Icons.close, size: 18),
+                              label: const Text('Cancel'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (_emailSelection.isSelectionMode) ...[
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                color: Colors.orange.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Colors.orange.shade700, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _emailSelection.selectedIds.isEmpty
+                              ? 'Tap email templates to select them'
+                              : '${_emailSelection.selectedIds.length} of ${filteredTemplates.length} templates selected',
+                          style: TextStyle(
+                            color: Colors.orange.shade800,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      if (_emailSelection.selectedIds.isNotEmpty)
+                        ElevatedButton.icon(
+                          onPressed: _deleteSelectedEmails,
+                          icon: const Icon(Icons.delete, size: 16),
+                          label: const Text('Delete'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Templates content or empty state
+            Expanded(
+              child: filteredTemplates.isEmpty
+                  ? _buildEmptyEmailState()
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: groupedTemplates.length,
+                      itemBuilder: (context, index) {
+                        final categoryKey =
+                            groupedTemplates.keys.elementAt(index);
+                        final categoryTemplates =
+                            groupedTemplates[categoryKey]!;
+
+                        return _buildEmailCategorySection(
+                            categoryKey, categoryTemplates);
+                      },
+                    ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  List<EmailTemplate> _filterEmailTemplates(List<EmailTemplate> templates) {
+    var filtered = templates;
+
+    // Filter by user category
+    if (_selectedEmailCategoryKey != 'all') {
+      filtered = filtered
+          .where((template) =>
+              template.userCategoryKey == _selectedEmailCategoryKey)
+          .toList();
+    }
+
+    // Then filter by search query
+    if (_searchQuery.isNotEmpty) {
+      final lowerQuery = _searchQuery.toLowerCase();
+      filtered = filtered
+          .where((template) =>
+              template.templateName.toLowerCase().contains(lowerQuery) ||
+              template.description.toLowerCase().contains(lowerQuery) ||
+              template.subject.toLowerCase().contains(lowerQuery) ||
+              template.emailContent.toLowerCase().contains(lowerQuery))
+          .toList();
+    }
+
+    return filtered;
+  }
+  Widget _buildEmptyEmailState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.email_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Email Templates',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create your first email template to get started',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Colors.grey[500],
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _createNewEmailTemplate,
+            icon: const Icon(Icons.add),
+            label: const Text('Create Email Template'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildEmailFilterChip(String label, IconData icon, bool isSelected, [String? categoryKey]) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
+            const SizedBox(width: 4),
+            Text(label),
+          ],
+        ),
+        selected: isSelected,
+        selectedColor: Colors.orange,
+        labelStyle: TextStyle(
+          color: isSelected ? Colors.white : Colors.grey[700],
+          fontSize: 12,
+        ),
+        onSelected: (selected) {
+          setState(() {
+            if (label == 'All Categories') {
+              _selectedEmailCategoryKey = 'all';
+            } else {
+              _selectedEmailCategoryKey = selected ? (categoryKey ?? label.toLowerCase()) : 'all';
+            }
+          });
+        },
+      ),
+    );
+  }
+
+
+
+  Widget _buildCustomDataTab() {
+    return const CustomAppDataScreen(); // No preview, direct content
+  }
+
+  String _getEmailCategoryDisplayName(String categoryKey) {
+    if (categoryKey == 'uncategorized') return 'Uncategorized Templates';
+    return '$categoryKey Templates';
+  }
+
+  Widget _buildEmailCategorySection(String categoryKey, List<EmailTemplate> categoryTemplates) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Category Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.email, color: Colors.orange, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  _getEmailCategoryDisplayName(categoryKey),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${categoryTemplates.length} template${categoryTemplates.length == 1 ? '' : 's'}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+
+          // Templates in this category
+          ...categoryTemplates.map((template) =>
+          _emailSelection.isSelectionMode
+              ? _buildSelectableEmailCard(template)
+              : _buildEmailTemplateCard(template)
+          ),
+        ],
+      ),
+    );
+  }
+
+  // CARD BUILDERS
+
+  Widget _buildSelectablePDFCard(PDFTemplate template) {
+    final isSelected = _pdfSelection.selectedIds.contains(template.id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Stack(
+        children: [
+          Card(
+            elevation: isSelected ? 3 : 1.5,
+            color: isSelected ? Colors.blue.shade50 : null,
+            child: InkWell(
+              onTap: _pdfSelection.isSelectionMode
+                  ? () => _togglePDFSelection(template.id)
+                  : () => _editPDFTemplate(template),
+              onLongPress: !_pdfSelection.isSelectionMode
+                  ? () => _showPDFTemplateContextMenu(template)
+                  : null,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                decoration: isSelected
+                    ? BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue, width: 2),
+                      )
+                    : null,
+                child: _buildPDFTemplateCardContent(template, isSelected),
+              ),
+            ),
+          ),
+          if (_pdfSelection.isSelectionMode)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Checkbox(
+                  value: isSelected,
+                  onChanged: (bool? value) => _togglePDFSelection(template.id),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  activeColor: Colors.blue,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPDFTemplateCard(PDFTemplate template) {
+    return Card(
+      elevation: 1.5,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () => _editPDFTemplate(template),
+        onLongPress: () => _showPDFTemplateContextMenu(template),
+        borderRadius: BorderRadius.circular(12),
+        child: _buildPDFTemplateCardContent(template, false),
+      ),
+    );
+  }
+
+  String? _getTemplateCategoryName(String? categoryKey) {
+    if (categoryKey == null) return null;
+    // This will be replaced with proper category lookup
+    return categoryKey; // For now, just return the key
+  }
+
+  Widget _buildPDFTemplateCardContent(PDFTemplate template, bool isSelected) {
+    final dateFormat = DateFormat('MMM dd, yyyy');
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: template.isActive
+                      ? Colors.green.shade100
+                      : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.picture_as_pdf,
+                  color: template.isActive
+                      ? Colors.green.shade700
+                      : Colors.grey.shade600,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      template.templateName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.blue.shade800 : null,
+                          ),
+                    ),
+                    if (template.description.isNotEmpty)
+                      Text(
+                        template.description,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isSelected
+                                  ? Colors.blue.shade600
+                                  : Colors.grey[600],
+                            ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: template.isActive ? Colors.green : Colors.grey,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  template.isActive ? 'ACTIVE' : 'INACTIVE',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // Template details
+          Row(
+            children: [
+              Expanded(
+                child: _buildDetailChip(
+                  Icons.layers,
+                  'Category: ${_getTemplateCategoryName(template.userCategoryKey) ?? 'No Category'}',
+                  isSelected: isSelected,
+                ),
+              ),
+              Expanded(
+                child: _buildDetailChip(
+                  Icons.text_fields,
+                  '${template.fieldMappings.length} fields',
+                  isSelected: isSelected,
+                ),
+              ),
+              Expanded(
+                child: _buildDetailChip(
+                  Icons.calendar_today,
+                  dateFormat.format(template.updatedAt),
+                  isSelected: isSelected,
+                ),
+              ),
+            ],
+          ),
+
+          if (!_pdfSelection.isSelectionMode) ...[
+            const SizedBox(height: 16),
+            // Action buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _editPDFTemplate(template),
+                    icon: const Icon(Icons.edit, size: 18),
+                    label: const Text('Edit'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _previewPDFTemplate(template),
+                    icon: const Icon(Icons.preview, size: 18),
+                    label: const Text('Preview'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                PopupMenuButton<String>(
+                  onSelected: (action) =>
+                      _handlePDFTemplateAction(action, template),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'toggle_active',
+                      child: Row(
+                        children: [
+                          Icon(
+                            template.isActive
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(template.isActive ? 'Deactivate' : 'Activate'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'duplicate',
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy, size: 18),
+                          SizedBox(width: 8),
+                          Text('Duplicate'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, size: 18, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Delete', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                  ],
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    child: const Icon(Icons.more_vert),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // EMPTY STATES
+
+  Widget _buildEmptyPDFState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.picture_as_pdf_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No PDF Templates',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.grey[600],
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Create your first PDF template to get started',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[500],
+                ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _createNewPDFTemplate,
+            icon: const Icon(Icons.add),
+            label: const Text('Create PDF Template'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // HELPER METHODS
+
+  List<PDFTemplate> _filterPDFTemplates(List<PDFTemplate> templates) {
+    var filtered = templates;
+
+    // Filter by type first
+    if (_selectedPDFCategoryKey != 'all') {
+      filtered = filtered
+          .where(
+              (template) => template.userCategoryKey == _selectedPDFCategoryKey)
+          .toList();
+    }
+
+    // Then filter by search query
+    if (_searchQuery.isNotEmpty) {
+      final lowerQuery = _searchQuery.toLowerCase();
+      filtered = filtered
+          .where((template) =>
+              template.templateName.toLowerCase().contains(lowerQuery) ||
+              template.description.toLowerCase().contains(lowerQuery) ||
+              template.templateType.toLowerCase().contains(lowerQuery))
+          .toList();
+    }
+
+    return filtered;
+  }
+
+  String _getCategoryKey(String categoryName) {
+    // Convert category names to consistent keys
+    switch (categoryName) {
+      case 'Quote Notifications':
+        return 'quote_notifications';
+      case 'Appointments':
+        return 'appointment_reminders';
+      case 'Job Updates':
+        return 'job_status_updates';
+      case 'Payment':
+        return 'payment_reminders';
+      case 'Follow-ups':
+        return 'follow-ups';
+      case 'Emergency':
+        return 'emergency/urgent';
+      case 'Quote Emails':
+        return 'quote_emails';
+      case 'Contracts':
+        return 'contract_emails';
+      case 'Invoices':
+        return 'invoice_emails';
+      case 'Appointment Emails':
+        return 'appointment_emails';
+      case 'Marketing':
+        return 'marketing/newsletter';
+      default:
+        return categoryName.toLowerCase().replaceAll(' ', '_');
+    }
+  }
+
+  Widget _buildDetailChip(IconData icon, String text,
+      {bool isSelected = false}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon,
+            size: 14,
+            color: isSelected ? Colors.blue.shade600 : Colors.grey[600]),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: isSelected ? Colors.blue.shade600 : Colors.grey[600],
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getTypeColor(String categoryKey) {
+    // For user categories, use a consistent blue color (like the old "quote" color)
+    if (categoryKey == 'uncategorized') {
+      return Colors.grey;
+    }
+
+    // Use the original blue color for all user categories
+    return Colors.blue;
+  }
+
+  IconData _getTypeIcon(String categoryKey) {
+    // For user categories, use category icon
+    if (categoryKey == 'uncategorized') {
+      return Icons.folder_outlined;
+    }
+
+    // Use category icon for all user categories
+    return Icons.description;
+  }
+
+
+  List<Map<String, dynamic>> _getTextMessageCategories() {
+    return [
+      {
+        'name': 'Quote Notifications',
+        'description': 'Notify customers about quote status',
+        'icon': Icons.notifications,
+        'color': Colors.blue
+      },
+      {
+        'name': 'Appointment Reminders',
+        'description': 'Remind customers of scheduled visits',
+        'icon': Icons.schedule,
+        'color': Colors.green
+      },
+      {
+        'name': 'Job Status Updates',
+        'description': 'Update customers on work progress',
+        'icon': Icons.construction,
+        'color': Colors.orange
+      },
+      {
+        'name': 'Payment Reminders',
+        'description': 'Send payment due notifications',
+        'icon': Icons.payment,
+        'color': Colors.red
+      },
+      {
+        'name': 'Follow-ups',
+        'description': 'Check in with customers',
+        'icon': Icons.chat,
+        'color': Colors.purple
+      },
+      {
+        'name': 'Emergency/Urgent',
+        'description': 'Urgent communication templates',
+        'icon': Icons.warning,
+        'color': Colors.red.shade700
+      },
+    ];
+  }
+
+  List<Map<String, dynamic>> _getEmailCategories() {
+    return [
+      {
+        'name': 'Quote Emails',
+        'description': 'Send quotes and estimates via email',
+        'icon': Icons.email,
+        'color': Colors.blue
+      },
+      {
+        'name': 'Contract Emails',
+        'description': 'Send contracts and agreements',
+        'icon': Icons.assignment,
+        'color': Colors.green
+      },
+      {
+        'name': 'Invoice Emails',
+        'description': 'Send invoices and billing',
+        'icon': Icons.receipt,
+        'color': Colors.orange
+      },
+      {
+        'name': 'Follow-up Emails',
+        'description': 'Customer follow-up communications',
+        'icon': Icons.reply,
+        'color': Colors.purple
+      },
+      {
+        'name': 'Appointment Emails',
+        'description': 'Schedule confirmations and reminders',
+        'icon': Icons.event,
+        'color': Colors.teal
+      },
+      {
+        'name': 'Marketing/Newsletter',
+        'description': 'Promotional and newsletter emails',
+        'icon': Icons.campaign,
+        'color': Colors.pink
+      },
+    ];
+  }
 
   void _showErrorSnackBar(String message) {
     if (mounted) {
@@ -738,28 +2178,6 @@ class _TemplatesScreenState extends State<TemplatesScreen>
       MaterialPageRoute(
         builder: (context) => const CategoryManagementScreen(),
       ),
-    );
-  }
-
-  // Small helper used by template cards
-  Widget _buildDetailChip(IconData icon, String text, {bool isSelected = false}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon,
-            size: 14, color: isSelected ? Colors.blue.shade600 : Colors.grey[600]),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 12,
-              color: isSelected ? Colors.blue.shade600 : Colors.grey[600],
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
     );
   }
 
