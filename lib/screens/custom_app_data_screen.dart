@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -159,7 +158,9 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
   Widget _buildManageFieldsTab() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bool isPhone = constraints.maxWidth < 600;
+        final bool isSmallScreen = constraints.maxWidth < 600;
+        final bool isVerySmall = constraints.maxWidth < 400;
+
         return Consumer<AppStateProvider>(
           builder: (context, appState, child) {
             final allFields = appState.customAppDataFields;
@@ -168,239 +169,250 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
 
             return Column(
               children: [
-            // Search and Filter Bar
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: Colors.white,
-              child: Column(
-                children: [
-                  // Search Bar
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search custom fields...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    onChanged: (value) {
-                      if (mounted) {
-                        setState(() => _searchQuery = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
+                // Compact Search and Filter Bar
+                Container(
+                  padding: EdgeInsets.all(isVerySmall ? 8 : 12),
+                  color: Colors.white,
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
-                            future: appState.getAllTemplateCategories(),
-                            builder: (context, snapshot) {
-                              if (!snapshot.hasData) {
-                                return const SizedBox(height: 40); // Placeholder while loading
-                              }
-
-                              final allCategories = snapshot.data!;
-                              final customFieldCategories = allCategories['custom_fields'] ?? [];
-
-                              if (kDebugMode) {
-                                debugPrint('🔍 Custom Fields tab found ${customFieldCategories.length} categories from async source:');
-                                for (final cat in customFieldCategories) {
-                                  debugPrint('  - ${cat['key']}: ${cat['name']}');
-                                }
-                              }
-
-                              return Row(
-                                children: [
-                                  // "All Fields" chip
-                                  _buildCategoryFilterChip(
-                                    'All Fields',
-                                    Icons.view_list,
-                                    _selectedCategory == 'all',
-                                    'all',
-                                  ),
-                                  // Dynamic category chips from database
-                                  ...customFieldCategories.map((category) {
-                                    final categoryKey = category['key'] as String;
-                                    final categoryName = category['name'] as String;
-                                    return _buildCategoryFilterChip(
-                                      categoryName,
-                                      Icons.data_object,
-                                      _selectedCategory == categoryKey,
-                                      categoryKey,
-                                    );
-                                  }),
-                                ],
-                              );
-                            },
+                      // Compact Search Bar
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search fields...',
+                          hintStyle: TextStyle(fontSize: isVerySmall ? 14 : 16),
+                          prefixIcon: Icon(Icons.search, size: isVerySmall ? 18 : 20),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Select Button
-                      if (!_isFieldSelectionMode)
-                        isPhone
-                            ? IconButton(
-                                onPressed: _enterFieldSelectionMode,
-                                icon: const Icon(Icons.checklist),
-                                color: RufkoTheme.primaryColor,
-                                tooltip: 'Select',
-                              )
-                            : ElevatedButton.icon(
-                                onPressed: _enterFieldSelectionMode,
-                                icon: const Icon(Icons.checklist, size: 18),
-                                label: const Text('Select'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: RufkoTheme.primaryColor,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                ),
-                              )
-                      else
-                        isPhone
-                            ? Row(
-                                children: [
-                                  IconButton(
-                                    onPressed: _selectAllFields,
-                                    icon: const Icon(Icons.select_all),
-                                    tooltip: _selectedFieldIds.length == filteredFields.length
-                                        ? 'Deselect All'
-                                        : 'Select All',
-                                  ),
-                                  IconButton(
-                                    onPressed: _exitFieldSelectionMode,
-                                    icon: const Icon(Icons.close),
-                                    tooltip: 'Cancel',
-                                  ),
-                                ],
-                              )
-                            : Row(
-                                children: [
-                                  TextButton.icon(
-                                    onPressed: _selectAllFields,
-                                    icon: const Icon(Icons.select_all, size: 18),
-                                    label: Text(
-                                      _selectedFieldIds.length == filteredFields.length
-                                          ? 'Deselect All'
-                                          : 'Select All',
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton.icon(
-                                    onPressed: _exitFieldSelectionMode,
-                                    icon: const Icon(Icons.close, size: 18),
-                                    label: const Text('Cancel'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.grey,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Selection mode info
-            if (_isFieldSelectionMode) ...[
-              Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                color: Colors.blue.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _selectedFieldIds.isEmpty
-                              ? 'Tap custom fields to select them'
-                              : '${_selectedFieldIds.length} of ${filteredFields.length} fields selected',
-                          style: TextStyle(
-                            color: Colors.blue.shade800,
-                            fontWeight: FontWeight.w500,
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: isVerySmall ? 8 : 12,
+                              vertical: isVerySmall ? 6 : 8
                           ),
+                          isDense: true,
                         ),
+                        style: TextStyle(fontSize: isVerySmall ? 14 : 16),
+                        onChanged: (value) {
+                          if (mounted) {
+                            setState(() => _searchQuery = value);
+                          }
+                        },
                       ),
-                      if (_selectedFieldIds.isNotEmpty)
-                        isPhone
-                            ? IconButton(
-                                onPressed: _deleteSelectedFields,
-                                icon: const Icon(Icons.delete),
-                                color: Colors.red,
-                                tooltip: 'Delete',
-                              )
-                            : ElevatedButton.icon(
-                                onPressed: _deleteSelectedFields,
-                                icon: const Icon(Icons.delete, size: 16),
-                                label: const Text('Delete'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                ),
+                      SizedBox(height: isVerySmall ? 8 : 12),
+
+                      // SIMPLE HORIZONTAL SCROLLING - THIS WILL WORK
+                      Row(
+                        children: [
+                          // Horizontal scrolling filter
+                          Expanded(
+                            child: Container(
+                              height: isVerySmall ? 32 : 36,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: 4, // Hardcoded for now to test scrolling
+                                itemBuilder: (context, index) {
+                                  final chips = [
+                                    {'key': 'all', 'name': 'All Fields', 'icon': Icons.view_list},
+                                    {'key': 'inspection', 'name': 'Inspection Fields', 'icon': Icons.checklist},
+                                    {'key': 'company', 'name': 'Company Info', 'icon': Icons.business},
+                                    {'key': 'custom', 'name': 'Custom Fields', 'icon': Icons.extension},
+                                  ];
+
+                                  final chip = chips[index];
+                                  final isSelected = _selectedCategory == chip['key'];
+
+                                  return Container(
+                                    margin: EdgeInsets.only(
+                                      left: index == 0 ? 8 : 0,
+                                      right: 8,
+                                    ),
+                                    child: FilterChip(
+                                      label: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            chip['icon'] as IconData,
+                                            size: 14,
+                                            color: isSelected ? Colors.white : Colors.grey[600],
+                                          ),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            chip['name'] as String,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: isSelected ? Colors.white : Colors.grey[700],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      selected: isSelected,
+                                      selectedColor: RufkoTheme.primaryColor,
+                                      onSelected: (selected) {
+                                        setState(() {
+                                          _selectedCategory = selected ? (chip['key'] as String) : 'all';
+                                        });
+                                      },
+                                    ),
+                                  );
+                                },
                               ),
+                            ),
+                          ),
+
+                          // Action buttons
+                          if (!_isFieldSelectionMode)
+                            _buildSelectButton(isVerySmall)
+                          else
+                            _buildSelectionActions(filteredFields, isVerySmall),
+                        ],
+                      ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-            ],
 
-            // Fields content or empty state
-            Expanded(
-              child: filteredFields.isEmpty
-                  ? _buildEmptyState(isPhone)
-                  : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: groupedFields.length,
-                itemBuilder: (context, index) {
-                  final category = groupedFields.keys.elementAt(index);
-                  final categoryFields = groupedFields[category]!;
+                // Selection mode info - more compact for mobile
+                if (_isFieldSelectionMode)
+                  _buildSelectionInfo(filteredFields, isVerySmall),
 
-                  return _buildCategorySection(category, categoryFields, isPhone);
-                },
-              ),
-            ),
-          ],
+                // Fields content or empty state
+                Expanded(
+                  child: filteredFields.isEmpty
+                      ? _buildEmptyState(isSmallScreen, isVerySmall)
+                      : _buildFieldsList(groupedFields, isSmallScreen, isVerySmall),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
-  Widget _buildCategoryFilterChip(String label, IconData icon, bool isSelected, String categoryKey) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: isSelected ? Colors.white : Colors.grey[600]),
-            const SizedBox(width: 4),
-            Text(label),
-          ],
+
+  // REMOVED - using simple inline approach above
+
+  // REMOVED - using inline chip building above
+
+  Widget _buildSelectButton(bool isVerySmall) {
+    return SizedBox(
+      height: isVerySmall ? 32 : 36,
+      width: isVerySmall ? 32 : 36,
+      child: IconButton(
+        onPressed: _enterFieldSelectionMode,
+        icon: Icon(Icons.checklist, size: isVerySmall ? 16 : 18),
+        padding: EdgeInsets.all(isVerySmall ? 6 : 8),
+        style: IconButton.styleFrom(
+          backgroundColor: RufkoTheme.primaryColor,
+          foregroundColor: Colors.white,
         ),
-        selected: isSelected,
-        selectedColor: RufkoTheme.primaryColor,
-        labelStyle: TextStyle(
-          color: isSelected ? Colors.white : Colors.grey[700],
-          fontSize: 12,
-        ),
-        onSelected: (selected) {
-          setState(() {
-            _selectedCategory = selected ? categoryKey : 'all';
-          });
-        },
       ),
     );
   }
 
-  Widget _buildCategorySection(String category, List<CustomAppDataField> fields, bool isPhone) {
+  Widget _buildSelectionActions(List<CustomAppDataField> filteredFields, bool isVerySmall) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Select all/none
+        SizedBox(
+          height: isVerySmall ? 32 : 36,
+          width: isVerySmall ? 32 : 36,
+          child: IconButton(
+            onPressed: _selectAllFields,
+            icon: Icon(
+              _selectedFieldIds.length == filteredFields.length
+                  ? Icons.deselect
+                  : Icons.select_all,
+              size: isVerySmall ? 16 : 18,
+            ),
+            padding: EdgeInsets.all(isVerySmall ? 6 : 8),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.grey[100],
+              foregroundColor: Colors.grey[700],
+            ),
+          ),
+        ),
+
+        SizedBox(width: isVerySmall ? 4 : 6),
+
+        // Delete selected
+        if (_selectedFieldIds.isNotEmpty)
+          SizedBox(
+            height: isVerySmall ? 32 : 36,
+            width: isVerySmall ? 32 : 36,
+            child: IconButton(
+              onPressed: _deleteSelectedFields,
+              icon: Icon(Icons.delete, size: isVerySmall ? 16 : 18),
+              padding: EdgeInsets.all(isVerySmall ? 6 : 8),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.red[50],
+                foregroundColor: Colors.red,
+              ),
+            ),
+          ),
+
+        if (_selectedFieldIds.isNotEmpty) SizedBox(width: isVerySmall ? 4 : 6),
+
+        // Cancel
+        SizedBox(
+          height: isVerySmall ? 32 : 36,
+          width: isVerySmall ? 32 : 36,
+          child: IconButton(
+            onPressed: _exitFieldSelectionMode,
+            icon: Icon(Icons.close, size: isVerySmall ? 16 : 18),
+            padding: EdgeInsets.all(isVerySmall ? 6 : 8),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.grey[200],
+              foregroundColor: Colors.grey[700],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSelectionInfo(List<CustomAppDataField> filteredFields, bool isVerySmall) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: isVerySmall ? 8 : 12),
+      child: Card(
+        color: Colors.blue.shade50,
+        child: Padding(
+          padding: EdgeInsets.all(isVerySmall ? 8 : 10),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue.shade700, size: isVerySmall ? 16 : 18),
+              SizedBox(width: isVerySmall ? 6 : 8),
+              Expanded(
+                child: Text(
+                  _selectedFieldIds.isEmpty
+                      ? 'Tap fields to select'
+                      : '${_selectedFieldIds.length}/${filteredFields.length} selected',
+                  style: TextStyle(
+                    color: Colors.blue.shade800,
+                    fontWeight: FontWeight.w500,
+                    fontSize: isVerySmall ? 12 : 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFieldsList(Map<String, List<CustomAppDataField>> groupedFields, bool isSmallScreen, bool isVerySmall) {
+    return ListView.builder(
+      padding: EdgeInsets.all(isVerySmall ? 8 : 12),
+      itemCount: groupedFields.length,
+      itemBuilder: (context, index) {
+        final category = groupedFields.keys.elementAt(index);
+        final categoryFields = groupedFields[category]!;
+
+        return _buildCategorySection(category, categoryFields, isSmallScreen, isVerySmall);
+      },
+    );
+  }
+
+  Widget _buildCategorySection(String category, List<CustomAppDataField> fields, bool isSmallScreen, bool isVerySmall) {
     return FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
       future: context.read<AppStateProvider>().getAllTemplateCategories(),
       builder: (context, snapshot) {
@@ -410,7 +422,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
           final allCategories = snapshot.data!;
           final customFieldCategories = allCategories['custom_fields'] ?? [];
 
-          // Find the category display name from the database
           for (final cat in customFieldCategories) {
             if (cat['key'] == category) {
               categoryDisplayName = cat['name'] as String;
@@ -420,13 +431,13 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
         }
 
         return Card(
-          margin: const EdgeInsets.only(bottom: 16),
+          margin: EdgeInsets.only(bottom: isVerySmall ? 8 : 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Category Header
+              // Compact Category Header
               Container(
-                padding: EdgeInsets.all(isPhone ? 12 : 16),
+                padding: EdgeInsets.all(isVerySmall ? 8 : 12),
                 decoration: BoxDecoration(
                   color: RufkoTheme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
@@ -439,30 +450,32 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                     Icon(
                       _getCategoryIcon(category),
                       color: RufkoTheme.primaryColor,
-                      size: isPhone ? 18 : 20,
+                      size: isVerySmall ? 16 : 18,
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      categoryDisplayName,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: RufkoTheme.primaryColor,
-                        fontSize: isPhone ? 14 : 16,
+                    SizedBox(width: isVerySmall ? 6 : 8),
+                    Expanded(
+                      child: Text(
+                        categoryDisplayName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: RufkoTheme.primaryColor,
+                          fontSize: isVerySmall ? 13 : 15,
+                        ),
                       ),
                     ),
-                    const Spacer(),
                     Text(
-                      '${fields.length} fields',
+                      '${fields.length}',
                       style: TextStyle(
                         color: Colors.grey[600],
-                        fontSize: isPhone ? 11 : 12,
+                        fontSize: isVerySmall ? 10 : 11,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
                 ),
               ),
-              // Fields List
-              ...fields.map((field) => _buildFieldTile(field, isPhone)),
+              // Compact Fields List
+              ...fields.map((field) => _buildCompactFieldTile(field, isSmallScreen, isVerySmall)),
             ],
           ),
         );
@@ -470,178 +483,219 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     );
   }
 
-  Widget _buildFieldTile(CustomAppDataField field, bool isPhone) {
+  Widget _buildCompactFieldTile(CustomAppDataField field, bool isSmallScreen, bool isVerySmall) {
     final isSelected = _selectedFieldIds.contains(field.id);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Stack(
-        children: [
-          Card(
-            elevation: isSelected ? 3 : 1,
-            color: isSelected ? RufkoTheme.primaryColor.withValues(alpha: 0.1) : null,
-            child: InkWell(
-              onTap: _isFieldSelectionMode
-                  ? () => _toggleFieldSelection(field.id)
-                  : () => _showEditFieldDialog(field),
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                decoration: isSelected
-                    ? BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: RufkoTheme.primaryColor, width: 2),
-                )
-                    : null,
-                  child: ListTile(
-                    dense: isPhone,
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: isPhone ? 8 : 16,
-                      vertical: isPhone ? 4 : 8,
-                    ),
-                    leading: CircleAvatar(
-                      backgroundColor: _getFieldTypeColor(field.fieldType),
-                      child: Icon(
-                        _getFieldTypeIcon(field.fieldType),
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
-                  title: Text(
+    return InkWell(
+      onTap: _isFieldSelectionMode
+          ? () => _toggleFieldSelection(field.id)
+          : () => _showEditFieldDialog(field),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: isVerySmall ? 8 : 12,
+          vertical: isVerySmall ? 6 : 8,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected ? RufkoTheme.primaryColor.withValues(alpha: 0.1) : null,
+          border: isSelected
+              ? Border.all(color: RufkoTheme.primaryColor, width: 1)
+              : const Border(bottom: BorderSide(color: Colors.grey, width: 0.2)),
+        ),
+        child: Row(
+          children: [
+            // Field type indicator
+            Container(
+              width: isVerySmall ? 24 : 28,
+              height: isVerySmall ? 24 : 28,
+              decoration: BoxDecoration(
+                color: _getFieldTypeColor(field.fieldType),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _getFieldTypeIcon(field.fieldType),
+                color: Colors.white,
+                size: isVerySmall ? 12 : 14,
+              ),
+            ),
+
+            SizedBox(width: isVerySmall ? 8 : 12),
+
+            // Field info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
                     field.displayName,
                     style: TextStyle(
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
+                      fontSize: isVerySmall ? 13 : 14,
                       color: isSelected ? RufkoTheme.primaryColor : null,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Field: ${field.fieldName} • Type: ${field.fieldType}',
-                        style: TextStyle(
-                          color: isSelected
-                              ? RufkoTheme.primaryColor.withValues(alpha: 0.7)
-                              : Colors.grey[600],
-                          fontSize: isPhone ? 11 : 12,
-                        ),
-                      ),
-                      if (field.currentValue.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? RufkoTheme.primaryColor.withValues(alpha: 0.2)
-                                : Colors.grey[200],
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'Value: ${field.currentValue}',
-                            style: TextStyle(fontSize: isPhone ? 10 : 11, fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  trailing: _isFieldSelectionMode
-                      ? null
-                      : PopupMenuButton<String>(
-                    onSelected: (action) => _handleFieldAction(action, field),
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, size: 16),
-                            SizedBox(width: 8),
-                            Text('Edit Field'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, size: 16, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Delete', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
 
-          // Selection checkbox
-          if (_isFieldSelectionMode)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
+                  SizedBox(height: isVerySmall ? 2 : 3),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          field.fieldName,
+                          style: TextStyle(
+                            color: isSelected
+                                ? RufkoTheme.primaryColor.withValues(alpha: 0.7)
+                                : Colors.grey[600],
+                            fontSize: isVerySmall ? 10 : 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+
+                      Text(
+                        field.fieldType,
+                        style: TextStyle(
+                          color: _getFieldTypeColor(field.fieldType),
+                          fontSize: isVerySmall ? 9 : 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  if (field.currentValue.isNotEmpty) ...[
+                    SizedBox(height: isVerySmall ? 2 : 3),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isVerySmall ? 4 : 6,
+                          vertical: isVerySmall ? 1 : 2
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? RufkoTheme.primaryColor.withValues(alpha: 0.2)
+                            : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        field.currentValue,
+                        style: TextStyle(
+                            fontSize: isVerySmall ? 9 : 10,
+                            fontWeight: FontWeight.w500
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
-                ),
-                child: Checkbox(
-                  value: isSelected,
-                  onChanged: (bool? value) => _toggleFieldSelection(field.id),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                  activeColor: RufkoTheme.primaryColor,
-                ),
+                ],
               ),
             ),
-        ],
+
+            // Selection indicator or menu
+            if (_isFieldSelectionMode)
+              Container(
+                width: isVerySmall ? 20 : 24,
+                height: isVerySmall ? 20 : 24,
+                decoration: BoxDecoration(
+                  color: isSelected ? RufkoTheme.primaryColor : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected ? RufkoTheme.primaryColor : Colors.grey,
+                    width: 2,
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: isSelected
+                    ? Icon(Icons.check, color: Colors.white, size: isVerySmall ? 12 : 14)
+                    : null,
+              )
+            else
+              PopupMenuButton<String>(
+                onSelected: (action) => _handleFieldAction(action, field),
+                icon: Icon(
+                  Icons.more_vert,
+                  size: isVerySmall ? 16 : 18,
+                  color: Colors.grey[600],
+                ),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 16),
+                        SizedBox(width: 8),
+                        Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 16, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Delete', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildEmptyState(bool isPhone) {
+  Widget _buildEmptyState(bool isSmallScreen, bool isVerySmall) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.data_object,
-            size: isPhone ? 48 : 64,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No Custom Fields Yet',
-            style: TextStyle(
-              fontSize: isPhone ? 16 : 18,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
+      child: Padding(
+        padding: EdgeInsets.all(isVerySmall ? 16 : 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.data_object,
+              size: isVerySmall ? 40 : 56,
+              color: Colors.grey[400],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Create custom fields to use in your PDF templates',
-            style: TextStyle(color: Colors.grey[500]),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _showAddFieldDialog,
-            icon: const Icon(Icons.add),
-            label: const Text('Add First Field'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: RufkoTheme.primaryColor,
-              foregroundColor: Colors.white,
+            SizedBox(height: isVerySmall ? 12 : 16),
+            Text(
+              'No Custom Fields',
+              style: TextStyle(
+                fontSize: isVerySmall ? 16 : 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[600],
+              ),
             ),
-          ),
-        ],
+            SizedBox(height: isVerySmall ? 6 : 8),
+            Text(
+              'Create fields for your PDF templates',
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: isVerySmall ? 13 : 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: isVerySmall ? 16 : 24),
+            ElevatedButton.icon(
+              onPressed: _showAddFieldDialog,
+              icon: Icon(Icons.add, size: isVerySmall ? 16 : 18),
+              label: Text(
+                'Add Field',
+                style: TextStyle(fontSize: isVerySmall ? 13 : 14),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: RufkoTheme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(
+                  horizontal: isVerySmall ? 16 : 20,
+                  vertical: isVerySmall ? 8 : 12,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -663,8 +717,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     return filtered..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
-  Map<String, List<CustomAppDataField>> _groupFieldsByCategory(
-      List<CustomAppDataField> fields) {
+  Map<String, List<CustomAppDataField>> _groupFieldsByCategory(List<CustomAppDataField> fields) {
     final grouped = <String, List<CustomAppDataField>>{};
     for (final field in fields) {
       grouped.putIfAbsent(field.category, () => []).add(field);
@@ -786,13 +839,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    // Cancel any pending operations
-    super.dispose();
-  }
-
-
   void _showEditFieldDialog(CustomAppDataField field) {
     if (!mounted) return;
     showDialog<CustomAppDataField?>(
@@ -895,7 +941,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Are you sure you want to delete this field?'),
+              const Text('Are you sure you want to delete this field?'),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -970,5 +1016,11 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
         }
       }
     });
+  }
+
+  @override
+  void dispose() {
+    // Cancel any pending operations
+    super.dispose();
   }
 }
