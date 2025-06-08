@@ -472,7 +472,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildCustomerListItem(Customer customer, int quoteCount) {
-    return ListTile(
+    return SizedBox(
+      width: double.infinity,
+      child: ListTile(
       leading: CircleAvatar(
         backgroundColor: RufkoTheme.primaryColor.withValues(alpha: 0.1),
         child: Text(
@@ -534,7 +536,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           builder: (context) => CustomerDetailScreen(customer: customer),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildEmptyCustomersState() {
@@ -628,9 +631,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildQuoteListItem(SimplifiedMultiLevelQuote quote, AppStateProvider appState) {
+  Widget _buildQuoteListItem(
+      SimplifiedMultiLevelQuote quote, AppStateProvider appState) {
     final customer = appState.customers.firstWhere(
-          (c) => c.id == quote.customerId,
+      (c) => c.id == quote.customerId,
       orElse: () => Customer(name: 'Unknown Customer'),
     );
 
@@ -639,7 +643,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       representativeTotal = quote.getDisplayTotalForLevel(quote.levels.first.id);
     }
 
-    return ListTile(
+    return SizedBox(
+      width: double.infinity,
+      child: ListTile(
       leading: Container(
         width: 40,
         height: 40,
@@ -717,7 +723,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildEmptyQuotesState() {
