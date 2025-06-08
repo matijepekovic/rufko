@@ -2174,6 +2174,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
   void _showAddTaxRateDialog() {
     final customer = widget.customer;
+    final appState = context.read<AppStateProvider>();
     final taxRateController = TextEditingController();
 
     showDialog(
