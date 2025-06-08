@@ -176,7 +176,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 mainAxisAlignment: MainAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
+                  Flexible(
+                    child: Row(
                       children: [
                         // Large prominent logo
                         Container(
@@ -251,6 +252,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ),
                       ],
                     ),
+                  ),
                 ],
               ),
             ),
@@ -417,6 +419,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                         ),
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -486,39 +489,30 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         customer.name,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
-        subtitle: Row(
-          children: [
-            if (customer.phone != null) ...[
-              Icon(Icons.phone, size: 14, color: Colors.grey[500]),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  customer.phone!,
-                  style: TextStyle(color: Colors.grey[600]),
-                  overflow: TextOverflow.ellipsis,
-                ),
+      subtitle: Row(
+        children: [
+          if (customer.phone != null) ...[
+            Icon(Icons.phone, size: 14, color: Colors.grey[500]),
+            const SizedBox(width: 4),
+            Text(customer.phone!, style: TextStyle(color: Colors.grey[600])),
+          ] else if (customer.email != null) ...[
+            Icon(Icons.email, size: 14, color: Colors.grey[500]),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                customer.email!,
+                style: TextStyle(color: Colors.grey[600]),
+                overflow: TextOverflow.ellipsis,
               ),
-            ] else if (customer.email != null) ...[
-              Icon(Icons.email, size: 14, color: Colors.grey[500]),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  customer.email!,
-                  style: TextStyle(color: Colors.grey[600]),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ] else ...[
-              Expanded(
-                child: Text(
-                  'Added ${_formatDate(customer.createdAt)}',
-                  style: TextStyle(color: Colors.grey[600]),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+            ),
+          ] else ...[
+            Text(
+              'Added ${_formatDate(customer.createdAt)}',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
           ],
-        ),
+        ],
+      ),
       trailing: quoteCount > 0
           ? Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -680,21 +674,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           const SizedBox(height: 2),
           Row(
             children: [
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${quote.levels.length} level${quote.levels.length == 1 ? "" : "s"}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.blue.shade700,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${quote.levels.length} level${quote.levels.length == 1 ? "" : "s"}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.blue.shade700,
                   ),
                 ),
               ),
