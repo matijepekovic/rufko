@@ -3602,10 +3602,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     ),
                     );
 
-                    if (!mounted) return;
+                    if (!context.mounted) return;
 
                     if (shouldDelete == true) {
                       await context.read<AppStateProvider>().deleteInspectionDocument(existingNote.id);
+                      if (!context.mounted) return;
                       navigator.pop();
                       messenger.showSnackBar(
                       const SnackBar(content: Text('Note deleted'), backgroundColor: Colors.red),
@@ -4587,8 +4588,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 }
 
                 // Remove from app state
-                if (!mounted) return;
+                if (!context.mounted) return;
                 await context.read<AppStateProvider>().deleteProjectMedia(mediaItem.id);
+                if (!context.mounted) return;
 
                 navigator.pop();
                 messenger.showSnackBar(
