@@ -206,7 +206,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                         children: [
                           // Horizontal scrolling filter
                           Expanded(
-                            child: Container(
+                            child: SizedBox(
                               height: isVerySmall ? 32 : 36,
                               child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
