@@ -1907,6 +1907,8 @@ class _TemplatesScreenState extends State<TemplatesScreen>
     final allCategories = await appState.getAllTemplateCategories();
     final pdfCategories = allCategories['pdf_templates'] ?? [];
 
+    if (!mounted) return null;
+
     return showDialog<String>(
       context: context,
       builder: (BuildContext context) {

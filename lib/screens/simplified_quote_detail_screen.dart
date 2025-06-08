@@ -752,6 +752,8 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
 
       final selectedOption = await _showTemplateSelectionDialog(availableTemplates);
 
+      if (!mounted) return;
+
       if (selectedOption == 'cancelled') {
         debugPrint('👤 User cancelled PDF generation');
         return;
