@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:open_filex/open_filex.dart';
+import '../services/file_service.dart';
 import '../providers/app_state_provider.dart';
+import '../services/database_service.dart';
 import '../models/app_settings.dart';
 
 import 'settings/category_manager_dialog.dart';
@@ -883,8 +885,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       setState(() => _isProcessing = true);
 
-      final appState = context.read<AppStateProvider>();
-      final filePath = await appState.exportAllDataToFile();
+      final databaseService = DatabaseService.instance;
+      final allData = await databaseService.exportAllData();
+
+      final filePath =
+          await FileService.instance.saveExportedData(allData);
 
       if (mounted) {
         final fileName = filePath.split('/').last;
@@ -921,8 +926,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _importData() async {
     try {
-      final appState = context.read<AppStateProvider>();
-      final data = await appState.pickBackupData();
+      final data = await FileService.instance.pickAndReadBackupFile();
       if (!mounted) return;
 
       if (data.isNotEmpty) {
@@ -963,7 +967,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         if (confirmed == true) {
           setState(() => _isProcessing = true);
 
-          await appState.importAllDataFromFile(data);
+          final databaseService = DatabaseService.instance;
+          await databaseService.importAllData(data);
+          if (!mounted) return;
+
+          final appState = context.read<AppStateProvider>();
+          await appState.loadAllData();
           if (!mounted) return;
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1072,9 +1081,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 setState(() => _isProcessing = true);
 
                 final appState = context.read<AppStateProvider>();
+                final databaseService = DatabaseService.instance;
 
                 // Clear all data
-                await appState.clearAllData();
+                await databaseService.importAllData({});
+                await appState.loadAllData();
 
                 if (mounted) {
                   messenger.showSnackBar(
@@ -1208,8 +1219,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 label: const Text('Change'),
                               ),
                               OutlinedButton.icon(
-                                onPressed: () async {
-                                  await appState.removeCompanyLogo(settings);
+                                onPressed: () {
+                                  settings.updateCompanyLogo(null);
+                                  appState.updateAppSettings(settings);
                                   setDialogState(() {});
                                 },
                                 icon: const Icon(Icons.delete),
@@ -1342,9 +1354,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _selectCompanyLogo(StateSetter setDialogState, AppSettings settings, AppStateProvider appState) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final newPath = await appState.pickAndSaveCompanyLogo(settings);
+      final newPath = await FileService.instance.pickAndSaveCompanyLogo();
+
       if (newPath != null) {
+        settings.updateCompanyLogo(newPath);
+        appState.updateAppSettings(settings);
+
         setDialogState(() {});
+
         messenger.showSnackBar(
           SnackBar(
             content: const Text('Company logo updated!'),
