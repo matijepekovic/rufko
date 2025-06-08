@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../providers/app_state_provider.dart';
 import '../models/customer.dart';
 import '../models/simplified_quote.dart';
+import '../theme/rufko_theme.dart';
 
 import 'customers_screen.dart';
 import 'quotes_screen.dart';
@@ -103,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           currentIndex: _selectedIndex,
           onTap: _onNavItemTapped,
           items: _navItems,
-          selectedItemColor: const Color(0xFF2E86AB), // Blue from logo
+          selectedItemColor: RufkoTheme.primaryColor, // Blue from logo
           unselectedItemColor: Colors.grey[600],
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -167,8 +168,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFF2E86AB), // Blue from your roof
-                const Color(0xFF1B5E7F), // Darker blue
+                RufkoTheme.primaryColor, // Blue from your roof
+                RufkoTheme.primaryDarkColor, // Darker blue
               ],
             ),
           ),
@@ -205,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: const Icon(Icons.roofing, color: Color(0xFF2E86AB), size: 60),
+                                  child: const Icon(Icons.roofing, color: RufkoTheme.primaryColor, size: 60),
                                 );
                               },
                             ),
@@ -478,12 +479,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildCustomerListItem(Customer customer, int quoteCount) {
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: const Color(0xFF2E86AB).withValues(alpha: 0.1),
+        backgroundColor: RufkoTheme.primaryColor.withValues(alpha: 0.1),
         child: Text(
           customer.name.isNotEmpty ? customer.name[0].toUpperCase() : 'C',
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            color: Color(0xFF2E86AB),
+            color: RufkoTheme.primaryColor,
           ),
         ),
       ),
@@ -773,7 +774,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildFloatingActionButton() {
     return FloatingActionButton.extended(
       onPressed: _showQuickCreateDialog,
-      backgroundColor: const Color(0xFF2E86AB),
+      backgroundColor: RufkoTheme.primaryColor,
       foregroundColor: Colors.white,
       icon: const Icon(Icons.add),
       label: const Text('Quick Create'),

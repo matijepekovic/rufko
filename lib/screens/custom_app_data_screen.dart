@@ -8,6 +8,7 @@ import '../providers/app_state_provider.dart';
 import '../widgets/add_custom_field_dialog.dart';
 import '../widgets/edit_custom_field_dialog.dart';
 import '../utils/common_utils.dart';
+import '../theme/rufko_theme.dart';
 
 class CustomAppDataScreen extends StatefulWidget {
   const CustomAppDataScreen({super.key});
@@ -38,7 +39,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Custom App Data'),
-        backgroundColor: const Color(0xFF2E86AB),
+        backgroundColor: RufkoTheme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -52,7 +53,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
       body: _buildManageFieldsTab(),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddFieldDialog,
-        backgroundColor: const Color(0xFF2E86AB),
+        backgroundColor: RufkoTheme.primaryColor,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -246,7 +247,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                           icon: const Icon(Icons.checklist, size: 18),
                           label: const Text('Select'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2E86AB),
+                            backgroundColor: RufkoTheme.primaryColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           ),
@@ -356,7 +357,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
           ],
         ),
         selected: isSelected,
-        selectedColor: const Color(0xFF2E86AB),
+        selectedColor: RufkoTheme.primaryColor,
         labelStyle: TextStyle(
           color: isSelected ? Colors.white : Colors.grey[700],
           fontSize: 12,
@@ -399,7 +400,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2E86AB).withValues(alpha: 0.1),
+                  color: RufkoTheme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(8),
                     topRight: Radius.circular(8),
@@ -409,7 +410,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                   children: [
                     Icon(
                       _getCategoryIcon(category),
-                      color: const Color(0xFF2E86AB),
+                      color: RufkoTheme.primaryColor,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
@@ -417,7 +418,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                       categoryDisplayName,
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF2E86AB),
+                        color: RufkoTheme.primaryColor,
                       ),
                     ),
                     const Spacer(),
@@ -449,7 +450,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
         children: [
           Card(
             elevation: isSelected ? 3 : 1,
-            color: isSelected ? const Color(0xFF2E86AB).withValues(alpha: 0.1) : null,
+            color: isSelected ? RufkoTheme.primaryColor.withValues(alpha: 0.1) : null,
             child: InkWell(
               onTap: _isFieldSelectionMode
                   ? () => _toggleFieldSelection(field.id)
@@ -459,7 +460,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                 decoration: isSelected
                     ? BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF2E86AB), width: 2),
+                  border: Border.all(color: RufkoTheme.primaryColor, width: 2),
                 )
                     : null,
                 child: ListTile(
@@ -475,7 +476,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                     field.displayName,
                     style: TextStyle(
                       fontWeight: FontWeight.w500,
-                      color: isSelected ? const Color(0xFF2E86AB) : null,
+                      color: isSelected ? RufkoTheme.primaryColor : null,
                     ),
                   ),
                   subtitle: Column(
@@ -485,7 +486,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                         'Field: ${field.fieldName} • Type: ${field.fieldType}',
                         style: TextStyle(
                           color: isSelected
-                              ? const Color(0xFF2E86AB).withValues(alpha: 0.7)
+                              ? RufkoTheme.primaryColor.withValues(alpha: 0.7)
                               : Colors.grey[600],
                           fontSize: 12,
                         ),
@@ -496,7 +497,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? const Color(0xFF2E86AB).withValues(alpha: 0.2)
+                                ? RufkoTheme.primaryColor.withValues(alpha: 0.2)
                                 : Colors.grey[200],
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -562,7 +563,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                   onChanged: (bool? value) => _toggleFieldSelection(field.id),
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   visualDensity: VisualDensity.compact,
-                  activeColor: const Color(0xFF2E86AB),
+                  activeColor: RufkoTheme.primaryColor,
                 ),
               ),
             ),
@@ -602,7 +603,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
             icon: const Icon(Icons.add),
             label: const Text('Add First Field'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E86AB),
+              backgroundColor: RufkoTheme.primaryColor,
               foregroundColor: Colors.white,
             ),
           ),

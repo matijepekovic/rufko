@@ -13,6 +13,7 @@ import 'simplified_quote_detail_screen.dart';
 import '../services/tax_service.dart';
 import '../models/quote_extras.dart'; // NEW: For PermitItem and CustomLineItem
 import 'package:rufko/screens/inspection_viewer_screen.dart';
+import '../theme/rufko_theme.dart';
 
 class SimplifiedQuoteScreen extends StatefulWidget {
   final Customer customer;
@@ -85,7 +86,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
               expandedHeight: 100,
               floating: false,
               pinned: true,
-              backgroundColor: const Color(0xFF2E86AB),
+              backgroundColor: RufkoTheme.primaryColor,
               foregroundColor: Colors.white,
               elevation: 0,
               flexibleSpace: FlexibleSpaceBar(
@@ -95,8 +96,8 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Color(0xFF2E86AB),
-                        Color(0xFF1B5E7F),
+                        RufkoTheme.primaryColor,
+                        RufkoTheme.primaryDarkColor,
                       ],
                     ),
                   ),
