@@ -11,6 +11,7 @@ import '../models/pdf_template.dart';
 import '../services/template_service.dart';
 import '../providers/app_state_provider.dart';
 import 'pdf_preview_screen.dart';
+import '../theme/rufko_theme.dart';
 
 class TemplateEditorScreen extends StatefulWidget {
   const TemplateEditorScreen({
@@ -117,7 +118,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         title: Text(_currentTemplate == null
             ? 'Create New Template'
             : 'Edit: ${_currentTemplate?.templateName ?? "Template"}'),
-        backgroundColor: const Color(0xFF2E86AB),
+        backgroundColor: RufkoTheme.primaryColor,
         foregroundColor: Colors.white,
         actions: [
           if (_currentTemplate != null)
@@ -465,7 +466,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
           child: Scaffold(
             appBar: AppBar(
               title: Text('Map: $pdfFieldName'),
-              backgroundColor: const Color(0xFF2E86AB),
+              backgroundColor: RufkoTheme.primaryColor,
               foregroundColor: Colors.white,
               leading: IconButton(
                 icon: const Icon(Icons.close),

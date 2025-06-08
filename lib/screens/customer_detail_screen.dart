@@ -13,6 +13,7 @@ import '../models/customer.dart';
 import '../models/project_media.dart';
 import '../models/simplified_quote.dart';
 import '../providers/app_state_provider.dart';
+import '../theme/rufko_theme.dart';
 import 'pdf_preview_screen.dart';
 import 'simplified_quote_screen.dart';
 import 'simplified_quote_detail_screen.dart';
@@ -330,7 +331,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       expandedHeight: 100,
       floating: false,
       pinned: true,
-      backgroundColor: const Color(0xFF2E86AB),
+      backgroundColor: RufkoTheme.primaryColor,
       foregroundColor: Colors.white,
       elevation: 0,
       flexibleSpace: FlexibleSpaceBar(
@@ -340,8 +341,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF2E86AB),
-                Color(0xFF1B5E7F),
+                RufkoTheme.primaryColor,
+                RufkoTheme.primaryDarkColor,
               ],
             ),
           ),

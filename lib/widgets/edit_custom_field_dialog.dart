@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../models/custom_app_data.dart';
 import '../providers/app_state_provider.dart';
 import '../mixins/field_type_mixin.dart';
+import '../theme/rufko_theme.dart';
 
 class EditCustomFieldDialog extends StatefulWidget {
   final CustomAppDataField field;
@@ -234,7 +235,7 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog>
         ElevatedButton(
           onPressed: _isLoading ? null : _handleSaveChanges,
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2E86AB),
+            backgroundColor: RufkoTheme.primaryColor,
             foregroundColor: Colors.white,
           ),
           child: _isLoading

@@ -13,6 +13,7 @@ import '../providers/app_state_provider.dart';
 import '../models/simplified_quote.dart';
 import '../models/customer.dart';
 import '../models/project_media.dart';
+import '../theme/rufko_theme.dart';
 import 'package:intl/intl.dart';
 import '../mixins/file_sharing_mixin.dart';
 // Model for form fields
@@ -461,7 +462,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF2E86AB),
+        backgroundColor: RufkoTheme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [

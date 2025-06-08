@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
+import '../theme/rufko_theme.dart';
 
 class CategoryManagementScreen extends StatefulWidget {
   const CategoryManagementScreen({super.key});
@@ -34,7 +35,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('Category Management'),
-        backgroundColor: const Color(0xFF2E86AB),
+        backgroundColor: RufkoTheme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
         bottom: TabBar(
@@ -76,7 +77,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
               color: Colors.white,
               child: Row(
                 children: [
-                  Icon(Icons.category, color: const Color(0xFF2E86AB)),
+                  Icon(Icons.category, color: RufkoTheme.primaryColor),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -89,7 +90,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
                     icon: const Icon(Icons.add, size: 18),
                     label: const Text('Add Category'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2E86AB),
+                      backgroundColor: RufkoTheme.primaryColor,
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -305,7 +306,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
 
   Color _getCategoryColor(String templateType) {
     switch (templateType) {
-      case 'PDF Templates': return const Color(0xFF2E86AB);
+      case 'PDF Templates': return RufkoTheme.primaryColor;
       case 'Message Templates': return Colors.green;
       case 'Email Templates': return Colors.orange;
       case 'Custom Fields': return Colors.purple;
@@ -387,7 +388,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E86AB),
+              backgroundColor: RufkoTheme.primaryColor,
               foregroundColor: Colors.white,
             ),
             child: const Text('Add Category'),
@@ -460,7 +461,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2E86AB),
+              backgroundColor: RufkoTheme.primaryColor,
               foregroundColor: Colors.white,
             ),
             child: const Text('Save Changes'),

@@ -24,6 +24,7 @@ import 'providers/template_provider.dart';
 import 'services/database_service.dart';
 import 'models/email_template.dart';
 import 'models/inspection_document.dart';
+import 'theme/rufko_theme.dart';
 // Your Screens
 import 'screens/home_screen.dart';
 import 'models/template_category.dart';
@@ -90,39 +91,7 @@ class RufkoApp extends StatelessWidget {
     return MaterialApp(
       title: 'Rufko - Professional Roofing Estimator',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
-        useMaterial3: true,
-        primaryColor: const Color(0xFF1565C0),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1565C0),
-          foregroundColor: Colors.white,
-          elevation: 2,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1565C0),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        cardTheme: CardThemeData(
-          elevation: 2,
-          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
-      ),
+      theme: RufkoTheme.phoneTheme,
       home: const HomeScreen(),
     );
   }
