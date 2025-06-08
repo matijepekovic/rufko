@@ -1,4 +1,3 @@
-// lib/screens/custom_app_data_screen.dart - FIXED FILTER CHIP DATA SOURCE
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -158,14 +157,17 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
   }
 
   Widget _buildManageFieldsTab() {
-    return Consumer<AppStateProvider>(
-      builder: (context, appState, child) {
-        final allFields = appState.customAppDataFields;
-        final filteredFields = _filterFields(allFields);
-        final groupedFields = _groupFieldsByCategory(filteredFields);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isPhone = constraints.maxWidth < 600;
+        return Consumer<AppStateProvider>(
+          builder: (context, appState, child) {
+            final allFields = appState.customAppDataFields;
+            final filteredFields = _filterFields(allFields);
+            final groupedFields = _groupFieldsByCategory(filteredFields);
 
-        return Column(
-          children: [
+            return Column(
+              children: [
             // Search and Filter Bar
             Container(
               padding: const EdgeInsets.all(16),
@@ -189,8 +191,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
-
-                  // 🚀 FIXED: Use the same async data source as other tabs
                   Row(
                     children: [
                       Expanded(
@@ -242,40 +242,64 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                       const SizedBox(width: 8),
                       // Select Button
                       if (!_isFieldSelectionMode)
-                        ElevatedButton.icon(
-                          onPressed: _enterFieldSelectionMode,
-                          icon: const Icon(Icons.checklist, size: 18),
-                          label: const Text('Select'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: RufkoTheme.primaryColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          ),
-                        )
+                        isPhone
+                            ? IconButton(
+                                onPressed: _enterFieldSelectionMode,
+                                icon: const Icon(Icons.checklist),
+                                color: RufkoTheme.primaryColor,
+                                tooltip: 'Select',
+                              )
+                            : ElevatedButton.icon(
+                                onPressed: _enterFieldSelectionMode,
+                                icon: const Icon(Icons.checklist, size: 18),
+                                label: const Text('Select'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: RufkoTheme.primaryColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                              )
                       else
-                        Row(
-                          children: [
-                            TextButton.icon(
-                              onPressed: _selectAllFields,
-                              icon: const Icon(Icons.select_all, size: 18),
-                              label: Text(
-                                _selectedFieldIds.length == filteredFields.length
-                                    ? 'Deselect All'
-                                    : 'Select All',
+                        isPhone
+                            ? Row(
+                                children: [
+                                  IconButton(
+                                    onPressed: _selectAllFields,
+                                    icon: const Icon(Icons.select_all),
+                                    tooltip: _selectedFieldIds.length == filteredFields.length
+                                        ? 'Deselect All'
+                                        : 'Select All',
+                                  ),
+                                  IconButton(
+                                    onPressed: _exitFieldSelectionMode,
+                                    icon: const Icon(Icons.close),
+                                    tooltip: 'Cancel',
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                children: [
+                                  TextButton.icon(
+                                    onPressed: _selectAllFields,
+                                    icon: const Icon(Icons.select_all, size: 18),
+                                    label: Text(
+                                      _selectedFieldIds.length == filteredFields.length
+                                          ? 'Deselect All'
+                                          : 'Select All',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: _exitFieldSelectionMode,
+                                    icon: const Icon(Icons.close, size: 18),
+                                    label: const Text('Cancel'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.grey,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            ElevatedButton.icon(
-                              onPressed: _exitFieldSelectionMode,
-                              icon: const Icon(Icons.close, size: 18),
-                              label: const Text('Cancel'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.grey,
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
                     ],
                   ),
                 ],
@@ -305,16 +329,23 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                         ),
                       ),
                       if (_selectedFieldIds.isNotEmpty)
-                        ElevatedButton.icon(
-                          onPressed: _deleteSelectedFields,
-                          icon: const Icon(Icons.delete, size: 16),
-                          label: const Text('Delete'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          ),
-                        ),
+                        isPhone
+                            ? IconButton(
+                                onPressed: _deleteSelectedFields,
+                                icon: const Icon(Icons.delete),
+                                color: Colors.red,
+                                tooltip: 'Delete',
+                              )
+                            : ElevatedButton.icon(
+                                onPressed: _deleteSelectedFields,
+                                icon: const Icon(Icons.delete, size: 16),
+                                label: const Text('Delete'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                ),
+                              ),
                     ],
                   ),
                 ),
@@ -325,7 +356,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
             // Fields content or empty state
             Expanded(
               child: filteredFields.isEmpty
-                  ? _buildEmptyState()
+                  ? _buildEmptyState(isPhone)
                   : ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: groupedFields.length,
@@ -333,7 +364,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                   final category = groupedFields.keys.elementAt(index);
                   final categoryFields = groupedFields[category]!;
 
-                  return _buildCategorySection(category, categoryFields);
+                  return _buildCategorySection(category, categoryFields, isPhone);
                 },
               ),
             ),
@@ -342,8 +373,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
       },
     );
   }
-
-  // 🚀 NEW: Consistent filter chip builder (matches other tabs)
   Widget _buildCategoryFilterChip(String label, IconData icon, bool isSelected, String categoryKey) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -371,8 +400,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     );
   }
 
-  Widget _buildCategorySection(String category, List<CustomAppDataField> fields) {
-    // 🚀 FIXED: Get category display name from async data source
+  Widget _buildCategorySection(String category, List<CustomAppDataField> fields, bool isPhone) {
     return FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
       future: context.read<AppStateProvider>().getAllTemplateCategories(),
       builder: (context, snapshot) {
@@ -398,7 +426,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
             children: [
               // Category Header
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(isPhone ? 12 : 16),
                 decoration: BoxDecoration(
                   color: RufkoTheme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: const BorderRadius.only(
@@ -411,14 +439,15 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                     Icon(
                       _getCategoryIcon(category),
                       color: RufkoTheme.primaryColor,
-                      size: 20,
+                      size: isPhone ? 18 : 20,
                     ),
                     const SizedBox(width: 8),
                     Text(
                       categoryDisplayName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: RufkoTheme.primaryColor,
+                        fontSize: isPhone ? 14 : 16,
                       ),
                     ),
                     const Spacer(),
@@ -426,14 +455,14 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                       '${fields.length} fields',
                       style: TextStyle(
                         color: Colors.grey[600],
-                        fontSize: 12,
+                        fontSize: isPhone ? 11 : 12,
                       ),
                     ),
                   ],
                 ),
               ),
               // Fields List
-              ...fields.map((field) => _buildFieldTile(field)),
+              ...fields.map((field) => _buildFieldTile(field, isPhone)),
             ],
           ),
         );
@@ -441,7 +470,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     );
   }
 
-  Widget _buildFieldTile(CustomAppDataField field) {
+  Widget _buildFieldTile(CustomAppDataField field, bool isPhone) {
     final isSelected = _selectedFieldIds.contains(field.id);
 
     return Container(
@@ -463,15 +492,20 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                   border: Border.all(color: RufkoTheme.primaryColor, width: 2),
                 )
                     : null,
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _getFieldTypeColor(field.fieldType),
-                    child: Icon(
-                      _getFieldTypeIcon(field.fieldType),
-                      color: Colors.white,
-                      size: 18,
+                  child: ListTile(
+                    dense: isPhone,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: isPhone ? 8 : 16,
+                      vertical: isPhone ? 4 : 8,
                     ),
-                  ),
+                    leading: CircleAvatar(
+                      backgroundColor: _getFieldTypeColor(field.fieldType),
+                      child: Icon(
+                        _getFieldTypeIcon(field.fieldType),
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
                   title: Text(
                     field.displayName,
                     style: TextStyle(
@@ -488,7 +522,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                           color: isSelected
                               ? RufkoTheme.primaryColor.withValues(alpha: 0.7)
                               : Colors.grey[600],
-                          fontSize: 12,
+                          fontSize: isPhone ? 11 : 12,
                         ),
                       ),
                       if (field.currentValue.isNotEmpty) ...[
@@ -503,7 +537,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                           ),
                           child: Text(
                             'Value: ${field.currentValue}',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                            style: TextStyle(fontSize: isPhone ? 10 : 11, fontWeight: FontWeight.w500),
                           ),
                         ),
                       ],
@@ -572,21 +606,21 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(bool isPhone) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.data_object,
-            size: 64,
+            size: isPhone ? 48 : 64,
             color: Colors.grey[400],
           ),
           const SizedBox(height: 16),
           Text(
             'No Custom Fields Yet',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: isPhone ? 16 : 18,
               fontWeight: FontWeight.w500,
               color: Colors.grey[600],
             ),
@@ -690,8 +724,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
 
   void _showAddFieldDialog() {
     if (!mounted) return;
-
-    // 🚀 FIXED: Use async data source for consistency
     showDialog<CustomAppDataField?>(
       context: context,
       barrierDismissible: false,
@@ -763,8 +795,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
 
   void _showEditFieldDialog(CustomAppDataField field) {
     if (!mounted) return;
-
-    // 🚀 FIXED: Use async data source for consistency
     showDialog<CustomAppDataField?>(
       context: context,
       barrierDismissible: false,
