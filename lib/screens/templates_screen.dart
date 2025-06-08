@@ -1905,6 +1905,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   Future<String?> _showCategorySelectionDialog() async {
     final appState = context.read<AppStateProvider>();
     final allCategories = await appState.getAllTemplateCategories();
+    if (!mounted) return null;
     final pdfCategories = allCategories['pdf_templates'] ?? [];
 
     return showDialog<String>(

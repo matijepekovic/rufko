@@ -3603,7 +3603,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   );
 
                   if (shouldDelete == true) {
-                    await context.read<AppStateProvider>().deleteInspectionDocument(existingNote.id);
+                    final appState = context.read<AppStateProvider>();
+                    await appState.deleteInspectionDocument(existingNote.id);
                     navigator.pop();
                     messenger.showSnackBar(
                       const SnackBar(content: Text('Note deleted'), backgroundColor: Colors.red),
@@ -3639,6 +3640,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   }
 
   void _showAddInspectionPdfDialog() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     try {
       // Pick PDF file
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -3650,6 +3653,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         final file = File(result.files.single.path!);
         final fileName = result.files.single.name;
         final fileSize = await file.length();
+
+        if (!mounted) return;
 
         // Show dialog to get title
         final titleController = TextEditingController(text: fileName.replaceAll('.pdf', ''));
@@ -3766,7 +3771,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Error selecting PDF: $e'),
           backgroundColor: Colors.red,
@@ -4086,6 +4091,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           imageQuality: 85,
         );
 
+        if (!mounted) return;
+
         if (image != null) {
           photos.add(File(image.path));
 
@@ -4166,12 +4173,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   Future<void> _processBulkMedia(List<File> files, String defaultType) async {
     if (files.isEmpty) return;
 
+    final messenger = ScaffoldMessenger.of(context);
+
     // Show category selection dialog for bulk upload
     final String? selectedCategory = await _showBulkCategoryDialog(files.length, defaultType);
 
     if (selectedCategory == null) return; // User cancelled
-
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isProcessingMedia = true);
 
     try {
@@ -4199,7 +4206,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             fileSizeBytes: fileSize,
           );
 
-          await context.read<AppStateProvider>().addProjectMedia(mediaItem);
+          final appState = context.read<AppStateProvider>();
+          await appState.addProjectMedia(mediaItem);
           successCount++;
         } catch (e) {
           debugPrint('Error processing file ${file.path}: $e');
@@ -4364,11 +4372,15 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   }
 
   Future<void> _processSelectedMedia(File file, String fileType) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final appState = context.read<AppStateProvider>();
     setState(() => _isProcessingMedia = true);
 
     try {
       // Calculate file size
       final fileSize = await file.length();
+
+      if (!mounted) return;
 
       // Get file info
       final fileName = path.basename(file.path);
@@ -4383,7 +4395,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       }
 
       // Show media details dialog
-      final messenger = ScaffoldMessenger.of(context);
       final ProjectMedia? mediaItem = await showDialog<ProjectMedia>(
         context: context,
         barrierDismissible: false,
@@ -4398,7 +4409,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
       if (mediaItem != null) {
         // Add to app state
-        await context.read<AppStateProvider>().addProjectMedia(mediaItem);
+        await appState.addProjectMedia(mediaItem);
 
         if (mounted) {
           messenger.showSnackBar(
@@ -4572,8 +4583,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   await file.delete();
                 }
 
-                // Remove from app state
-                await context.read<AppStateProvider>().deleteProjectMedia(mediaItem.id);
+                final appState = context.read<AppStateProvider>();
+                await appState.deleteProjectMedia(mediaItem.id);
 
                 navigator.pop();
                 messenger.showSnackBar(

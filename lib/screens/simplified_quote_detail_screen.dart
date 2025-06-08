@@ -11,6 +11,7 @@ import '../providers/app_state_provider.dart';
 import '../models/pdf_template.dart';
 import 'pdf_preview_screen.dart';
 import 'simplified_quote_screen.dart';
+import 'package:open_filex/open_filex.dart';
 
 class SimplifiedQuoteDetailScreen extends StatefulWidget {
   final SimplifiedMultiLevelQuote quote;
@@ -752,6 +753,8 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
 
       final selectedOption = await _showTemplateSelectionDialog(availableTemplates);
 
+      if (!mounted) return;
+
       if (selectedOption == 'cancelled') {
         debugPrint('👤 User cancelled PDF generation');
         return;
@@ -1050,9 +1053,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
           content: Text('Preview generated: ${previewPath.split('/').last}'),
           action: SnackBarAction(
             label: 'Open',
-            onPressed: () {
-              // TODO: Open PDF
-            },
+            onPressed: () => OpenFilex.open(previewPath),
           ),
         ),
       );
