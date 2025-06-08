@@ -16,6 +16,7 @@ import '../models/email_template.dart';
 import 'category_management_screen.dart';
 import '../models/custom_app_data.dart';
 import '../widgets/add_custom_field_dialog.dart';
+import '../mixins/selection_mixin.dart';
 
 
 class TemplatesScreen extends StatefulWidget {
@@ -26,7 +27,7 @@ class TemplatesScreen extends StatefulWidget {
 }
 
 class _TemplatesScreenState extends State<TemplatesScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, SelectionMixin {
   late TabController _tabController;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -36,13 +37,10 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   String _selectedMessageCategoryKey = 'all'; // <<< RENAMED
   String _selectedEmailCategoryKey = 'all'; // <<< RENAMED
 
-  // Selection states for each tab
-  bool _isPDFSelectionMode = false;
-  bool _isMessageSelectionMode = false;
-  bool _isEmailSelectionMode = false;
-  Set<String> _selectedPDFIds = <String>{};
-  Set<String> _selectedMessageIds = <String>{};
-  Set<String> _selectedEmailIds = <String>{};
+  // Selection controllers for each tab
+  final SelectionState _pdfSelection = SelectionState();
+  final SelectionState _messageSelection = SelectionState();
+  final SelectionState _emailSelection = SelectionState();
 
   @override
   void initState() {
@@ -51,13 +49,13 @@ class _TemplatesScreenState extends State<TemplatesScreen>
 
     // Listen for tab changes to exit selection modes
     _tabController.addListener(() {
-      if (_isPDFSelectionMode && _tabController.index != 0) {
+      if (_pdfSelection.isSelectionMode && _tabController.index != 0) {
         _exitPDFSelectionMode();
       }
-      if (_isMessageSelectionMode && _tabController.index != 1) {
+      if (_messageSelection.isSelectionMode && _tabController.index != 1) {
         _exitMessageSelectionMode();
       }
-      if (_isEmailSelectionMode && _tabController.index != 2) {
+      if (_emailSelection.isSelectionMode && _tabController.index != 2) {
         _exitEmailSelectionMode();
       }
     });
@@ -71,57 +69,23 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   }
 
   // PDF Selection Mode Methods
-  void _enterPDFSelectionMode() {
-    setState(() {
-      _isPDFSelectionMode = true;
-      _selectedPDFIds.clear();
-    });
-  }
+  void _enterPDFSelectionMode() => enterSelectionMode(_pdfSelection);
 
-  void _exitPDFSelectionMode() {
-    setState(() {
-      _isPDFSelectionMode = false;
-      _selectedPDFIds.clear();
-    });
-  }
+  void _exitPDFSelectionMode() => exitSelectionMode(_pdfSelection);
 
-  void _togglePDFSelection(String templateId) {
-    setState(() {
-      if (_selectedPDFIds.contains(templateId)) {
-        _selectedPDFIds.remove(templateId);
-      } else {
-        _selectedPDFIds.add(templateId);
-      }
-    });
-  }
+  void _togglePDFSelection(String templateId) =>
+      toggleSelection(_pdfSelection, templateId);
 
   void _selectAllPDF() {
     final appState = context.read<AppStateProvider>();
     final templates = _filterPDFTemplates(appState.pdfTemplates);
-
-    setState(() {
-      if (_selectedPDFIds.length == templates.length) {
-        _selectedPDFIds.clear();
-      } else {
-        _selectedPDFIds = templates.map((t) => t.id).toSet();
-      }
-    });
+    selectAll(_pdfSelection, templates.map((t) => t.id));
   }
 
 // Message Selection Mode Methods
-  void _enterMessageSelectionMode() {
-    setState(() {
-      _isMessageSelectionMode = true;
-      _selectedMessageIds.clear();
-    });
-  }
+  void _enterMessageSelectionMode() => enterSelectionMode(_messageSelection);
 
-  void _exitMessageSelectionMode() {
-    setState(() {
-      _isMessageSelectionMode = false;
-      _selectedMessageIds.clear();
-    });
-  }
+  void _exitMessageSelectionMode() => exitSelectionMode(_messageSelection);
 
   void _selectAllMessages() {
     final categories = _getTextMessageCategories();
@@ -132,37 +96,21 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                 _getCategoryKey(cat['name']) == _selectedMessageCategoryKey)
             .toList();
 
-    setState(() {
-      if (_selectedMessageIds.length == filteredCategories.length) {
-        _selectedMessageIds.clear();
-      } else {
-        _selectedMessageIds =
-            filteredCategories.map((c) => c['name'].toString()).toSet();
-      }
-    });
+    selectAll(_messageSelection,
+        filteredCategories.map((c) => c['name'].toString()));
   }
 
   void _deleteSelectedMessages() {
-    if (_selectedMessageIds.isEmpty) return;
+    if (_messageSelection.selectedIds.isEmpty) return;
     _showErrorSnackBar(
-        'Delete ${_selectedMessageIds.length} message template${_selectedMessageIds.length == 1 ? '' : 's'} - Coming soon!');
+        'Delete ${_messageSelection.selectedIds.length} message template${_messageSelection.selectedIds.length == 1 ? '' : 's'} - Coming soon!');
     _exitMessageSelectionMode();
   }
 
 // Email Selection Mode Methods
-  void _enterEmailSelectionMode() {
-    setState(() {
-      _isEmailSelectionMode = true;
-      _selectedEmailIds.clear();
-    });
-  }
+  void _enterEmailSelectionMode() => enterSelectionMode(_emailSelection);
 
-  void _exitEmailSelectionMode() {
-    setState(() {
-      _isEmailSelectionMode = false;
-      _selectedEmailIds.clear();
-    });
-  }
+  void _exitEmailSelectionMode() => exitSelectionMode(_emailSelection);
 
   void _selectAllEmails() {
     final categories = _getEmailCategories();
@@ -173,25 +121,19 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                 _getCategoryKey(cat['name']) == _selectedEmailCategoryKey)
             .toList();
 
-    setState(() {
-      if (_selectedEmailIds.length == filteredCategories.length) {
-        _selectedEmailIds.clear();
-      } else {
-        _selectedEmailIds =
-            filteredCategories.map((c) => c['name'].toString()).toSet();
-      }
-    });
+    selectAll(
+        _emailSelection, filteredCategories.map((c) => c['name'].toString()));
   }
 
   void _deleteSelectedEmails() {
-    if (_selectedEmailIds.isEmpty) return;
+    if (_emailSelection.selectedIds.isEmpty) return;
     _showErrorSnackBar(
-        'Delete ${_selectedEmailIds.length} email template${_selectedEmailIds.length == 1 ? '' : 's'} - Coming soon!');
+        'Delete ${_emailSelection.selectedIds.length} email template${_emailSelection.selectedIds.length == 1 ? '' : 's'} - Coming soon!');
     _exitEmailSelectionMode();
   }
 
   void _deleteSelectedPDF() {
-    if (_selectedPDFIds.isEmpty) return;
+    if (_pdfSelection.selectedIds.isEmpty) return;
 
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
@@ -200,10 +142,10 @@ class _TemplatesScreenState extends State<TemplatesScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-            'Delete ${_selectedPDFIds.length} template${_selectedPDFIds.length == 1 ? '' : 's'}'),
-        content: Text(_selectedPDFIds.length == 1
+            'Delete ${_pdfSelection.selectedIds.length} template${_pdfSelection.selectedIds.length == 1 ? '' : 's'}'),
+        content: Text(_pdfSelection.selectedIds.length == 1
             ? 'Are you sure you want to delete this PDF template?'
-            : 'Are you sure you want to delete these ${_selectedPDFIds.length} PDF templates?'),
+            : 'Are you sure you want to delete these ${_pdfSelection.selectedIds.length} PDF templates?'),
         actions: [
           TextButton(
             onPressed: () => navigator.pop(),
@@ -214,7 +156,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               try {
                 final appState = context.read<AppStateProvider>();
 
-                for (final templateId in _selectedPDFIds) {
+                for (final templateId in _pdfSelection.selectedIds) {
                   await appState.deletePDFTemplate(templateId);
                 }
 
@@ -224,7 +166,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                 messenger.showSnackBar(
                   SnackBar(
                     content: Text(
-                        'Deleted ${_selectedPDFIds.length} template${_selectedPDFIds.length == 1 ? '' : 's'}'),
+                        'Deleted ${_pdfSelection.selectedIds.length} template${_pdfSelection.selectedIds.length == 1 ? '' : 's'}'),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -243,16 +185,16 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_isPDFSelectionMode &&
-          !_isMessageSelectionMode &&
-          !_isEmailSelectionMode,
+      canPop: !_pdfSelection.isSelectionMode &&
+          !_messageSelection.isSelectionMode &&
+          !_emailSelection.isSelectionMode,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          if (_isPDFSelectionMode) {
+          if (_pdfSelection.isSelectionMode) {
             _exitPDFSelectionMode();
-          } else if (_isMessageSelectionMode) {
+          } else if (_messageSelection.isSelectionMode) {
             _exitMessageSelectionMode();
-          } else if (_isEmailSelectionMode) {
+          } else if (_emailSelection.isSelectionMode) {
             _exitEmailSelectionMode();
           }
         }
@@ -323,27 +265,27 @@ class _TemplatesScreenState extends State<TemplatesScreen>
         indicatorColor: Colors.white,
         tabs: [
           Tab(
-            icon: Icon(_isPDFSelectionMode && _tabController.index == 0
+            icon: Icon(_pdfSelection.isSelectionMode && _tabController.index == 0
                 ? Icons.checklist
                 : Icons.picture_as_pdf),
-            text: _isPDFSelectionMode && _tabController.index == 0
-                ? '${_selectedPDFIds.length} selected'
+            text: _pdfSelection.isSelectionMode && _tabController.index == 0
+                ? '${_pdfSelection.selectedIds.length} selected'
                 : 'PDF Templates',
           ),
           Tab(
-            icon: Icon(_isMessageSelectionMode && _tabController.index == 1
+            icon: Icon(_messageSelection.isSelectionMode && _tabController.index == 1
                 ? Icons.checklist
                 : Icons.sms),
-            text: _isMessageSelectionMode && _tabController.index == 1
-                ? '${_selectedMessageIds.length} selected'
+            text: _messageSelection.isSelectionMode && _tabController.index == 1
+                ? '${_messageSelection.selectedIds.length} selected'
                 : 'Message Templates',
           ),
           Tab(
-            icon: Icon(_isEmailSelectionMode && _tabController.index == 2
+            icon: Icon(_emailSelection.isSelectionMode && _tabController.index == 2
                 ? Icons.checklist
                 : Icons.email),
-            text: _isEmailSelectionMode && _tabController.index == 2
-                ? '${_selectedEmailIds.length} selected'
+            text: _emailSelection.isSelectionMode && _tabController.index == 2
+                ? '${_emailSelection.selectedIds.length} selected'
                 : 'Email Templates',
           ),
           const Tab(icon: Icon(Icons.data_object), text: 'Custom Fields'),
@@ -359,11 +301,11 @@ class _TemplatesScreenState extends State<TemplatesScreen>
         final currentTab = _tabController.index;
 
         // PDF tab with selection mode
-        if (currentTab == 0 && _isPDFSelectionMode) {
+        if (currentTab == 0 && _pdfSelection.isSelectionMode) {
           return Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (_selectedPDFIds.isNotEmpty)
+              if (_pdfSelection.selectedIds.isNotEmpty)
                 FloatingActionButton(
                   heroTag: "delete_selected_pdf_fab",
                   onPressed: _deleteSelectedPDF,
@@ -516,7 +458,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                       ),
                       const SizedBox(width: 8),
                       // Select Button
-                      if (!_isPDFSelectionMode)
+                      if (!_pdfSelection.isSelectionMode)
                         ElevatedButton.icon(
                           onPressed: _enterPDFSelectionMode,
                           icon: const Icon(Icons.checklist, size: 18),
@@ -535,7 +477,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                               onPressed: _selectAllPDF,
                               icon: const Icon(Icons.select_all, size: 18),
                               label: Text(
-                                _selectedPDFIds.length == templates.length
+                                _pdfSelection.selectedIds.length == templates.length
                                     ? 'Deselect All'
                                     : 'Select All',
                               ),
@@ -559,7 +501,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
             ),
 
             // Selection mode info
-            if (_isPDFSelectionMode) ...[
+            if (_pdfSelection.isSelectionMode) ...[
               Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 color: Colors.blue.shade50,
@@ -572,16 +514,16 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          _selectedPDFIds.isEmpty
+                          _pdfSelection.selectedIds.isEmpty
                               ? 'Tap PDF templates to select them'
-                              : '${_selectedPDFIds.length} of ${templates.length} templates selected',
+                              : '${_pdfSelection.selectedIds.length} of ${templates.length} templates selected',
                           style: TextStyle(
                             color: Colors.blue.shade800,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                      if (_selectedPDFIds.isNotEmpty)
+                      if (_pdfSelection.selectedIds.isNotEmpty)
                         ElevatedButton.icon(
                           onPressed: _deleteSelectedPDF,
                           icon: const Icon(Icons.delete, size: 16),
@@ -704,7 +646,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
           ),
 
           // Templates in this category
-          ...typeTemplates.map((template) => _isPDFSelectionMode
+          ...typeTemplates.map((template) => _pdfSelection.isSelectionMode
               ? _buildSelectablePDFCard(template)
               : _buildPDFTemplateCard(template)),
         ],
@@ -798,7 +740,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                       ),
                       const SizedBox(width: 8),
                       // Select Button
-                      if (!_isMessageSelectionMode)
+                      if (!_messageSelection.isSelectionMode)
                         ElevatedButton.icon(
                           onPressed: _enterMessageSelectionMode,
                           icon: const Icon(Icons.checklist, size: 18),
@@ -817,7 +759,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                               onPressed: _selectAllMessages,
                               icon: const Icon(Icons.select_all, size: 18),
                               label: Text(
-                                _selectedMessageIds.length ==
+                                _messageSelection.selectedIds.length ==
                                         filteredTemplates.length
                                     ? 'Deselect All'
                                     : 'Select All',
@@ -841,7 +783,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               ),
             ),
             // Selection mode info
-            if (_isMessageSelectionMode) ...[
+            if (_messageSelection.isSelectionMode) ...[
               Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 color: Colors.green.shade50,
@@ -854,16 +796,16 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          _selectedMessageIds.isEmpty
+                          _messageSelection.selectedIds.isEmpty
                               ? 'Tap message templates to select them'
-                              : '${_selectedMessageIds.length} of ${filteredTemplates.length} templates selected',
+                              : '${_messageSelection.selectedIds.length} of ${filteredTemplates.length} templates selected',
                           style: TextStyle(
                             color: Colors.green.shade800,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                      if (_selectedMessageIds.isNotEmpty)
+                      if (_messageSelection.selectedIds.isNotEmpty)
                         ElevatedButton.icon(
                           onPressed: _deleteSelectedMessages,
                           icon: const Icon(Icons.delete, size: 16),
@@ -969,7 +911,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
           ),
 
           // Templates in this category
-          ...categoryTemplates.map((template) => _isMessageSelectionMode
+          ...categoryTemplates.map((template) => _messageSelection.isSelectionMode
               ? _buildSelectableMessageCard(template)
               : _buildMessageTemplateCard(template)),
         ],
@@ -1140,7 +1082,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                       ),
                       const SizedBox(width: 8),
                       // Select Button
-                      if (!_isEmailSelectionMode)
+                      if (!_emailSelection.isSelectionMode)
                         ElevatedButton.icon(
                           onPressed: _enterEmailSelectionMode,
                           icon: const Icon(Icons.checklist, size: 18),
@@ -1159,7 +1101,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                               onPressed: _selectAllEmails,
                               icon: const Icon(Icons.select_all, size: 18),
                               label: Text(
-                                _selectedEmailIds.length ==
+                                _emailSelection.selectedIds.length ==
                                         filteredTemplates.length
                                     ? 'Deselect All'
                                     : 'Select All',
@@ -1182,7 +1124,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                 ],
               ),
             ),
-            if (_isEmailSelectionMode) ...[
+            if (_emailSelection.isSelectionMode) ...[
               Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 color: Colors.orange.shade50,
@@ -1195,16 +1137,16 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          _selectedEmailIds.isEmpty
+                          _emailSelection.selectedIds.isEmpty
                               ? 'Tap email templates to select them'
-                              : '${_selectedEmailIds.length} of ${filteredTemplates.length} templates selected',
+                              : '${_emailSelection.selectedIds.length} of ${filteredTemplates.length} templates selected',
                           style: TextStyle(
                             color: Colors.orange.shade800,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                      if (_selectedEmailIds.isNotEmpty)
+                      if (_emailSelection.selectedIds.isNotEmpty)
                         ElevatedButton.icon(
                           onPressed: _deleteSelectedEmails,
                           icon: const Icon(Icons.delete, size: 16),
@@ -1389,7 +1331,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
 
           // Templates in this category
           ...categoryTemplates.map((template) =>
-          _isEmailSelectionMode
+          _emailSelection.isSelectionMode
               ? _buildSelectableEmailCard(template)
               : _buildEmailTemplateCard(template)
           ),
@@ -1401,7 +1343,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   // CARD BUILDERS
 
   Widget _buildSelectablePDFCard(PDFTemplate template) {
-    final isSelected = _selectedPDFIds.contains(template.id);
+    final isSelected = _pdfSelection.selectedIds.contains(template.id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1411,10 +1353,10 @@ class _TemplatesScreenState extends State<TemplatesScreen>
             elevation: isSelected ? 3 : 1.5,
             color: isSelected ? Colors.blue.shade50 : null,
             child: InkWell(
-              onTap: _isPDFSelectionMode
+              onTap: _pdfSelection.isSelectionMode
                   ? () => _togglePDFSelection(template.id)
                   : () => _editPDFTemplate(template),
-              onLongPress: !_isPDFSelectionMode
+              onLongPress: !_pdfSelection.isSelectionMode
                   ? () => _showPDFTemplateContextMenu(template)
                   : null,
               borderRadius: BorderRadius.circular(12),
@@ -1429,7 +1371,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               ),
             ),
           ),
-          if (_isPDFSelectionMode)
+          if (_pdfSelection.isSelectionMode)
             Positioned(
               top: 8,
               right: 8,
@@ -1578,7 +1520,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
             ],
           ),
 
-          if (!_isPDFSelectionMode) ...[
+          if (!_pdfSelection.isSelectionMode) ...[
             const SizedBox(height: 16),
             // Action buttons
             Row(
@@ -2242,7 +2184,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
 
   // NEW MESSAGE TEMPLATE CARD BUILDERS
   Widget _buildSelectableMessageCard(MessageTemplate template) {
-    final isSelected = _selectedMessageIds.contains(template.id);
+    final isSelected = _messageSelection.selectedIds.contains(template.id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -2252,10 +2194,10 @@ class _TemplatesScreenState extends State<TemplatesScreen>
             elevation: isSelected ? 3 : 1.5,
             color: isSelected ? Colors.green.shade50 : null,
             child: InkWell(
-              onTap: _isMessageSelectionMode
+              onTap: _messageSelection.isSelectionMode
                   ? () => _toggleMessageSelection(template.id)
                   : () => _editMessageTemplate(template),
-              onLongPress: !_isMessageSelectionMode
+              onLongPress: !_messageSelection.isSelectionMode
                   ? () => _showMessageTemplateContextMenu(template)
                   : null,
               borderRadius: BorderRadius.circular(12),
@@ -2270,7 +2212,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               ),
             ),
           ),
-          if (_isMessageSelectionMode)
+          if (_messageSelection.isSelectionMode)
             Positioned(
               top: 8,
               right: 8,
@@ -2438,7 +2380,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
             ],
           ),
 
-          if (!_isMessageSelectionMode) ...[
+          if (!_messageSelection.isSelectionMode) ...[
             const SizedBox(height: 16),
             // Action buttons
             Row(
@@ -2514,13 +2456,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
 
   // Message template selection helpers
   void _toggleMessageSelection(String templateId) {
-    setState(() {
-      if (_selectedMessageIds.contains(templateId)) {
-        _selectedMessageIds.remove(templateId);
-      } else {
-        _selectedMessageIds.add(templateId);
-      }
-    });
+    toggleSelection(_messageSelection, templateId);
   }
 
   void _editMessageTemplate(MessageTemplate template) {
@@ -2696,13 +2632,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
 
 // Email template selection helpers
   void _toggleEmailSelection(String templateId) {
-    setState(() {
-      if (_selectedEmailIds.contains(templateId)) {
-        _selectedEmailIds.remove(templateId);
-      } else {
-        _selectedEmailIds.add(templateId);
-      }
-    });
+    toggleSelection(_emailSelection, templateId);
   }
 
   void _editEmailTemplate(EmailTemplate template) {
@@ -3018,7 +2948,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
             ],
           ),
 
-          if (!_isEmailSelectionMode) ...[
+          if (!_emailSelection.isSelectionMode) ...[
             const SizedBox(height: 16),
             // Action buttons
             Row(
@@ -3094,7 +3024,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
 
 // EMAIL TEMPLATE CARD BUILDERS (NEW - ADDITION TO EXISTING MESSAGE METHODS)
   Widget _buildSelectableEmailCard(EmailTemplate template) {
-    final isSelected = _selectedEmailIds.contains(template.id);
+    final isSelected = _emailSelection.selectedIds.contains(template.id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -3104,10 +3034,10 @@ class _TemplatesScreenState extends State<TemplatesScreen>
             elevation: isSelected ? 3 : 1.5,
             color: isSelected ? Colors.orange.shade50 : null,
             child: InkWell(
-              onTap: _isEmailSelectionMode
+              onTap: _emailSelection.isSelectionMode
                   ? () => _toggleEmailSelection(template.id)
                   : () => _editEmailTemplate(template),
-              onLongPress: !_isEmailSelectionMode
+              onLongPress: !_emailSelection.isSelectionMode
                   ? () => _showEmailTemplateContextMenu(template)
                   : null,
               borderRadius: BorderRadius.circular(12),
@@ -3122,7 +3052,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               ),
             ),
           ),
-          if (_isEmailSelectionMode)
+          if (_emailSelection.isSelectionMode)
             Positioned(
               top: 8,
               right: 8,

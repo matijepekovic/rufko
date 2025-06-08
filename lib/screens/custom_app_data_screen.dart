@@ -208,16 +208,9 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                               height: isVerySmall ? 32 : 36,
                               child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
-                                itemCount: 4, // Hardcoded for now to test scrolling
+                                itemCount: _buildFilterChips(appState).length,
                                 itemBuilder: (context, index) {
-                                  final chips = [
-                                    {'key': 'all', 'name': 'All Fields', 'icon': Icons.view_list},
-                                    {'key': 'inspection', 'name': 'Inspection Fields', 'icon': Icons.checklist},
-                                    {'key': 'company', 'name': 'Company Info', 'icon': Icons.business},
-                                    {'key': 'custom', 'name': 'Custom Fields', 'icon': Icons.extension},
-                                  ];
-
-                                  final chip = chips[index];
+                                  final chip = _buildFilterChips(appState)[index];
                                   final isSelected = _selectedCategory == chip['key'];
 
                                   return Container(
@@ -723,6 +716,38 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
       grouped.putIfAbsent(field.category, () => []).add(field);
     }
     return grouped;
+  }
+
+  List<Map<String, dynamic>> _buildFilterChips(AppStateProvider appState) {
+    final chips = <Map<String, dynamic>>[{
+      'key': 'all',
+      'name': 'All Fields',
+      'icon': Icons.view_list
+    }];
+
+    final categories = appState.templateCategories
+        .where((c) => c.templateType == 'custom_fields')
+        .toList();
+    for (final cat in categories) {
+      chips.add({'key': cat.key, 'name': cat.name, 'icon': Icons.extension});
+    }
+
+    const defaults = [
+      {'key': 'inspection', 'name': 'Inspection Fields', 'icon': Icons.checklist},
+      {'key': 'company', 'name': 'Company Info', 'icon': Icons.business},
+      {'key': 'contact', 'name': 'Contact Info', 'icon': Icons.contact_phone},
+      {'key': 'legal', 'name': 'Legal', 'icon': Icons.gavel},
+      {'key': 'pricing', 'name': 'Pricing', 'icon': Icons.attach_money},
+      {'key': 'custom', 'name': 'Custom Fields', 'icon': Icons.extension},
+    ];
+
+    for (final d in defaults) {
+      if (!chips.any((c) => c['key'] == d['key'])) {
+        chips.add(d);
+      }
+    }
+
+    return chips;
   }
 
   IconData _getCategoryIcon(String category) {
