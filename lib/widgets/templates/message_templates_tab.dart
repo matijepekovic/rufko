@@ -16,6 +16,7 @@ class MessageTemplatesTab extends StatefulWidget {
 class _MessageTemplatesTabState extends State<MessageTemplatesTab> {
   String _searchQuery = '';
   String _selectedCategoryKey = 'all';
+  Map<String, String> _categoryNames = {};
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +83,13 @@ class _MessageTemplatesTabState extends State<MessageTemplatesTab> {
                         return const SizedBox(height: 40);
                       }
                       final cats = snapshot.data!['message_templates'] ?? [];
+                      if (_categoryNames.length != cats.length) {
+                        setState(() {
+                          _categoryNames = {
+                            for (final c in cats) c['key'] as String: c['name'] as String
+                          };
+                        });
+                      }
                       return Row(
                         children: [
                           _buildFilterChip('All Categories', Icons.view_list, 'all'),
@@ -184,6 +192,24 @@ class _MessageTemplatesTabState extends State<MessageTemplatesTab> {
                   ),
                   Text(dateFormat.format(template.updatedAt),
                       style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  PopupMenuButton<String>(
+                    onSelected: (action) =>
+                        _handleTemplateAction(action, template),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Text('Edit'),
+                      ),
+                      PopupMenuItem(
+                        value: 'toggle',
+                        child: Text(template.isActive ? 'Deactivate' : 'Activate'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Delete', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               if (template.description.isNotEmpty) ...[
@@ -222,7 +248,7 @@ class _MessageTemplatesTabState extends State<MessageTemplatesTab> {
 
   String _getCategoryDisplayName(String key) {
     if (key == 'uncategorized') return 'Uncategorized Templates';
-    return '$key Templates';
+    return _categoryNames[key] ?? '$key Templates';
   }
 
   void _editTemplate(MessageTemplate template) {
@@ -231,6 +257,53 @@ class _MessageTemplatesTabState extends State<MessageTemplatesTab> {
       MaterialPageRoute(
         builder: (context) =>
             MessageTemplateEditorScreen(existingTemplate: template),
+      ),
+    );
+  }
+
+  void _handleTemplateAction(String action, MessageTemplate template) {
+    switch (action) {
+      case 'edit':
+        _editTemplate(template);
+        break;
+      case 'toggle':
+        context.read<AppStateProvider>().toggleMessageTemplateActive(template.id);
+        break;
+      case 'delete':
+        _showDeleteConfirmation(template);
+        break;
+    }
+  }
+
+  void _showDeleteConfirmation(MessageTemplate template) {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Message Template'),
+        content: Text('Are you sure you want to delete "${template.templateName}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => navigator.pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              navigator.pop();
+              await context
+                  .read<AppStateProvider>()
+                  .deleteMessageTemplate(template.id);
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Template deleted'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
