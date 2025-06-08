@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../models/message_template.dart';
 import '../../providers/app_state_provider.dart';
 import '../../screens/message_template_editor_screen.dart';
+import '../../mixins/template_tab_mixin.dart';
 
 class MessageTemplatesTab extends StatefulWidget {
   const MessageTemplatesTab({super.key});
@@ -13,247 +14,384 @@ class MessageTemplatesTab extends StatefulWidget {
   State<MessageTemplatesTab> createState() => _MessageTemplatesTabState();
 }
 
-class _MessageTemplatesTabState extends State<MessageTemplatesTab> {
-  String _searchQuery = '';
-  String _selectedCategoryKey = 'all';
+class _MessageTemplatesTabState extends State<MessageTemplatesTab> with TemplateTabMixin {
+
+  // Implement required mixin properties
+  @override
+  Color get primaryColor => Colors.green;
+
+  @override
+  String get itemTypeName => 'template';
+
+  @override
+  String get itemTypePlural => 'templates';
+
+  @override
+  IconData get tabIcon => Icons.sms;
+
+  @override
+  String get searchHintText => 'Search message templates...';
+
+  @override
+  String get categoryType => 'message_templates';
+
+  // Implement required data methods
+  @override
+  List<dynamic> getAllItems() {
+    return context.read<AppStateProvider>().messageTemplates;
+  }
+
+  @override
+  List<dynamic> getFilteredItems() {
+    var filtered = getAllItems().cast<MessageTemplate>();
+
+    if (selectedCategory != 'all') {
+      filtered = filtered.where((t) => t.userCategoryKey == selectedCategory).toList();
+    }
+
+    if (searchQuery.isNotEmpty) {
+      final q = searchQuery.toLowerCase();
+      filtered = filtered.where((t) =>
+      t.templateName.toLowerCase().contains(q) ||
+          t.description.toLowerCase().contains(q) ||
+          t.messageContent.toLowerCase().contains(q)).toList();
+    }
+
+    return filtered..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  }
+
+  @override
+  Future<void> deleteItemById(String id) async {
+    await context.read<AppStateProvider>().deleteMessageTemplate(id);
+  }
+
+  @override
+  String getItemId(dynamic item) {
+    return (item as MessageTemplate).id;
+  }
+
+  @override
+  String getItemDisplayName(dynamic item) {
+    return (item as MessageTemplate).templateName;
+  }
+
+  // Implement required UI/navigation methods
+  @override
+  void navigateToEditor([dynamic existingItem]) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MessageTemplateEditorScreen(
+          existingTemplate: existingItem as MessageTemplate?,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget buildItemTile(dynamic item, bool isSelected, bool isSmallScreen, bool isVerySmall) {
+    final template = item as MessageTemplate;
+    final dateFormat = DateFormat('MMM dd, yyyy');
+
+    return InkWell(
+      onTap: isSelectionMode
+          ? () => toggleSelection(getItemId(template))
+          : () => navigateToEditor(template),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: isVerySmall ? 8 : 12,
+          vertical: isVerySmall ? 6 : 8,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected ? primaryColor.withValues(alpha: 0.1) : null,
+          border: isSelected
+              ? Border.all(color: primaryColor, width: 1)
+              : const Border(bottom: BorderSide(color: Colors.grey, width: 0.2)),
+        ),
+        child: Row(
+          children: [
+            // Active status indicator
+            Container(
+              width: isVerySmall ? 24 : 28,
+              height: isVerySmall ? 24 : 28,
+              decoration: BoxDecoration(
+                color: template.isActive ? primaryColor : Colors.grey,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                tabIcon,
+                color: Colors.white,
+                size: isVerySmall ? 12 : 14,
+              ),
+            ),
+
+            SizedBox(width: isVerySmall ? 8 : 12),
+
+            // Template info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    template.templateName,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: isVerySmall ? 13 : 14,
+                      color: isSelected ? primaryColor : null,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+
+                  SizedBox(height: isVerySmall ? 2 : 3),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          template.description.isNotEmpty
+                              ? template.description
+                              : 'No description',
+                          style: TextStyle(
+                            color: isSelected
+                                ? primaryColor.withValues(alpha: 0.7)
+                                : Colors.grey[600],
+                            fontSize: isVerySmall ? 10 : 11,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+
+                      Text(
+                        dateFormat.format(template.updatedAt),
+                        style: TextStyle(
+                          color: Colors.grey[500],
+                          fontSize: isVerySmall ? 9 : 10,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  if (template.messageContent.isNotEmpty) ...[
+                    SizedBox(height: isVerySmall ? 2 : 3),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isVerySmall ? 4 : 6,
+                          vertical: isVerySmall ? 1 : 2
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? primaryColor.withValues(alpha: 0.2)
+                            : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        template.messageContent.length > 50
+                            ? '${template.messageContent.substring(0, 50)}...'
+                            : template.messageContent,
+                        style: TextStyle(
+                            fontSize: isVerySmall ? 9 : 10,
+                            fontWeight: FontWeight.w500
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // Selection indicator or menu
+            if (isSelectionMode)
+              Container(
+                width: isVerySmall ? 20 : 24,
+                height: isVerySmall ? 20 : 24,
+                decoration: BoxDecoration(
+                  color: isSelected ? primaryColor : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected ? primaryColor : Colors.grey,
+                    width: 2,
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: isSelected
+                    ? Icon(Icons.check, color: Colors.white, size: isVerySmall ? 12 : 14)
+                    : null,
+              )
+            else
+              PopupMenuButton<String>(
+                onSelected: (action) => _handleTemplateAction(action, template),
+                icon: Icon(
+                  Icons.more_vert,
+                  size: isVerySmall ? 16 : 18,
+                  color: Colors.grey[600],
+                ),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit, size: 16),
+                        SizedBox(width: 8),
+                        Text('Edit'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'toggle_active',
+                    child: Row(
+                      children: [
+                        Icon(
+                          template.isActive ? Icons.visibility_off : Icons.visibility,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(template.isActive ? 'Deactivate' : 'Activate'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'duplicate',
+                    child: Row(
+                      children: [
+                        Icon(Icons.copy, size: 16),
+                        SizedBox(width: 8),
+                        Text('Duplicate'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, size: 16, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text('Delete', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppStateProvider>(
       builder: (context, appState, child) {
-        final templates = _filterTemplates(appState.messageTemplates);
-        final grouped = <String, List<MessageTemplate>>{};
-        for (final t in templates) {
-          final key = t.userCategoryKey ?? 'uncategorized';
-          grouped.putIfAbsent(key, () => []).add(t);
-        }
-
-        return Column(
-          children: [
-            _buildSearchAndFilter(appState),
-            const SizedBox(height: 16),
-            Expanded(
-              child: templates.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: grouped.length,
-                      itemBuilder: (context, index) {
-                        final key = grouped.keys.elementAt(index);
-                        final items = grouped[key]!;
-                        return _buildCategorySection(key, items);
-                      },
-                    ),
-            ),
-          ],
-        );
+        return buildMainLayout(); // This comes from the mixin!
       },
     );
   }
 
-  Widget _buildSearchAndFilter(AppStateProvider appState) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: Column(
-        children: [
-          TextField(
-            decoration: InputDecoration(
-              hintText: 'Search message templates...',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-            onChanged: (v) => setState(() => _searchQuery = v),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
-                    future: appState.getAllTemplateCategories(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const SizedBox(height: 40);
-                      }
-                      final cats = snapshot.data!['message_templates'] ?? [];
-                      return Row(
-                        children: [
-                          _buildFilterChip('All Categories', Icons.view_list, 'all'),
-                          ...cats.map((c) => _buildFilterChip(
-                              c['name'] as String, Icons.sms, c['key'] as String)),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, IconData icon, String key) {
-    final selected = _selectedCategoryKey == key;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: selected ? Colors.white : Colors.grey[600]),
-            const SizedBox(width: 4),
-            Text(label),
-          ],
-        ),
-        selected: selected,
-        selectedColor: Colors.green,
-        labelStyle: TextStyle(
-          color: selected ? Colors.white : Colors.grey[700],
-          fontSize: 12,
-        ),
-        onSelected: (_) {
-          setState(() => _selectedCategoryKey = key);
-        },
-      ),
-    );
-  }
-
-  Widget _buildCategorySection(String key, List<MessageTemplate> templates) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(8),
-                topRight: Radius.circular(8),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.sms, color: Colors.green, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  _getCategoryDisplayName(key),
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
-                ),
-                const Spacer(),
-                Text('${templates.length} template${templates.length == 1 ? '' : 's'}',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-              ],
+  // Template-specific action handler
+  void _handleTemplateAction(String action, MessageTemplate template) {
+    switch (action) {
+      case 'edit':
+        navigateToEditor(template);
+        break;
+      case 'toggle_active':
+        context.read<AppStateProvider>().toggleMessageTemplateActive(template.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              template.isActive ? 'Template deactivated' : 'Template activated',
             ),
           ),
-          ...templates.map(_buildTemplateCard),
-        ],
-      ),
-    );
+        );
+        break;
+      case 'duplicate':
+        _duplicateTemplate(template);
+        break;
+      case 'delete':
+        _deleteTemplate(template);
+        break;
+    }
   }
 
-  Widget _buildTemplateCard(MessageTemplate template) {
-    final dateFormat = DateFormat('MMM dd, yyyy');
-    return Card(
-      elevation: 1.5,
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => _editTemplate(template),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      template.templateName,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+  void _duplicateTemplate(MessageTemplate template) async {
+    // Implementation specific to message templates
+    try {
+      final duplicatedTemplate = template.copyWith(
+        templateName: '${template.templateName} (Copy)',
+        updatedAt: DateTime.now(),
+      );
+
+      final newTemplate = MessageTemplate(
+        templateName: duplicatedTemplate.templateName,
+        description: duplicatedTemplate.description,
+        category: duplicatedTemplate.category,
+        messageContent: duplicatedTemplate.messageContent,
+        placeholders: List.from(duplicatedTemplate.placeholders),
+        isActive: duplicatedTemplate.isActive,
+        sortOrder: duplicatedTemplate.sortOrder,
+      );
+
+      await context.read<AppStateProvider>().addMessageTemplate(newTemplate);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Template duplicated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error duplicating template: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _deleteTemplate(MessageTemplate template) {
+    // Use single item delete (different from bulk delete in mixin)
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Template'),
+        content: Text('Are you sure you want to delete "${template.templateName}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await deleteItemById(template.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Deleted: ${template.templateName}'),
+                      backgroundColor: Colors.green,
                     ),
-                  ),
-                  Text(dateFormat.format(template.updatedAt),
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                ],
-              ),
-              if (template.description.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  template.description,
-                  style: TextStyle(color: Colors.grey[700], fontSize: 12),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Helpers
-  List<MessageTemplate> _filterTemplates(List<MessageTemplate> templates) {
-    var filtered = templates;
-    if (_selectedCategoryKey != 'all') {
-      filtered = filtered
-          .where((t) => t.userCategoryKey == _selectedCategoryKey)
-          .toList();
-    }
-    if (_searchQuery.isNotEmpty) {
-      final q = _searchQuery.toLowerCase();
-      filtered = filtered
-          .where((t) =>
-              t.templateName.toLowerCase().contains(q) ||
-              t.description.toLowerCase().contains(q) ||
-              t.messageContent.toLowerCase().contains(q))
-          .toList();
-    }
-    return filtered;
-  }
-
-  String _getCategoryDisplayName(String key) {
-    if (key == 'uncategorized') return 'Uncategorized Templates';
-    return '$key Templates';
-  }
-
-  void _editTemplate(MessageTemplate template) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            MessageTemplateEditorScreen(existingTemplate: template),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.sms_outlined, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'No Message Templates',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Colors.grey[600],
-                ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Create your first message template to get started',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[500],
-                ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting template: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

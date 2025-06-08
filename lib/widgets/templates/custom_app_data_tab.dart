@@ -6,6 +6,7 @@ import '../add_custom_field_dialog.dart';
 import '../edit_custom_field_dialog.dart';
 import '../../utils/common_utils.dart';
 import '../../theme/rufko_theme.dart';
+import '../../mixins/template_tab_mixin.dart';
 
 class CustomAppDataScreen extends StatefulWidget {
   const CustomAppDataScreen({super.key});
@@ -14,487 +15,92 @@ class CustomAppDataScreen extends StatefulWidget {
   State<CustomAppDataScreen> createState() => _CustomAppDataScreenState();
 }
 
-class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
-  String _searchQuery = '';
-  String _selectedCategory = 'all';
+class _CustomAppDataScreenState extends State<CustomAppDataScreen> with TemplateTabMixin {
 
-  bool _isFieldSelectionMode = false;
-  Set<String> _selectedFieldIds = <String>{};
+  // Implement required mixin properties
+  @override
+  Color get primaryColor => RufkoTheme.primaryColor;
 
   @override
-  Widget build(BuildContext context) {
-    // Check if we're embedded in Templates screen (no Scaffold needed)
-    final bool isEmbedded = ModalRoute.of(context)?.settings.name != '/custom_app_data';
+  String get itemTypeName => 'field';
 
-    if (isEmbedded) {
-      // Return just the content without Scaffold/AppBar when embedded
-      return _buildManageFieldsTab();
+  @override
+  String get itemTypePlural => 'fields';
+
+  @override
+  IconData get tabIcon => Icons.data_object;
+
+  @override
+  String get searchHintText => 'Search fields...';
+
+  @override
+  String get categoryType => 'custom_fields';
+
+  // Implement required data methods
+  @override
+  List<dynamic> getAllItems() {
+    return context.read<AppStateProvider>().customAppDataFields;
+  }
+
+  @override
+  List<dynamic> getFilteredItems() {
+    var filtered = getAllItems().cast<CustomAppDataField>();
+
+    if (selectedCategory != 'all') {
+      filtered = filtered.where((f) => f.category == selectedCategory).toList();
     }
 
-    // Full screen version with AppBar (when accessed directly)
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Custom App Data'),
-        backgroundColor: RufkoTheme.primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showAddFieldDialog,
-            tooltip: 'Add New Field',
-          ),
-        ],
-      ),
-      body: _buildManageFieldsTab(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddFieldDialog,
-        backgroundColor: RufkoTheme.primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
+    if (searchQuery.isNotEmpty) {
+      filtered = filtered.where((f) =>
+      f.displayName.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          f.fieldName.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+    }
+
+    return filtered..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   }
 
-  // Field Selection Mode Methods
-  void _enterFieldSelectionMode() {
-    setState(() {
-      _isFieldSelectionMode = true;
-      _selectedFieldIds.clear();
-    });
+  @override
+  Future<void> deleteItemById(String id) async {
+    await context.read<AppStateProvider>().deleteCustomAppDataField(id);
   }
 
-  void _exitFieldSelectionMode() {
-    setState(() {
-      _isFieldSelectionMode = false;
-      _selectedFieldIds.clear();
-    });
+  @override
+  String getItemId(dynamic item) {
+    return (item as CustomAppDataField).id;
   }
 
-  void _toggleFieldSelection(String fieldId) {
-    setState(() {
-      if (_selectedFieldIds.contains(fieldId)) {
-        _selectedFieldIds.remove(fieldId);
-      } else {
-        _selectedFieldIds.add(fieldId);
-      }
-    });
+  @override
+  String getItemDisplayName(dynamic item) {
+    return (item as CustomAppDataField).displayName;
   }
 
-  void _selectAllFields() {
-    final appState = context.read<AppStateProvider>();
-    final fields = _filterFields(appState.customAppDataFields);
-
-    setState(() {
-      if (_selectedFieldIds.length == fields.length) {
-        _selectedFieldIds.clear();
-      } else {
-        _selectedFieldIds = fields.map((f) => f.id).toSet();
-      }
-    });
+  // Implement required UI/navigation methods
+  @override
+  void navigateToEditor([dynamic existingItem]) {
+    if (existingItem != null) {
+      _showEditFieldDialog(existingItem as CustomAppDataField);
+    } else {
+      _showAddFieldDialog();
+    }
   }
 
-  void _deleteSelectedFields() {
-    if (_selectedFieldIds.isEmpty) return;
-
-    // Store context reference before async operations
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete ${_selectedFieldIds.length} field${_selectedFieldIds.length == 1 ? '' : 's'}'),
-        content: Text(
-            _selectedFieldIds.length == 1
-                ? 'Are you sure you want to delete this custom field?'
-                : 'Are you sure you want to delete these ${_selectedFieldIds.length} custom fields?'
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => navigator.pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                final appState = context.read<AppStateProvider>();
-
-                for (final fieldId in _selectedFieldIds) {
-                  await appState.deleteCustomAppDataField(fieldId);
-                }
-
-                _exitFieldSelectionMode();
-                navigator.pop();
-
-                if (mounted) {
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      content: Text('Deleted ${_selectedFieldIds.length} field${_selectedFieldIds.length == 1 ? '' : 's'}'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              } catch (e) {
-                navigator.pop();
-                if (mounted) {
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      content: Text('Error deleting fields: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildManageFieldsTab() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool isSmallScreen = constraints.maxWidth < 600;
-        final bool isVerySmall = constraints.maxWidth < 400;
-
-        return Consumer<AppStateProvider>(
-          builder: (context, appState, child) {
-            final allFields = appState.customAppDataFields;
-            final filteredFields = _filterFields(allFields);
-            final groupedFields = _groupFieldsByCategory(filteredFields);
-
-            // BUILD CHIPS ONCE, not in ListView.builder
-            final filterChips = _buildFilterChips(appState);
-
-            return Column(
-              children: [
-                // Compact Search and Filter Bar
-                Container(
-                  padding: EdgeInsets.all(isVerySmall ? 8 : 12),
-                  color: Colors.white,
-                  child: Column(
-                    children: [
-                      // Compact Search Bar
-                      TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Search fields...',
-                          hintStyle: TextStyle(fontSize: isVerySmall ? 14 : 16),
-                          prefixIcon: Icon(Icons.search, size: isVerySmall ? 18 : 20),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: isVerySmall ? 8 : 12,
-                              vertical: isVerySmall ? 6 : 8
-                          ),
-                          isDense: true,
-                        ),
-                        style: TextStyle(fontSize: isVerySmall ? 14 : 16),
-                        onChanged: (value) {
-                          if (mounted) {
-                            setState(() => _searchQuery = value);
-                          }
-                        },
-                      ),
-                      SizedBox(height: isVerySmall ? 8 : 12),
-
-                      // FIXED FILTER CHIPS
-                      Row(
-                        children: [
-                          // Horizontal scrolling filter
-                          Expanded(
-                            child: SizedBox(
-                              height: isVerySmall ? 32 : 36,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: filterChips.length,  // Use cached chips
-                                itemBuilder: (context, index) {
-                                  final chip = filterChips[index];  // Use cached chips
-                                  final isSelected = _selectedCategory == chip['key'];
-
-                                  return Container(
-                                    margin: EdgeInsets.only(
-                                      left: index == 0 ? 8 : 0,
-                                      right: 8,
-                                    ),
-                                    child: FilterChip(
-                                      label: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            chip['icon'] as IconData,
-                                            size: 14,
-                                            color: isSelected ? Colors.white : Colors.grey[600],
-                                          ),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            chip['name'] as String,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: isSelected ? Colors.white : Colors.grey[700],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      selected: isSelected,
-                                      selectedColor: RufkoTheme.primaryColor,
-                                      onSelected: (selected) {
-                                        setState(() {
-                                          _selectedCategory = selected ? (chip['key'] as String) : 'all';
-                                        });
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-
-                          // Action buttons
-                          if (!_isFieldSelectionMode)
-                            _buildSelectButton(isVerySmall)
-                          else
-                            _buildSelectionActions(filteredFields, isVerySmall),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Selection mode info - more compact for mobile
-                if (_isFieldSelectionMode)
-                  _buildSelectionInfo(filteredFields, isVerySmall),
-
-                // Fields content or empty state
-                Expanded(
-                  child: filteredFields.isEmpty
-                      ? _buildEmptyState(isSmallScreen, isVerySmall)
-                      : _buildFieldsList(groupedFields, isSmallScreen, isVerySmall),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  // REMOVED - using simple inline approach above
-
-  // REMOVED - using inline chip building above
-
-  Widget _buildSelectButton(bool isVerySmall) {
-    return SizedBox(
-      height: isVerySmall ? 32 : 36,
-      child: ElevatedButton.icon(
-        onPressed: () => setState(() => _enterFieldSelectionMode()),
-        icon: Icon(Icons.checklist, size: isVerySmall ? 16 : 18),
-        label: const Text('Select'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: RufkoTheme.primaryColor,
-          foregroundColor: Colors.white,
-          padding: EdgeInsets.symmetric(horizontal: isVerySmall ? 8 : 12),
-          minimumSize: Size.zero,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSelectionActions(List<CustomAppDataField> filteredFields, bool isVerySmall) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Select all/none
-        SizedBox(
-          height: isVerySmall ? 32 : 36,
-          width: isVerySmall ? 32 : 36,
-          child: IconButton(
-            onPressed: _selectAllFields,
-            icon: Icon(
-              _selectedFieldIds.length == filteredFields.length
-                  ? Icons.deselect
-                  : Icons.select_all,
-              size: isVerySmall ? 16 : 18,
-            ),
-            padding: EdgeInsets.all(isVerySmall ? 6 : 8),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.grey[100],
-              foregroundColor: Colors.grey[700],
-            ),
-          ),
-        ),
-
-        SizedBox(width: isVerySmall ? 4 : 6),
-
-        // Delete selected
-        if (_selectedFieldIds.isNotEmpty)
-          SizedBox(
-            height: isVerySmall ? 32 : 36,
-            width: isVerySmall ? 32 : 36,
-            child: IconButton(
-              onPressed: _deleteSelectedFields,
-              icon: Icon(Icons.delete, size: isVerySmall ? 16 : 18),
-              padding: EdgeInsets.all(isVerySmall ? 6 : 8),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.red[50],
-                foregroundColor: Colors.red,
-              ),
-            ),
-          ),
-
-        if (_selectedFieldIds.isNotEmpty) SizedBox(width: isVerySmall ? 4 : 6),
-
-        // Cancel
-        SizedBox(
-          height: isVerySmall ? 32 : 36,
-          width: isVerySmall ? 32 : 36,
-          child: IconButton(
-            onPressed: _exitFieldSelectionMode,
-            icon: Icon(Icons.close, size: isVerySmall ? 16 : 18),
-            padding: EdgeInsets.all(isVerySmall ? 6 : 8),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.grey[200],
-              foregroundColor: Colors.grey[700],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSelectionInfo(List<CustomAppDataField> filteredFields, bool isVerySmall) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: isVerySmall ? 8 : 12),
-      child: Card(
-        color: Colors.blue.shade50,
-        child: Padding(
-          padding: EdgeInsets.all(isVerySmall ? 8 : 10),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline, color: Colors.blue.shade700, size: isVerySmall ? 16 : 18),
-              SizedBox(width: isVerySmall ? 6 : 8),
-              Expanded(
-                child: Text(
-                  _selectedFieldIds.isEmpty
-                      ? 'Tap fields to select'
-                      : '${_selectedFieldIds.length}/${filteredFields.length} selected',
-                  style: TextStyle(
-                    color: Colors.blue.shade800,
-                    fontWeight: FontWeight.w500,
-                    fontSize: isVerySmall ? 12 : 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFieldsList(Map<String, List<CustomAppDataField>> groupedFields, bool isSmallScreen, bool isVerySmall) {
-    return ListView.builder(
-      padding: EdgeInsets.all(isVerySmall ? 8 : 12),
-      itemCount: groupedFields.length,
-      itemBuilder: (context, index) {
-        final category = groupedFields.keys.elementAt(index);
-        final categoryFields = groupedFields[category]!;
-
-        return _buildCategorySection(category, categoryFields, isSmallScreen, isVerySmall);
-      },
-    );
-  }
-
-  Widget _buildCategorySection(String category, List<CustomAppDataField> fields, bool isSmallScreen, bool isVerySmall) {
-    return FutureBuilder<Map<String, List<Map<String, dynamic>>>>(
-      future: context.read<AppStateProvider>().getAllTemplateCategories(),
-      builder: (context, snapshot) {
-        String categoryDisplayName = formatCategoryName(category);
-
-        if (snapshot.hasData) {
-          final allCategories = snapshot.data!;
-          final customFieldCategories = allCategories['custom_fields'] ?? [];
-
-          for (final cat in customFieldCategories) {
-            if (cat['key'] == category) {
-              categoryDisplayName = cat['name'] as String;
-              break;
-            }
-          }
-        }
-
-        return Card(
-          margin: EdgeInsets.only(bottom: isVerySmall ? 8 : 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Compact Category Header
-              Container(
-                padding: EdgeInsets.all(isVerySmall ? 8 : 12),
-                decoration: BoxDecoration(
-                  color: RufkoTheme.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(8),
-                    topRight: Radius.circular(8),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _getCategoryIcon(category),
-                      color: RufkoTheme.primaryColor,
-                      size: isVerySmall ? 16 : 18,
-                    ),
-                    SizedBox(width: isVerySmall ? 6 : 8),
-                    Expanded(
-                      child: Text(
-                        categoryDisplayName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: RufkoTheme.primaryColor,
-                          fontSize: isVerySmall ? 13 : 15,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${fields.length}',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: isVerySmall ? 10 : 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Compact Fields List
-              ...fields.map((field) => _buildCompactFieldTile(field, isSmallScreen, isVerySmall)),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildCompactFieldTile(CustomAppDataField field, bool isSmallScreen, bool isVerySmall) {
-    final isSelected = _selectedFieldIds.contains(field.id);
+  @override
+  Widget buildItemTile(dynamic item, bool isSelected, bool isSmallScreen, bool isVerySmall) {
+    final field = item as CustomAppDataField;
 
     return InkWell(
-      onTap: _isFieldSelectionMode
-          ? () => _toggleFieldSelection(field.id)
-          : () => _showEditFieldDialog(field),
+      onTap: isSelectionMode
+          ? () => toggleSelection(getItemId(field))
+          : () => navigateToEditor(field),
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: isVerySmall ? 8 : 12,
           vertical: isVerySmall ? 6 : 8,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? RufkoTheme.primaryColor.withValues(alpha: 0.1) : null,
+          color: isSelected ? primaryColor.withValues(alpha: 0.1) : null,
           border: isSelected
-              ? Border.all(color: RufkoTheme.primaryColor, width: 1)
+              ? Border.all(color: primaryColor, width: 1)
               : const Border(bottom: BorderSide(color: Colors.grey, width: 0.2)),
         ),
         child: Row(
@@ -526,7 +132,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: isVerySmall ? 13 : 14,
-                      color: isSelected ? RufkoTheme.primaryColor : null,
+                      color: isSelected ? primaryColor : null,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -541,7 +147,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                           field.fieldName,
                           style: TextStyle(
                             color: isSelected
-                                ? RufkoTheme.primaryColor.withValues(alpha: 0.7)
+                                ? primaryColor.withValues(alpha: 0.7)
                                 : Colors.grey[600],
                             fontSize: isVerySmall ? 10 : 11,
                           ),
@@ -570,7 +176,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? RufkoTheme.primaryColor.withValues(alpha: 0.2)
+                            ? primaryColor.withValues(alpha: 0.2)
                             : Colors.grey[200],
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -590,14 +196,14 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
             ),
 
             // Selection indicator or menu
-            if (_isFieldSelectionMode)
+            if (isSelectionMode)
               Container(
                 width: isVerySmall ? 20 : 24,
                 height: isVerySmall ? 20 : 24,
                 decoration: BoxDecoration(
-                  color: isSelected ? RufkoTheme.primaryColor : Colors.transparent,
+                  color: isSelected ? primaryColor : Colors.transparent,
                   border: Border.all(
-                    color: isSelected ? RufkoTheme.primaryColor : Colors.grey,
+                    color: isSelected ? primaryColor : Colors.grey,
                     width: 2,
                   ),
                   borderRadius: BorderRadius.circular(4),
@@ -643,124 +249,50 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     );
   }
 
-  Widget _buildEmptyState(bool isSmallScreen, bool isVerySmall) {
-    return Center(
-      child: Padding(
-        padding: EdgeInsets.all(isVerySmall ? 16 : 24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.data_object,
-              size: isVerySmall ? 40 : 56,
-              color: Colors.grey[400],
-            ),
-            SizedBox(height: isVerySmall ? 12 : 16),
-            Text(
-              'No Custom Fields',
-              style: TextStyle(
-                fontSize: isVerySmall ? 16 : 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600],
-              ),
-            ),
-            SizedBox(height: isVerySmall ? 6 : 8),
-            Text(
-              'Create fields for your PDF templates',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: isVerySmall ? 13 : 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: isVerySmall ? 16 : 24),
-            ElevatedButton.icon(
-              onPressed: _showAddFieldDialog,
-              icon: Icon(Icons.add, size: isVerySmall ? 16 : 18),
-              label: Text(
-                'Add Field',
-                style: TextStyle(fontSize: isVerySmall ? 13 : 14),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: RufkoTheme.primaryColor,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(
-                  horizontal: isVerySmall ? 16 : 20,
-                  vertical: isVerySmall ? 8 : 12,
-                ),
-              ),
-            ),
-          ],
-        ),
+  @override
+  Widget build(BuildContext context) {
+    // Check if we're embedded in Templates screen (no Scaffold needed)
+    final bool isEmbedded = ModalRoute.of(context)?.settings.name != '/custom_app_data';
+
+    if (isEmbedded) {
+      // Return just the content without Scaffold/AppBar when embedded
+      return Consumer<AppStateProvider>(
+        builder: (context, appState, child) {
+          return buildMainLayout(); // This comes from the mixin!
+        },
+      );
+    }
+
+    // Full screen version with AppBar (when accessed directly)
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text('Custom App Data'),
+        backgroundColor: RufkoTheme.primaryColor,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: () => navigateToEditor(),
+            tooltip: 'Add New Field',
+          ),
+        ],
+      ),
+      body: Consumer<AppStateProvider>(
+        builder: (context, appState, child) {
+          return buildMainLayout(); // This comes from the mixin!
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => navigateToEditor(),
+        backgroundColor: RufkoTheme.primaryColor,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  // Helper Methods
-  List<CustomAppDataField> _filterFields(List<CustomAppDataField> fields) {
-    var filtered = fields;
-
-    if (_selectedCategory != 'all') {
-      filtered = filtered.where((f) => f.category == _selectedCategory).toList();
-    }
-
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((f) =>
-      f.displayName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          f.fieldName.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-    }
-
-    return filtered..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-  }
-
-  Map<String, List<CustomAppDataField>> _groupFieldsByCategory(List<CustomAppDataField> fields) {
-    final grouped = <String, List<CustomAppDataField>>{};
-    for (final field in fields) {
-      grouped.putIfAbsent(field.category, () => []).add(field);
-    }
-    return grouped;
-  }
-
-
-  List<Map<String, dynamic>> _buildFilterChips(AppStateProvider appState) {
-    final chips = <Map<String, dynamic>>[{
-      'key': 'all',
-      'name': 'All Fields',
-      'icon': Icons.view_list
-    }];
-
-    // ONLY load categories from category management system
-    final categories = appState.templateCategories
-        .where((c) => c.templateType == 'custom_fields')
-        .toList();
-
-    for (final cat in categories) {
-      chips.add({
-        'key': cat.key,
-        'name': cat.name,
-        'icon': Icons.folder
-      });
-    }
-
-    // REMOVED: All hardcoded defaults
-    // NO MORE: inspection, company, contact, legal, pricing, custom
-
-    return chips;
-  }
-
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'all': return Icons.view_list;
-      case 'company': return Icons.business;
-      case 'contact': return Icons.contact_phone;
-      case 'legal': return Icons.gavel;
-      case 'pricing': return Icons.attach_money;
-      case 'custom': return Icons.extension;
-      case 'inspection': return Icons.checklist;
-      default: return Icons.folder;
-    }
-  }
-
+  // Field-specific helper methods (these are unique to custom fields)
   Color _getFieldTypeColor(String fieldType) {
     switch (fieldType) {
       case 'text': return Colors.blue;
@@ -790,7 +322,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
   void _handleFieldAction(String action, CustomAppDataField field) {
     switch (action) {
       case 'edit':
-        _showEditFieldDialog(field);
+        navigateToEditor(field);
         break;
       case 'delete':
         _deleteField(field);
@@ -816,7 +348,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
             final allCategories = snapshot.data!;
             final customFieldCategories = allCategories['custom_fields'] ?? [];
 
-            // Build available categories and names - ONLY from category management
             final availableCategories = <String>[];
             final categoryNames = <String, String>{};
 
@@ -826,9 +357,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
               availableCategories.add(categoryKey);
               categoryNames[categoryKey] = categoryName;
             }
-
-            // REMOVED: All hardcoded defaults injection
-            // NO MORE: ['custom', 'inspection', 'company', 'contact', 'legal', 'pricing']
 
             return AddCustomFieldDialog(
               categories: availableCategories,
@@ -851,15 +379,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
           }
         });
       }
-    }).catchError((error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $error'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     });
   }
 
@@ -881,7 +400,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
             final allCategories = snapshot.data!;
             final customFieldCategories = allCategories['custom_fields'] ?? [];
 
-            // Build available categories including current field's category
             final availableCategories = <String>[field.category];
             final categoryNames = <String, String>{
               field.category: formatCategoryName(field.category)
@@ -895,9 +413,6 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                 categoryNames[categoryKey] = categoryName;
               }
             }
-
-            // REMOVED: All hardcoded defaults injection
-            // NO MORE: ['custom', 'inspection', 'company', 'contact', 'legal', 'pricing']
 
             return EditCustomFieldDialog(
               field: field,
@@ -932,20 +447,10 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
           }
         }
       }
-    }).catchError((error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $error'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     });
   }
 
   void _deleteField(CustomAppDataField field) {
-    // Store context reference before async operations
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     showDialog<bool>(
@@ -1009,8 +514,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     ).then((confirmed) async {
       if (confirmed == true && mounted) {
         try {
-          final appState = context.read<AppStateProvider>();
-          await appState.deleteCustomAppDataField(field.id);
+          await deleteItemById(field.id);
 
           if (mounted) {
             scaffoldMessenger.showSnackBar(
@@ -1036,7 +540,8 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
 
   @override
   void dispose() {
-    // Cancel any pending operations
     super.dispose();
   }
+
+
 }

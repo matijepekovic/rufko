@@ -1,4 +1,4 @@
-// lib/screens/category_management_screen.dart
+// lib/screens/category_management_screen.dart - UPDATED VERSION
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -47,23 +47,26 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white70,
               indicatorColor: Colors.white,
-              isScrollable: isPhone,
+              isScrollable: false,
               labelStyle: TextStyle(fontSize: isPhone ? 12 : 14),
+              unselectedLabelStyle: TextStyle(fontSize: isPhone ? 12 : 14),
+              padding: EdgeInsets.zero,
+              indicatorSize: TabBarIndicatorSize.tab,
               tabs: const [
-                Tab(icon: Icon(Icons.picture_as_pdf), text: 'PDF Templates'),
+                Tab(icon: Icon(Icons.picture_as_pdf), text: 'PDF'),
                 Tab(icon: Icon(Icons.sms), text: 'Messages'),
                 Tab(icon: Icon(Icons.email), text: 'Emails'),
-                Tab(icon: Icon(Icons.data_object), text: 'Custom Fields'),
+                Tab(icon: Icon(Icons.data_object), text: 'Fields'),
               ],
             ),
           ),
           body: TabBarView(
             controller: _tabController,
             children: [
-              _buildCategoryTab('PDF Templates', isPhone),
+              _buildCategoryTab('PDF', isPhone),
               _buildCategoryTab('Message Templates', isPhone),
               _buildCategoryTab('Email Templates', isPhone),
-              _buildCategoryTab('Custom Fields', isPhone),
+              _buildCategoryTab('Fields', isPhone),
             ],
           ),
         );
@@ -141,13 +144,13 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
   }
   String _getTemplateTypeKey(String templateType) {
     switch (templateType) {
-      case 'PDF Templates':
+      case 'PDF':
         return 'pdf_templates';
       case 'Message Templates':
         return 'message_templates';
       case 'Email Templates':
         return 'email_templates';
-      case 'Custom Fields':
+      case 'Fields':
         return 'custom_fields';
       default:
         return templateType.toLowerCase().replaceAll(' ', '_');
@@ -232,7 +235,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
       List<Map<String, dynamic>> relevantCategories = [];
 
       // For Custom Fields, ALWAYS add protected "inspection" category first
-      if (templateType == 'Custom Fields') {
+      if (templateType == 'Fields') {
         relevantCategories.add({
           'id': 'protected_inspection',
           'key': 'inspection',
@@ -247,7 +250,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
           .where((cat) => cat.templateType == templateTypeKey)
           .map((cat) {
         // Skip inspection if it already exists from protection above
-        if (templateType == 'Custom Fields' && cat.key == 'inspection') {
+        if (templateType == 'Fields' && cat.key == 'inspection') {
           return null;
         }
 
@@ -276,13 +279,13 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
   int _calculateUsageCount(AppStateProvider appState, String templateType, String categoryKey) {
     try {
       switch (templateType) {
-        case 'PDF Templates':
+        case 'PDF':
           return appState.pdfTemplates.where((t) => t.userCategoryKey == categoryKey).length;
         case 'Message Templates':
           return appState.messageTemplates.where((t) => t.userCategoryKey == categoryKey).length;
         case 'Email Templates':
           return appState.emailTemplates.where((t) => t.userCategoryKey == categoryKey).length;
-        case 'Custom Fields':
+        case 'Fields':
           return appState.customAppDataFields.where((f) => f.category == categoryKey).length;
         default:
           return 0;
@@ -329,20 +332,20 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
 
   Color _getCategoryColor(String templateType) {
     switch (templateType) {
-      case 'PDF Templates': return RufkoTheme.primaryColor;
+      case 'PDF': return RufkoTheme.primaryColor;
       case 'Message Templates': return Colors.green;
       case 'Email Templates': return Colors.orange;
-      case 'Custom Fields': return Colors.purple;
+      case 'Fields': return Colors.purple;
       default: return Colors.grey;
     }
   }
 
   IconData _getCategoryIcon(String templateType) {
     switch (templateType) {
-      case 'PDF Templates': return Icons.picture_as_pdf;
+      case 'PDF': return Icons.picture_as_pdf;
       case 'Message Templates': return Icons.sms;
       case 'Email Templates': return Icons.email;
-      case 'Custom Fields': return Icons.data_object;
+      case 'Fields': return Icons.data_object;
       default: return Icons.category;
     }
   }
@@ -643,4 +646,5 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
         );
       }
     }
-  }}
+  }
+}
