@@ -31,39 +31,47 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Category Management'),
-        backgroundColor: RufkoTheme.primaryColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-          tabs: const [
-            Tab(icon: Icon(Icons.picture_as_pdf), text: 'PDF Templates'),
-            Tab(icon: Icon(Icons.sms), text: 'Messages'),
-            Tab(icon: Icon(Icons.email), text: 'Emails'),
-            Tab(icon: Icon(Icons.data_object), text: 'Custom Fields'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildCategoryTab('PDF Templates'),
-          _buildCategoryTab('Message Templates'),
-          _buildCategoryTab('Email Templates'),
-          _buildCategoryTab('Custom Fields'),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isPhone = constraints.maxWidth < 600;
+
+        return Scaffold(
+          backgroundColor: Colors.grey[50],
+          appBar: AppBar(
+            title: const Text('Category Management'),
+            backgroundColor: RufkoTheme.primaryColor,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            bottom: TabBar(
+              controller: _tabController,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: Colors.white,
+              isScrollable: isPhone,
+              labelStyle: TextStyle(fontSize: isPhone ? 12 : 14),
+              tabs: const [
+                Tab(icon: Icon(Icons.picture_as_pdf), text: 'PDF Templates'),
+                Tab(icon: Icon(Icons.sms), text: 'Messages'),
+                Tab(icon: Icon(Icons.email), text: 'Emails'),
+                Tab(icon: Icon(Icons.data_object), text: 'Custom Fields'),
+              ],
+            ),
+          ),
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildCategoryTab('PDF Templates', isPhone),
+              _buildCategoryTab('Message Templates', isPhone),
+              _buildCategoryTab('Email Templates', isPhone),
+              _buildCategoryTab('Custom Fields', isPhone),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildCategoryTab(String templateType) {
+  Widget _buildCategoryTab(String templateType, bool isPhone) {
     return Consumer<AppStateProvider>(
       builder: (context, appState, child) {
         // Get categories synchronously from the already-loaded data
@@ -77,23 +85,38 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
               color: Colors.white,
               child: Row(
                 children: [
-                  Icon(Icons.category, color: RufkoTheme.primaryColor),
+                  Icon(
+                    Icons.category,
+                    color: RufkoTheme.primaryColor,
+                    size: isPhone ? 20 : 24,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       '$templateType Categories',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: isPhone ? 16 : 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddCategoryDialog(templateType),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add Category'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: RufkoTheme.primaryColor,
-                      foregroundColor: Colors.white,
+                  if (isPhone)
+                    IconButton(
+                      onPressed: () => _showAddCategoryDialog(templateType),
+                      icon: const Icon(Icons.add),
+                      color: RufkoTheme.primaryColor,
+                      tooltip: 'Add Category',
+                    )
+                  else
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddCategoryDialog(templateType),
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add Category'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: RufkoTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
