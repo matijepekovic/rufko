@@ -8,6 +8,7 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 
 import '../models/pdf_template.dart';
+import '../services/template_service.dart';
 import '../providers/app_state_provider.dart';
 import 'pdf_preview_screen.dart';
 import '../theme/rufko_theme.dart';
@@ -744,12 +745,12 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
           return;
         }
 
-        final template =
-            await appState.createPDFTemplateFromFile(filePath, templateName.trim());
+        final template = await TemplateService.instance.createTemplateFromPDF(filePath, templateName.trim());
         _setLoading(false);
 
         if (!mounted) return;
         if (template != null) {
+          await appState.addExistingPDFTemplateToList(template);
 
           setState(() {
             _currentTemplate = template;
@@ -829,12 +830,10 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   void _previewTemplate() async {
     if (_currentTemplate == null) return;
     _setLoading(true, 'Generating preview...');
-    final appState = context.read<AppStateProvider>();
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
-      final previewPath =
-          await appState.generateTemplatePreview(_currentTemplate!);
+      final previewPath = await TemplateService.instance.generateTemplatePreview(_currentTemplate!);
       _setLoading(false);
 
       if (!mounted) return;

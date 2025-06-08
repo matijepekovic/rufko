@@ -10,6 +10,7 @@ import '../models/simplified_quote.dart';
 import '../models/quote.dart';
 import '../providers/app_state_provider.dart';
 import 'simplified_quote_detail_screen.dart';
+import '../services/tax_service.dart';
 import '../models/quote_extras.dart'; // NEW: For PermitItem and CustomLineItem
 import 'package:rufko/screens/inspection_viewer_screen.dart';
 import '../theme/rufko_theme.dart';
@@ -2062,7 +2063,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     debugPrint('   City: ${customer.city}');
 
     // Try to get tax rate from local database
-    final detectedRate = appState.detectTaxRate(
+    final detectedRate = TaxService.getTaxRateByAddress(
       city: customer.city,
       stateAbbreviation: customer.stateAbbreviation,
       zipCode: customer.zipCode,
@@ -2222,9 +2223,9 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
               // Save to database
               if (customer.zipCode?.isNotEmpty == true) {
-                await appState.saveZipCodeTaxRate(customer.zipCode!, rate);
+                await TaxService.setZipCodeRate(customer.zipCode!, rate);
               } else if (customer.stateAbbreviation?.isNotEmpty == true) {
-                await appState.saveStateTaxRate(customer.stateAbbreviation!, rate);
+                await TaxService.setStateRate(customer.stateAbbreviation!, rate);
               }
 
               // Set for current quote

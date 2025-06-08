@@ -14,8 +14,6 @@ import '../models/custom_app_data.dart';
 import '../services/database_service.dart';
 import '../services/pdf_service.dart';
 import '../services/template_service.dart';
-import '../services/file_service.dart';
-import '../services/tax_service.dart';
 import '../models/message_template.dart';
 import '../models/email_template.dart';
 import '../models/template_category.dart';
@@ -1275,30 +1273,6 @@ class AppStateProvider extends ChangeNotifier {
     return invalidTemplates;
   }
 
-  Future<PDFTemplate?> createPDFTemplateFromFile(
-      String pdfPath, String templateName) async {
-    try {
-      setLoading(true, 'Processing PDF & Detecting Fields...');
-      final template =
-          await TemplateService.instance.createTemplateFromPDF(pdfPath, templateName);
-      if (template != null) {
-        await addExistingPDFTemplateToList(template);
-      }
-      return template;
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  Future<String> generateTemplatePreview(PDFTemplate template) async {
-    try {
-      setLoading(true, 'Generating preview...');
-      return await TemplateService.instance.generateTemplatePreview(template);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   Future<void> addExistingPDFTemplateToList(PDFTemplate template) async {
     try {
       final existingIndex = _pdfTemplates.indexWhere((t) => t.id == template.id);
@@ -1819,70 +1793,6 @@ class AppStateProvider extends ChangeNotifier {
   Future<int> getCategoryUsageCount(String templateType, String categoryKey) async {
     return await _db.getCategoryUsageCount(templateType, categoryKey);
   }
-
-  // --- Data Management ---
-  Future<String> exportAllDataToFile() async {
-    try {
-      setLoading(true, 'Exporting data...');
-      final data = await _db.exportAllData();
-      final filePath = await FileService.instance.saveExportedData(data);
-      return filePath;
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  Future<Map<String, dynamic>> pickBackupData() async {
-    return await FileService.instance.pickAndReadBackupFile();
-  }
-
-  Future<String?> pickAndSaveCompanyLogo(AppSettings settings) async {
-    final newPath = await FileService.instance.pickAndSaveCompanyLogo();
-    if (newPath != null) {
-      settings.updateCompanyLogo(newPath);
-      await updateAppSettings(settings);
-    }
-    return newPath;
-  }
-
-  Future<void> removeCompanyLogo(AppSettings settings) async {
-    settings.updateCompanyLogo(null);
-    await updateAppSettings(settings);
-  }
-
-  Future<void> importAllDataFromFile(Map<String, dynamic> data) async {
-    try {
-      setLoading(true, 'Importing data...');
-      await _db.importAllData(data);
-      await loadAllData();
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  Future<void> clearAllData() async {
-    await importAllDataFromFile({});
-  }
-
-  // --- Tax Helpers ---
-  double? detectTaxRate({String? city, String? stateAbbreviation, String? zipCode}) {
-    return TaxService.getTaxRateByAddress(
-      city: city,
-      stateAbbreviation: stateAbbreviation,
-      zipCode: zipCode,
-    );
-  }
-
-  Future<void> saveZipCodeTaxRate(String zipCode, double rate) async {
-    await TaxService.setZipCodeRate(zipCode, rate);
-  }
-
-  Future<void> saveStateTaxRate(String stateAbbreviation, double rate) async {
-    await TaxService.setStateRate(stateAbbreviation, rate);
-  }
-
-  bool get isTaxDatabaseAvailable => TaxService.isDatabaseAvailable;
-  String get taxDatabaseStatus => TaxService.getDatabaseStatus();
   // --- Search Operations ---
   List<Customer> searchCustomers(String query) {
     if (query.isEmpty) return _customers;
