@@ -10,7 +10,6 @@ import '../models/simplified_quote.dart';
 import '../models/quote.dart';
 import '../providers/app_state_provider.dart';
 import 'simplified_quote_detail_screen.dart';
-import '../services/tax_service.dart';
 import '../models/quote_extras.dart'; // NEW: For PermitItem and CustomLineItem
 import 'package:rufko/screens/inspection_viewer_screen.dart';
 import '../theme/rufko_theme.dart';
@@ -2063,7 +2062,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     debugPrint('   City: ${customer.city}');
 
     // Try to get tax rate from local database
-    final detectedRate = TaxService.getTaxRateByAddress(
+    final detectedRate = appState.detectTaxRate(
       city: customer.city,
       stateAbbreviation: customer.stateAbbreviation,
       zipCode: customer.zipCode,
@@ -2175,6 +2174,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
   void _showAddTaxRateDialog() {
     final customer = widget.customer;
+    final appState = context.read<AppStateProvider>();
     final taxRateController = TextEditingController();
 
     showDialog(
@@ -2223,9 +2223,9 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
               // Save to database
               if (customer.zipCode?.isNotEmpty == true) {
-                await TaxService.setZipCodeRate(customer.zipCode!, rate);
+                await appState.saveZipCodeTaxRate(customer.zipCode!, rate);
               } else if (customer.stateAbbreviation?.isNotEmpty == true) {
-                await TaxService.setStateRate(customer.stateAbbreviation!, rate);
+                await appState.saveStateTaxRate(customer.stateAbbreviation!, rate);
               }
 
               // Set for current quote
