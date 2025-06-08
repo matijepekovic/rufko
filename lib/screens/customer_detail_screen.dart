@@ -3584,9 +3584,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   final messenger = ScaffoldMessenger.of(context);
                   final navigator = Navigator.of(context);
 
-                  final shouldDelete = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
+                    final shouldDelete = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
                       title: const Text('Delete Note'),
                       content: const Text('Delete this inspection note?'),
                       actions: [
@@ -3600,12 +3600,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                         ),
                       ],
                     ),
-                  );
+                    );
 
-                  if (shouldDelete == true) {
-                    await context.read<AppStateProvider>().deleteInspectionDocument(existingNote.id);
-                    navigator.pop();
-                    messenger.showSnackBar(
+                    if (!mounted) return;
+
+                    if (shouldDelete == true) {
+                      await context.read<AppStateProvider>().deleteInspectionDocument(existingNote.id);
+                      navigator.pop();
+                      messenger.showSnackBar(
                       const SnackBar(content: Text('Note deleted'), backgroundColor: Colors.red),
                     );
                   }
@@ -3639,6 +3641,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   }
 
   void _showAddInspectionPdfDialog() async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       // Pick PDF file
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -3650,6 +3653,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         final file = File(result.files.single.path!);
         final fileName = result.files.single.name;
         final fileSize = await file.length();
+
+        if (!mounted) return;
 
         // Show dialog to get title
         final titleController = TextEditingController(text: fileName.replaceAll('.pdf', ''));
@@ -3766,7 +3771,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return;
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Error selecting PDF: $e'),
           backgroundColor: Colors.red,
@@ -4086,6 +4092,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           imageQuality: 85,
         );
 
+        if (!mounted) return;
+
         if (image != null) {
           photos.add(File(image.path));
 
@@ -4171,6 +4179,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
     if (selectedCategory == null) return; // User cancelled
 
+    if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _isProcessingMedia = true);
 
@@ -4199,6 +4208,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
             fileSizeBytes: fileSize,
           );
 
+          if (!mounted) return;
           await context.read<AppStateProvider>().addProjectMedia(mediaItem);
           successCount++;
         } catch (e) {
@@ -4370,6 +4380,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       // Calculate file size
       final fileSize = await file.length();
 
+      if (!mounted) return;
+
       // Get file info
       final fileName = path.basename(file.path);
       final fileExtension = path.extension(fileName).toLowerCase();
@@ -4395,6 +4407,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           customerId: widget.customer.id,
         ),
       );
+
+      if (!mounted) return;
 
       if (mediaItem != null) {
         // Add to app state
@@ -4573,6 +4587,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 }
 
                 // Remove from app state
+                if (!mounted) return;
                 await context.read<AppStateProvider>().deleteProjectMedia(mediaItem.id);
 
                 navigator.pop();
