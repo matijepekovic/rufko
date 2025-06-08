@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
 import '../models/simplified_quote.dart';
 import '../models/customer.dart';
 import '../providers/app_state_provider.dart';
@@ -1053,9 +1054,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
           content: Text('Preview generated: ${previewPath.split('/').last}'),
           action: SnackBarAction(
             label: 'Open',
-            onPressed: () {
-              // TODO: Open PDF
-            },
+            onPressed: () => OpenFilex.open(previewPath),
           ),
         ),
       );
