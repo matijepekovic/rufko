@@ -29,7 +29,7 @@ mixin RufkoTheme {
           ),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
         shape: RoundedRectangleBorder(
