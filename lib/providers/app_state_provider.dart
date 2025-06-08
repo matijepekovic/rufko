@@ -69,8 +69,7 @@ class AppStateProvider extends ChangeNotifier {
     setLoading(true, 'Initializing app data...');
     await _loadAppSettings();
     await loadAllData();
-    await initializeDefaultCustomFields();
-    await _ensureInspectionCategoryExists(); // Add this line
+    await _ensureInspectionCategoryExists();
     setLoading(false);
   }
 
@@ -1646,24 +1645,7 @@ class AppStateProvider extends ChangeNotifier {
     return dataMap;
   }
 
-  Future<void> initializeDefaultCustomFields() async {
-    try {
-      // Only add if no custom fields exist
-      if (_customAppDataFields.isEmpty) {
-        final defaultFields = CustomAppDataTemplates.getAllDefaultFields();
 
-        for (final field in defaultFields) {
-          await addCustomAppDataField(field);
-        }
-
-        if (kDebugMode) {
-          debugPrint('✅ Initialized ${defaultFields.length} default custom fields');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error initializing default custom fields: $e');
-    }
-  }
 
   Future<void> addTemplateFields(List<CustomAppDataField> templateFields) async {
     try {

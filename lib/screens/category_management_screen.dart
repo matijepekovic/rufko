@@ -347,67 +347,69 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
     }
   }
 
+
   void _showAddCategoryDialog(String templateType) {
-    final TextEditingController controller = TextEditingController();
+    String categoryName = '';
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Add $templateType Category'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                labelText: 'Category Name',
-                hintText: 'e.g., Contract Templates',
-                prefixIcon: const Icon(Icons.category),
-                border: const OutlineInputBorder(),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: InputDecoration(
+                  labelText: 'Category Name',
+                  hintText: 'e.g., Contract Templates',
+                  prefixIcon: const Icon(Icons.category),
+                  border: const OutlineInputBorder(),
+                ),
+                autofocus: true,
+                onChanged: (value) => categoryName = value,
+                onSubmitted: (value) {
+                  if (value.trim().isNotEmpty) {
+                    Navigator.pop(context);
+                    _addCategory(templateType, value.trim());
+                  }
+                },
               ),
-              autofocus: true,
-              onSubmitted: (value) {
-                if (value.trim().isNotEmpty) {
-                  _addCategory(templateType, value.trim(), controller);
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Category keys will be auto-generated in lowercase with underscores.',
-                      style: TextStyle(fontSize: 12),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Category keys will be auto-generated in lowercase with underscores.',
+                        style: TextStyle(fontSize: 12),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              controller.dispose();
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
-              final newName = controller.text.trim();
-              if (newName.isNotEmpty) {
-                _addCategory(templateType, newName, controller);
+              if (categoryName.trim().isNotEmpty) {
+                Navigator.pop(context);
+                _addCategory(templateType, categoryName.trim());
               }
             },
             style: ElevatedButton.styleFrom(
@@ -421,66 +423,70 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
     );
   }
 
+// REPLACE your _showEditCategoryDialog method ENTIRELY:
+
   void _showEditCategoryDialog(String templateType, String categoryKey, String categoryName) {
-    final TextEditingController controller = TextEditingController(text: categoryName);
+    String newCategoryName = categoryName;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Edit Category'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                labelText: 'Category Name',
-                prefixIcon: const Icon(Icons.edit),
-                border: const OutlineInputBorder(),
+        title: const Text('Edit Category'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Category Name',
+                  prefixIcon: Icon(Icons.edit),
+                  border: OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: categoryName),
+                autofocus: true,
+                onChanged: (value) => newCategoryName = value,
+                onSubmitted: (value) {
+                  if (value.trim().isNotEmpty) {
+                    Navigator.pop(context);
+                    _editCategory(templateType, categoryKey, value.trim());
+                  }
+                },
               ),
-              autofocus: true,
-              onSubmitted: (value) {
-                if (value.trim().isNotEmpty) {
-                  _editCategory(templateType, categoryKey, value.trim(), controller);
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning_amber, color: Colors.orange.shade600, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'Existing templates will automatically use the new category name.',
-                      style: TextStyle(fontSize: 12),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber, color: Colors.orange.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Existing templates will automatically use the new category name.',
+                        style: TextStyle(fontSize: 12),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              controller.dispose();
-              Navigator.pop(context);
-            },
+            onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
-              final newName = controller.text.trim();
-              if (newName.isNotEmpty) {
-                _editCategory(templateType, categoryKey, newName, controller);
+              if (newCategoryName.trim().isNotEmpty) {
+                Navigator.pop(context);
+                _editCategory(templateType, categoryKey, newCategoryName.trim());
               }
             },
             style: ElevatedButton.styleFrom(
@@ -493,6 +499,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
       ),
     );
   }
+
 
   void _showDeleteCategoryDialog(String templateType, String categoryKey, String categoryName) {
     showDialog(
@@ -554,27 +561,16 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
     );
   }
 
-  // Action methods (placeholders for now)
-  // Real action methods with database integration
-  Future<void> _addCategory(String templateType, String categoryName, TextEditingController controller) async {
+  Future<void> _addCategory(String templateType, String categoryName) async {
     try {
-      // Store the context reference before any async operations
       final scaffoldMessenger = ScaffoldMessenger.of(context);
-      final navigator = Navigator.of(context);
-
-      // Get the provider reference before any async operations
       final appState = context.read<AppStateProvider>();
 
-      // Generate category key from name
       final categoryKey = categoryName.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(' ', '_');
-
       final templateTypeKey = _getTemplateTypeKey(templateType);
+
       await appState.addTemplateCategory(templateTypeKey, categoryKey, categoryName);
 
-      controller.dispose();
-      navigator.pop();
-
-      // Use the stored reference instead of accessing context
       scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Added "$categoryName" to $templateType successfully!'),
@@ -582,7 +578,6 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
         ),
       );
     } catch (e) {
-      // Use the stored reference instead of accessing context
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -594,22 +589,14 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
     }
   }
 
-  Future<void> _editCategory(String templateType, String categoryKey, String newName, TextEditingController controller) async {
+  Future<void> _editCategory(String templateType, String categoryKey, String newName) async {
     try {
-      // Store the context reference before any async operations
       final scaffoldMessenger = ScaffoldMessenger.of(context);
-      final navigator = Navigator.of(context);
-
-      // Get the provider reference before any async operations
       final appState = context.read<AppStateProvider>();
 
       final templateTypeKey = _getTemplateTypeKey(templateType);
       await appState.updateTemplateCategory(templateTypeKey, categoryKey, newName);
 
-      controller.dispose();
-      navigator.pop();
-
-      // Use the stored reference instead of accessing context
       scaffoldMessenger.showSnackBar(
         SnackBar(
           content: Text('Updated category to "$newName" successfully!'),

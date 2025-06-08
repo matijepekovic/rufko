@@ -8,7 +8,7 @@ import '../models/pdf_template.dart';
 import '../providers/app_state_provider.dart';
 import 'template_editor_screen.dart';
 import 'pdf_preview_screen.dart';
-import 'custom_app_data_screen.dart';
+import '../widgets/templates/custom_app_data_tab.dart';
 import '../theme/rufko_theme.dart';
 import 'message_template_editor_screen.dart';
 import 'email_template_editor_screen.dart';

@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/custom_app_data.dart';
-import '../providers/app_state_provider.dart';
-import '../widgets/add_custom_field_dialog.dart';
-import '../widgets/edit_custom_field_dialog.dart';
-import '../utils/common_utils.dart';
-import '../theme/rufko_theme.dart';
+import '../../models/custom_app_data.dart';
+import '../../providers/app_state_provider.dart';
+import '../add_custom_field_dialog.dart';
+import '../edit_custom_field_dialog.dart';
+import '../../utils/common_utils.dart';
+import '../../theme/rufko_theme.dart';
 
 class CustomAppDataScreen extends StatefulWidget {
   const CustomAppDataScreen({super.key});
@@ -167,6 +167,9 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
             final filteredFields = _filterFields(allFields);
             final groupedFields = _groupFieldsByCategory(filteredFields);
 
+            // BUILD CHIPS ONCE, not in ListView.builder
+            final filterChips = _buildFilterChips(appState);
+
             return Column(
               children: [
                 // Compact Search and Filter Bar
@@ -199,7 +202,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                       ),
                       SizedBox(height: isVerySmall ? 8 : 12),
 
-                      // SIMPLE HORIZONTAL SCROLLING - THIS WILL WORK
+                      // FIXED FILTER CHIPS
                       Row(
                         children: [
                           // Horizontal scrolling filter
@@ -208,9 +211,9 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
                               height: isVerySmall ? 32 : 36,
                               child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
-                                itemCount: _buildFilterChips(appState).length,
+                                itemCount: filterChips.length,  // Use cached chips
                                 itemBuilder: (context, index) {
-                                  final chip = _buildFilterChips(appState)[index];
+                                  final chip = filterChips[index];  // Use cached chips
                                   final isSelected = _selectedCategory == chip['key'];
 
                                   return Container(
@@ -287,14 +290,15 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
   Widget _buildSelectButton(bool isVerySmall) {
     return SizedBox(
       height: isVerySmall ? 32 : 36,
-      width: isVerySmall ? 32 : 36,
-      child: IconButton(
-        onPressed: _enterFieldSelectionMode,
+      child: ElevatedButton.icon(
+        onPressed: () => setState(() => _enterFieldSelectionMode()),
         icon: Icon(Icons.checklist, size: isVerySmall ? 16 : 18),
-        padding: EdgeInsets.all(isVerySmall ? 6 : 8),
-        style: IconButton.styleFrom(
+        label: const Text('Select'),
+        style: ElevatedButton.styleFrom(
           backgroundColor: RufkoTheme.primaryColor,
           foregroundColor: Colors.white,
+          padding: EdgeInsets.symmetric(horizontal: isVerySmall ? 8 : 12),
+          minimumSize: Size.zero,
         ),
       ),
     );
@@ -718,6 +722,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
     return grouped;
   }
 
+
   List<Map<String, dynamic>> _buildFilterChips(AppStateProvider appState) {
     final chips = <Map<String, dynamic>>[{
       'key': 'all',
@@ -725,27 +730,21 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
       'icon': Icons.view_list
     }];
 
+    // ONLY load categories from category management system
     final categories = appState.templateCategories
         .where((c) => c.templateType == 'custom_fields')
         .toList();
+
     for (final cat in categories) {
-      chips.add({'key': cat.key, 'name': cat.name, 'icon': Icons.extension});
+      chips.add({
+        'key': cat.key,
+        'name': cat.name,
+        'icon': Icons.folder
+      });
     }
 
-    const defaults = [
-      {'key': 'inspection', 'name': 'Inspection Fields', 'icon': Icons.checklist},
-      {'key': 'company', 'name': 'Company Info', 'icon': Icons.business},
-      {'key': 'contact', 'name': 'Contact Info', 'icon': Icons.contact_phone},
-      {'key': 'legal', 'name': 'Legal', 'icon': Icons.gavel},
-      {'key': 'pricing', 'name': 'Pricing', 'icon': Icons.attach_money},
-      {'key': 'custom', 'name': 'Custom Fields', 'icon': Icons.extension},
-    ];
-
-    for (final d in defaults) {
-      if (!chips.any((c) => c['key'] == d['key'])) {
-        chips.add(d);
-      }
-    }
+    // REMOVED: All hardcoded defaults
+    // NO MORE: inspection, company, contact, legal, pricing, custom
 
     return chips;
   }
@@ -818,18 +817,19 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
             final allCategories = snapshot.data!;
             final customFieldCategories = allCategories['custom_fields'] ?? [];
 
-            // Build available categories and names
-            final availableCategories = <String>['custom'];
-            final categoryNames = <String, String>{'custom': 'Custom Fields'};
+            // Build available categories and names - ONLY from category management
+            final availableCategories = <String>[];
+            final categoryNames = <String, String>{};
 
             for (final category in customFieldCategories) {
               final categoryKey = category['key'] as String;
               final categoryName = category['name'] as String;
-              if (!availableCategories.contains(categoryKey)) {
-                availableCategories.add(categoryKey);
-                categoryNames[categoryKey] = categoryName;
-              }
+              availableCategories.add(categoryKey);
+              categoryNames[categoryKey] = categoryName;
             }
+
+            // REMOVED: All hardcoded defaults injection
+            // NO MORE: ['custom', 'inspection', 'company', 'contact', 'legal', 'pricing']
 
             return AddCustomFieldDialog(
               categories: availableCategories,
@@ -897,16 +897,8 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> {
               }
             }
 
-            // Add defaults if missing
-            final defaults = ['custom', 'inspection', 'company', 'contact', 'legal', 'pricing'];
-            for (final defaultCat in defaults) {
-              if (!availableCategories.contains(defaultCat)) {
-                availableCategories.add(defaultCat);
-                categoryNames[defaultCat] = defaultCat == 'inspection'
-                    ? 'Inspection Fields'
-                    : formatCategoryName(defaultCat);
-              }
-            }
+            // REMOVED: All hardcoded defaults injection
+            // NO MORE: ['custom', 'inspection', 'company', 'contact', 'legal', 'pricing']
 
             return EditCustomFieldDialog(
               field: field,
