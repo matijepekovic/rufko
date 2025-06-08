@@ -18,6 +18,7 @@ class PdfTemplatesTab extends StatefulWidget {
 class _PdfTemplatesTabState extends State<PdfTemplatesTab> {
   String _searchQuery = '';
   String _selectedCategoryKey = 'all';
+  Map<String, String> _categoryNames = {};
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +85,13 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> {
                         return const SizedBox(height: 40);
                       }
                       final cats = snapshot.data!['pdf_templates'] ?? [];
+                      if (_categoryNames.length != cats.length) {
+                        setState(() {
+                          _categoryNames = {
+                            for (final c in cats) c['key'] as String: c['name'] as String
+                          };
+                        });
+                      }
                       return Row(
                         children: [
                           _buildFilterChip(
@@ -210,6 +218,32 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> {
                   Text(dateFormat.format(template.updatedAt),
                       style:
                           TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  PopupMenuButton<String>(
+                    onSelected: (action) =>
+                        _handleTemplateAction(action, template),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Text('Edit'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'preview',
+                        child: Text('Preview'),
+                      ),
+                      PopupMenuItem(
+                        value: 'toggle',
+                        child: Text(template.isActive ? 'Deactivate' : 'Activate'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'duplicate',
+                        child: Text('Duplicate'),
+                      ),
+                      const PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Delete', style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               if (template.description.isNotEmpty) ...[
@@ -248,7 +282,7 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> {
 
   String _getCategoryDisplayName(String key) {
     if (key == 'uncategorized') return 'Uncategorized Templates';
-    return '$key Templates';
+    return _categoryNames[key] ?? '$key Templates';
   }
 
   Color _getTypeColor(String key) {
@@ -264,6 +298,74 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> {
       context,
       MaterialPageRoute(
         builder: (context) => TemplateEditorScreen(existingTemplate: template),
+      ),
+    );
+  }
+
+  void _handleTemplateAction(String action, PDFTemplate template) {
+    switch (action) {
+      case 'edit':
+        _editTemplate(template);
+        break;
+      case 'preview':
+        _previewTemplate(template);
+        break;
+      case 'toggle':
+        context.read<AppStateProvider>().togglePDFTemplateActive(template.id);
+        break;
+      case 'duplicate':
+        _duplicateTemplate(template);
+        break;
+      case 'delete':
+        _showDeleteConfirmation(template);
+        break;
+    }
+  }
+
+  void _duplicateTemplate(PDFTemplate template) async {
+    final duplicated = template.clone();
+    duplicated.templateName = '${template.templateName} (Copy)';
+    await context.read<AppStateProvider>().addPDFTemplate(duplicated);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Template duplicated successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  void _showDeleteConfirmation(PDFTemplate template) {
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Template'),
+        content: Text(
+            'Are you sure you want to delete "${template.templateName}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => navigator.pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              navigator.pop();
+              await context
+                  .read<AppStateProvider>()
+                  .deletePDFTemplate(template.id);
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Template deleted'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
