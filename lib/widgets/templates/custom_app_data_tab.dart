@@ -267,7 +267,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> with Template
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Custom App Data'),
+        title: const Text('Fields'),
         backgroundColor: RufkoTheme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,

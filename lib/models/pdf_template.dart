@@ -312,7 +312,7 @@ class PDFTemplate extends HiveObject {
         'contact': 'Contact Information', // Will create new if doesn't exist
         'legal': 'Legal Information',
         'pricing': 'Pricing Information',
-        'custom': 'Custom App Data',
+        'custom': 'Fields',
       };
 
       // Process each custom field category

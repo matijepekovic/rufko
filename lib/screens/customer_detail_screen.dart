@@ -3071,7 +3071,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Go to Templates → Custom App Data Fields\nand create fields with "Inspection" category',
+                  'Go to Templates → Fields\nand create fields with "Inspection" category',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey[500],
                   ),
