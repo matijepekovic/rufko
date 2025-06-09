@@ -15,53 +15,82 @@ mixin ResponsiveTextMixin on ResponsiveBreakpointsMixin {
   }
 
   // Responsive font size
-  double responsiveFontSize(BuildContext context, double baseSize, {bool respectTextScale = true}) {
+  double responsiveFontSize(
+    BuildContext context,
+    double baseSize, {
+    bool respectTextScale = true,
+    double? min,
+    double? max,
+  }) {
     final scale = _baseFontScale(context);
-    final textScale = respectTextScale ? MediaQuery.of(context).textScaleFactor : 1.0;
-    return baseSize * scale * textScale;
+    final textScale =
+        respectTextScale ? MediaQuery.of(context).textScaleFactor : 1.0;
+    double size = baseSize * scale * textScale;
+    if (min != null || max != null) {
+      size = size.clamp(min ?? size, max ?? size);
+    }
+    return size;
   }
 
   // Text style helpers
-  TextStyle responsiveTextStyle(BuildContext context, TextStyle baseStyle, {bool respectTextScale = true}) {
+  TextStyle responsiveTextStyle(
+    BuildContext context,
+    TextStyle baseStyle, {
+    bool respectTextScale = true,
+    double? min,
+    double? max,
+  }) {
     final fontSize = baseStyle.fontSize;
     if (fontSize == null) return baseStyle;
 
     return baseStyle.copyWith(
-      fontSize: responsiveFontSize(context, fontSize, respectTextScale: respectTextScale),
+      fontSize: responsiveFontSize(
+        context,
+        fontSize,
+        respectTextScale: respectTextScale,
+        min: min,
+        max: max,
+      ),
       height: baseStyle.height, // Preserve line height ratio
     );
   }
 
   // Common text styles
   TextStyle headlineLarge(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-  );
+        context,
+        const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+        min: 14,
+      );
 
   TextStyle headlineMedium(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-  );
+        context,
+        const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        min: 14,
+      );
 
   TextStyle headlineSmall(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-  );
+        context,
+        const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        min: 14,
+      );
 
   TextStyle titleLarge(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
-  );
+        context,
+        const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+        min: 14,
+      );
 
   TextStyle titleMedium(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-  );
+        context,
+        const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        min: 14,
+      );
 
   TextStyle titleSmall(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-  );
+        context,
+        const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        min: 14,
+      );
 
   TextStyle bodyLarge(BuildContext context) => responsiveTextStyle(
     context,
