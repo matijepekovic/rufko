@@ -6,10 +6,14 @@ import 'responsive_breakpoints_mixin.dart';
 mixin ResponsiveSpacingMixin on ResponsiveBreakpointsMixin {
   // Base spacing unit
   double baseSpacing(BuildContext context) {
-    if (isXS(context)) return 4.0;
-    if (isSM(context)) return 6.0;
-    if (isMD(context)) return 8.0;
-    return 10.0;
+    switch (windowSizeClass(context)) {
+      case WindowSizeClass.compact:
+        return 4.0;
+      case WindowSizeClass.medium:
+        return 6.0;
+      case WindowSizeClass.expanded:
+        return 8.0;
+    }
   }
 
   // Responsive spacing multipliers
@@ -44,17 +48,16 @@ mixin ResponsiveSpacingMixin on ResponsiveBreakpointsMixin {
 
   // Screen edge padding
   EdgeInsets screenPadding(BuildContext context) {
-    if (isXS(context)) return const EdgeInsets.all(8);
-    if (isSM(context)) return const EdgeInsets.all(16);
-    if (isMD(context)) return const EdgeInsets.all(24);
-    if (isLG(context)) return const EdgeInsets.all(32);
+    if (isCompact(context)) return const EdgeInsets.all(8);
+    if (isMedium(context)) return const EdgeInsets.all(16);
+    if (isExpanded(context)) return const EdgeInsets.all(32);
     return const EdgeInsets.all(48);
   }
 
   // Card padding
   EdgeInsets cardPadding(BuildContext context) {
-    if (isXS(context)) return const EdgeInsets.all(12);
-    if (isSM(context)) return const EdgeInsets.all(16);
+    if (isCompact(context)) return const EdgeInsets.all(12);
+    if (isMedium(context)) return const EdgeInsets.all(16);
     return const EdgeInsets.all(20);
   }
 }
