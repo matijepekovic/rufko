@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
+
+import '../../services/file_service.dart';
 
 import '../../models/product.dart';
 import '../../providers/app_state_provider.dart';
@@ -25,6 +28,8 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
   String _selectedUnit = 'each';
   bool _isActive = true;
   bool _isDiscountable = true;
+
+  String? _imagePath;
 
   // 3-Tier System State
   ProductPricingType _pricingType = ProductPricingType.simple;
@@ -174,6 +179,35 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: CircleAvatar(
+                        radius: isPhone ? 40 : 50,
+                        backgroundImage:
+                            _imagePath != null ? FileImage(File(_imagePath!)) : null,
+                        child: _imagePath == null
+                            ? Icon(Icons.camera_alt,
+                                size: isPhone ? 24 : 32,
+                                color: Colors.grey)
+                            : null,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _pickImage,
+                      child: Text(_imagePath == null ? 'Add Photo' : 'Change Photo'),
+                    ),
+                    if (_imagePath != null)
+                      TextButton(
+                        onPressed: () => setState(() => _imagePath = null),
+                        child: const Text('Remove Photo'),
+                      ),
+                  ],
+                ),
+              ),
+              SizedBox(height: isPhone ? 12 : 24),
               _buildModernTextField(
                 controller: _nameController,
                 label: 'Product Name',
@@ -181,7 +215,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                 isPhone: isPhone,
                 validator: (v) => v == null || v.isEmpty ? 'Product name is required' : null,
               ),
-              SizedBox(height: isPhone ? 16 : 20),
+              SizedBox(height: isPhone ? 10 : 20),
               _buildModernTextField(
                 controller: _descriptionController,
                 label: 'Description',
@@ -190,7 +224,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                 maxLines: isPhone ? 2 : 3,
                 hint: 'Describe what this product is and its key features...',
               ),
-              SizedBox(height: isPhone ? 16 : 20),
+              SizedBox(height: isPhone ? 10 : 20),
               _buildModernTextField(
                 controller: _basePriceController,
                 label: 'Base Unit Price',
@@ -199,7 +233,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                 keyboardType: TextInputType.number,
                 validator: (v) => v == null || (double.tryParse(v) == null || double.parse(v) < 0) ? 'Enter a valid price' : null,
               ),
-              SizedBox(height: isPhone ? 16 : 20),
+              SizedBox(height: isPhone ? 10 : 20),
               Row(
                 children: [
                   Expanded(
@@ -225,7 +259,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                   ),
                 ],
               ),
-              SizedBox(height: isPhone ? 24 : 32),
+              SizedBox(height: isPhone ? 14 : 28),
               Text(
                 'Product Settings',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -234,7 +268,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                   fontSize: isPhone ? 16 : 18,
                 ),
               ),
-              SizedBox(height: isPhone ? 16 : 20),
+              SizedBox(height: isPhone ? 12 : 20),
               _buildModernSwitch(
                 title: 'Active Product',
                 subtitle: 'Available for use in quotes and estimates',
@@ -243,7 +277,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                 icon: Icons.visibility,
                 isPhone: isPhone,
               ),
-              SizedBox(height: isPhone ? 16 : 20),
+              SizedBox(height: isPhone ? 12 : 20),
               _buildModernSwitch(
                 title: 'Discountable Product',
                 subtitle: 'Can be affected by quote discounts and promotions',
@@ -280,7 +314,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
               fontSize: isPhone ? 14 : 16,
             ),
           ),
-          SizedBox(height: isPhone ? 24 : 32),
+          SizedBox(height: isPhone ? 14 : 32),
 
           _buildProductTypeCard(
             type: ProductPricingType.mainDifferentiator,
@@ -291,7 +325,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
             example: 'Builder (\$120) | Homeowner (\$180) | Platinum (\$240)',
             isPhone: isPhone,
           ),
-          SizedBox(height: isPhone ? 16 : 20),
+          SizedBox(height: isPhone ? 10 : 20),
 
           _buildProductTypeCard(
             type: ProductPricingType.subLeveled,
@@ -302,7 +336,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
             example: 'Basic Gutters (\$8) OR Mesh Gutters (\$18)',
             isPhone: isPhone,
           ),
-          SizedBox(height: isPhone ? 16 : 20),
+          SizedBox(height: isPhone ? 12 : 20),
 
           _buildProductTypeCard(
             type: ProductPricingType.simple,
@@ -325,9 +359,9 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(height: isPhone ? 60 : 80),
+            SizedBox(height: isPhone ? 40 : 80),
             Icon(Icons.check_circle, size: isPhone ? 64 : 80, color: Colors.green.shade400),
-            SizedBox(height: isPhone ? 16 : 24),
+            SizedBox(height: isPhone ? 12 : 24),
             Text(
               'Simple Product Selected',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -393,7 +427,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
               ),
             ],
           ),
-          SizedBox(height: isPhone ? 16 : 20),
+            SizedBox(height: isPhone ? 12 : 20),
           Container(
             padding: EdgeInsets.all(isPhone ? 12 : 16),
             decoration: BoxDecoration(
@@ -419,7 +453,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
               ],
             ),
           ),
-          SizedBox(height: isPhone ? 24 : 32),
+            SizedBox(height: isPhone ? 18 : 32),
 
           // Level configuration cards
           ...List.generate(_currentLevelKeys.length, (index) {
@@ -514,7 +548,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                           style: TextStyle(fontSize: isPhone ? 14 : 16),
                           validator: (v) => v == null || v.isEmpty ? 'Name is required' : null,
                         ),
-                        SizedBox(height: isPhone ? 16 : 20),
+                        SizedBox(height: isPhone ? 12 : 20),
 
                         // Level description
                         TextFormField(
@@ -535,7 +569,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                           style: TextStyle(fontSize: isPhone ? 14 : 16),
                           maxLines: 2,
                         ),
-                        SizedBox(height: isPhone ? 16 : 20),
+                        SizedBox(height: isPhone ? 12 : 20),
 
                         // Level price
                         TextFormField(
@@ -577,7 +611,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
           }),
 
           // Add/Remove level controls
-          SizedBox(height: isPhone ? 16 : 20),
+          SizedBox(height: isPhone ? 12 : 20),
           _buildLevelControls(isPhone),
         ],
       ),
@@ -1069,6 +1103,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
       _isDiscountable = p.isDiscountable;
       _pricingType = p.pricingType;
       _isMainDifferentiator = p.isMainDifferentiator;
+      _imagePath = p.imagePath;
 
       _currentLevelKeys = p.enhancedLevelPrices.map((level) => level.levelId).toList();
       if (_currentLevelKeys.isEmpty && _pricingType != ProductPricingType.simple) {
@@ -1121,6 +1156,14 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
     }
   }
 
+  Future<void> _pickImage() async {
+    final path = await FileService.instance.pickAndSaveProductImage();
+    if (!mounted) return;
+    if (path != null) {
+      setState(() => _imagePath = path);
+    }
+  }
+
   void _saveProduct() {
     if (!_formKey.currentState!.validate()) {
       if (_nameController.text.isEmpty || _basePriceController.text.isEmpty) {
@@ -1166,6 +1209,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
         isDiscountable: _isDiscountable,
         isMainDifferentiator: _isMainDifferentiator,
         enableLevelPricing: _pricingType != ProductPricingType.simple,
+        imagePath: _imagePath,
       );
 
       widget.product!.enhancedLevelPrices.clear();
@@ -1190,6 +1234,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
         enableLevelPricing: _pricingType != ProductPricingType.simple,
         pricingType: _pricingType,
         enhancedLevelPrices: enhancedLevelPrices,
+        imagePath: _imagePath,
       );
 
       appState.addProduct(newProduct);

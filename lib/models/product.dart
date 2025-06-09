@@ -117,6 +117,10 @@ class Product extends HiveObject {
   @HiveField(18)
   ProductPricingType pricingType; // mainDifferentiator,  subLeveled, simple
 
+  // Optional path to a product image
+  @HiveField(19)
+  String? imagePath;
+
   Product({
     String? id,
     required this.name,
@@ -137,6 +141,7 @@ class Product extends HiveObject {
     ProductPricingType? pricingType, // NEW
     DateTime? createdAt,
     DateTime? updatedAt,
+    this.imagePath,
   })  : levelPrices = levelPrices ?? {},
         enhancedLevelPrices = enhancedLevelPrices ?? [],
         pricingType = pricingType ?? ProductPricingType.simple, // NEW
@@ -237,6 +242,7 @@ class Product extends HiveObject {
     String? notes,
     bool? isMainDifferentiator, // NEW
     bool? enableLevelPricing, // NEW
+    String? imagePath,
   }) {
     if (name != null) this.name = name;
     if (description != null) this.description = description;
@@ -253,6 +259,7 @@ class Product extends HiveObject {
     if (isDiscountable != null) this.isDiscountable = isDiscountable;
     if (maxLevels != null) this.maxLevels = maxLevels;
     if (notes != null) this.notes = notes;
+    if (imagePath != null) this.imagePath = imagePath;
 
     // NEW: Update 3-tier system flags
     if (isMainDifferentiator != null) this.isMainDifferentiator = isMainDifferentiator;
@@ -297,6 +304,7 @@ class Product extends HiveObject {
       'pricingType': pricingType.toString(), // NEW
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      'imagePath': imagePath,
     };
   }
 
@@ -326,6 +334,7 @@ class Product extends HiveObject {
       ), // NEW
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
+      imagePath: map['imagePath'],
     );
   }
 
