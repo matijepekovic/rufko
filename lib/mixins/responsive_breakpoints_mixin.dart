@@ -2,6 +2,9 @@
 
 import 'package:flutter/material.dart';
 
+/// Material 3 window size classes.
+enum WindowSizeClass { compact, medium, expanded }
+
 mixin ResponsiveBreakpointsMixin {
   // Screen size breakpoints
   static const double xsBreakpoint = 360;
@@ -10,22 +13,53 @@ mixin ResponsiveBreakpointsMixin {
   static const double lgBreakpoint = 1200;
   static const double xlBreakpoint = 1600;
 
+  // Material window size class breakpoints
+  static const double compactBreakpoint = 600;
+  static const double mediumBreakpoint = 1240;
+
   // Check current breakpoint
-  bool isXS(BuildContext context) => MediaQuery.of(context).size.width < xsBreakpoint;
-  bool isSM(BuildContext context) => MediaQuery.of(context).size.width >= xsBreakpoint && MediaQuery.of(context).size.width < smBreakpoint;
-  bool isMD(BuildContext context) => MediaQuery.of(context).size.width >= smBreakpoint && MediaQuery.of(context).size.width < mdBreakpoint;
-  bool isLG(BuildContext context) => MediaQuery.of(context).size.width >= mdBreakpoint && MediaQuery.of(context).size.width < lgBreakpoint;
-  bool isXL(BuildContext context) => MediaQuery.of(context).size.width >= lgBreakpoint && MediaQuery.of(context).size.width < xlBreakpoint;
-  bool isXXL(BuildContext context) => MediaQuery.of(context).size.width >= xlBreakpoint;
+  bool isXS(BuildContext context) => MediaQuery.sizeOf(context).width < xsBreakpoint;
+  bool isSM(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= xsBreakpoint &&
+      MediaQuery.sizeOf(context).width < smBreakpoint;
+  bool isMD(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= smBreakpoint &&
+      MediaQuery.sizeOf(context).width < mdBreakpoint;
+  bool isLG(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= mdBreakpoint &&
+      MediaQuery.sizeOf(context).width < lgBreakpoint;
+  bool isXL(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= lgBreakpoint &&
+      MediaQuery.sizeOf(context).width < xlBreakpoint;
+  bool isXXL(BuildContext context) => MediaQuery.sizeOf(context).width >= xlBreakpoint;
 
   // Mobile/Tablet/Desktop helpers
-  bool isMobile(BuildContext context) => MediaQuery.of(context).size.width < smBreakpoint;
-  bool isTablet(BuildContext context) => MediaQuery.of(context).size.width >= smBreakpoint && MediaQuery.of(context).size.width < mdBreakpoint;
-  bool isDesktop(BuildContext context) => MediaQuery.of(context).size.width >= mdBreakpoint;
+  bool isMobile(BuildContext context) =>
+      MediaQuery.sizeOf(context).width < smBreakpoint;
+  bool isTablet(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= smBreakpoint &&
+      MediaQuery.sizeOf(context).width < mdBreakpoint;
+  bool isDesktop(BuildContext context) =>
+      MediaQuery.sizeOf(context).width >= mdBreakpoint;
+
+  // Material window size classes
+  WindowSizeClass windowSizeClass(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < compactBreakpoint) return WindowSizeClass.compact;
+    if (width < mediumBreakpoint) return WindowSizeClass.medium;
+    return WindowSizeClass.expanded;
+  }
+
+  bool isCompact(BuildContext context) =>
+      windowSizeClass(context) == WindowSizeClass.compact;
+  bool isMedium(BuildContext context) =>
+      windowSizeClass(context) == WindowSizeClass.medium;
+  bool isExpanded(BuildContext context) =>
+      windowSizeClass(context) == WindowSizeClass.expanded;
 
   // Get responsive grid columns
   int getGridColumns(BuildContext context, {int xs = 1, int sm = 2, int md = 3, int lg = 4, int xl = 5}) {
-    final width = MediaQuery.of(context).size.width;
+    final width = MediaQuery.sizeOf(context).width;
     if (width < xsBreakpoint) return xs;
     if (width < smBreakpoint) return sm;
     if (width < mdBreakpoint) return md;

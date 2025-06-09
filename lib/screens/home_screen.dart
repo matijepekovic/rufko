@@ -361,11 +361,11 @@ class _HomeScreenState extends State<HomeScreen>
           builder: (context, constraints) {
             final columns = getGridColumns(
               context,
-              xs: 1,
+              xs: 2,
               sm: 2,
               md: 2,
-              lg: 4,
-              xl: 4,
+              lg: 3,
+              xl: 3,
             );
 
             final cardWidth = (constraints.maxWidth - (spacingMD(context) * (columns - 1))) / columns;
@@ -422,12 +422,13 @@ class _HomeScreenState extends State<HomeScreen>
       VoidCallback? onTap,
       double width,
       ) {
+    final orientationScale = isLandscape(context) ? 1.5 : 1.0;
     final iconSize = responsiveValue(
       context,
       mobile: 24.0,
       tablet: 28.0,
       desktop: 32.0,
-    );
+    ) * orientationScale;
 
     Widget cardContent = Card(
       elevation: 2,
@@ -481,6 +482,7 @@ class _HomeScreenState extends State<HomeScreen>
                         child: Text(
                           value,
                           style: headlineSmall(context).copyWith(
+                            fontSize: headlineSmall(context).fontSize! * orientationScale,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -494,6 +496,7 @@ class _HomeScreenState extends State<HomeScreen>
                         child: Text(
                           title,
                           style: labelMedium(context).copyWith(
+                            fontSize: labelMedium(context).fontSize! * orientationScale,
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w500,
                           ),
