@@ -1,4 +1,4 @@
-// lib/widgets/add_custom_field_dialog.dart
+// lib/widgets/edit_field_dialog.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,69 +7,19 @@ import '../../../providers/app_state_provider.dart';
 import '../../../mixins/field_type_mixin.dart';
 import '../../../theme/rufko_theme.dart';
 
-class AddCustomFieldDialog extends StatefulWidget {
+class EditFieldDialog extends StatefulWidget {
+  final CustomAppDataField field;
   final List<String> categories;
   final Map<String, String> categoryNames;
-  final String? preSelectedCategory;
 
-  const AddCustomFieldDialog({
+  const EditFieldDialog({
     super.key,
+    required this.field,
     required this.categories,
     required this.categoryNames,
-    this.preSelectedCategory,
   });
 
-  // Static method to show dialog with category check
-  static Future<CustomAppDataField?> show(BuildContext context, {String? preSelectedCategory}) async {
-    final appState = context.read<AppStateProvider>();
-
-    // Get available categories for custom fields
-    final allTemplateCategories = appState.templateCategories;
-    final customFieldCategories = allTemplateCategories
-        .where((cat) => cat.templateType == 'custom_fields')
-        .toList();
-
-    // If no categories exist, prompt to create one
-    if (customFieldCategories.isEmpty) {
-      final newCategory = await _createNewCategoryAndReturn(context);
-      if (newCategory == null) return null; // User cancelled
-
-      // Reload categories after creation
-      await appState.loadTemplateCategories();
-      final updatedCategories = appState.templateCategories
-          .where((cat) => cat.templateType == 'custom_fields')
-          .toList();
-
-      if (updatedCategories.isEmpty) return null; // Still no categories
-      preSelectedCategory = newCategory; // Select the newly created category
-    }
-
-    // Now show the field dialog
-    final finalCategories = appState.templateCategories
-        .where((cat) => cat.templateType == 'custom_fields')
-        .toList();
-
-    final availableCategories = <String>[];
-    final categoryNames = <String, String>{};
-
-    for (final category in finalCategories) {
-      availableCategories.add(category.key);
-      categoryNames[category.key] = category.name;
-    }
-
-    return showDialog<CustomAppDataField?>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AddCustomFieldDialog(
-          categories: availableCategories,
-          categoryNames: categoryNames,
-          preSelectedCategory: preSelectedCategory,
-        );
-      },
-    );
-  }
-
+  // Static method to create a new category
   static Future<String?> _createNewCategoryAndReturn(BuildContext context) async {
     final TextEditingController controller = TextEditingController();
 
@@ -103,8 +53,8 @@ class AddCustomFieldDialog extends StatefulWidget {
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                          ),
                         ),
+                      ),
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
@@ -123,7 +73,7 @@ class AddCustomFieldDialog extends StatefulWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Create a new category for custom fields:',
+                        'Create a new category for fields:',
                         style: TextStyle(fontSize: 14, color: Colors.grey),
                       ),
                       const SizedBox(height: 16),
@@ -208,23 +158,23 @@ class AddCustomFieldDialog extends StatefulWidget {
   }
 
   @override
-  State<AddCustomFieldDialog> createState() => _AddCustomFieldDialogState();
+  State<EditFieldDialog> createState() => _EditFieldDialogState();
 }
 
-class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
+class _EditFieldDialogState extends State<EditFieldDialog>
     with FieldTypeMixin {
   final _formKey = GlobalKey<FormState>();
-  final _fieldNameController = TextEditingController();
-  final _displayNameController = TextEditingController();
-  final _valueTextController = TextEditingController();
+  late final TextEditingController _fieldNameController;
+  late final TextEditingController _displayNameController;
+  late final TextEditingController _valueTextController;
 
   late String _selectedFieldCategory;
-  String _selectedFieldType = 'text';
-  bool _isRequired = false;
+  late String _selectedFieldType;
+  late bool _isRequired;
   bool _isLoading = false;
   bool _checkboxValue = false;
 
-  // Extended categories and names to include new categories created during adding
+  // Extended categories and names to include new categories created during editing
   late List<String> _currentCategories;
   late Map<String, String> _currentCategoryNames;
 
@@ -234,23 +184,32 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
   @override
   void initState() {
     super.initState();
+    _fieldNameController = TextEditingController(text: widget.field.fieldName);
+    _displayNameController = TextEditingController(text: widget.field.displayName);
+    _valueTextController = TextEditingController(text: widget.field.currentValue);
 
-    // Initialize current categories from widget
     _currentCategories = List.from(widget.categories);
     _currentCategoryNames = Map.from(widget.categoryNames);
 
-    // Select pre-selected category if provided, otherwise first available category
-    if (widget.preSelectedCategory != null &&
-        _currentCategories.contains(widget.preSelectedCategory!)) {
-      _selectedFieldCategory = widget.preSelectedCategory!;
-    } else if (_currentCategories.isNotEmpty) {
-      _selectedFieldCategory = _currentCategories.first;
+    // Keep the field's original category if it exists, otherwise use first available
+    if (widget.categories.contains(widget.field.category)) {
+      _selectedFieldCategory = widget.field.category;
+    } else if (widget.categories.isNotEmpty) {
+      _selectedFieldCategory = widget.categories.first;
     } else {
-      _selectedFieldCategory = '';
+      // This shouldn't happen, but fallback to the original category
+      _selectedFieldCategory = widget.field.category;
     }
-    _valueTextController.text = 'false';
 
-    debugPrint('🎯 AddCustomFieldDialog initialized with category: $_selectedFieldCategory');
+    _selectedFieldType = widget.field.fieldType;
+    _isRequired = widget.field.isRequired;
+
+    // Initialize checkbox state if it's a checkbox field
+    if (_selectedFieldType == 'checkbox') {
+      _checkboxValue = widget.field.currentValue.toLowerCase() == 'true';
+    }
+
+    debugPrint('🔧 Editing field: ${widget.field.fieldName} in category: $_selectedFieldCategory');
   }
 
   @override
@@ -276,22 +235,23 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
             // Header
             Container(
               padding: const EdgeInsets.fromLTRB(20, 16, 16, 8),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: RufkoTheme.primaryColor,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.add_circle, color: Colors.white, size: 20),
+                  const Icon(Icons.edit, color: Colors.white, size: 20),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Add Field',
-                      style: TextStyle(
+                      'Edit: ${widget.field.displayName}',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   IconButton(
@@ -358,7 +318,7 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
                         onChanged: (String? newValue) async {
                           if (newValue == _createNewCategoryValue) {
                             // Show create category dialog
-                            final newCategory = await AddCustomFieldDialog._createNewCategoryAndReturn(context);
+                            final newCategory = await EditFieldDialog._createNewCategoryAndReturn(context);
                             if (newCategory != null && mounted) {
                               // Update the local categories and select the new one
                               final appState = context.read<AppStateProvider>();
@@ -415,6 +375,10 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
                           if (newValue != null) {
                             setState(() {
                               _selectedFieldType = newValue;
+                              // Reset checkbox value when type changes
+                              if (newValue == 'checkbox') {
+                                _checkboxValue = _valueTextController.text.toLowerCase() == 'true';
+                              }
                             });
                           }
                         },
@@ -433,20 +397,17 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
                           border: OutlineInputBorder(),
                         ),
                         style: const TextStyle(fontSize: 14),
-                        onChanged: (value) {
-                          if (_displayNameController.text.isEmpty ||
-                              _displayNameController.text == _generateDisplayName(_fieldNameController.text)) {
-                            _displayNameController.text = _generateDisplayName(value);
-                          }
-                        },
                         validator: (value) {
                           if (value == null || value.isEmpty) return 'Enter field name';
                           if (value.contains(' ')) return 'No spaces allowed';
 
                           final appState = context.read<AppStateProvider>();
-                          if (appState.customAppDataFields.any((f) =>
-                          f.fieldName == value.trim() && f.category == _selectedFieldCategory)) {
-                            return 'Name already exists in this category';
+                          if (value.trim() != widget.field.fieldName &&
+                              appState.customAppDataFields.any((f) =>
+                              f.fieldName == value.trim() &&
+                                  f.category == _selectedFieldCategory &&
+                                  f.id != widget.field.id)) {
+                            return 'Name already exists';
                           }
                           return null;
                         },
@@ -473,71 +434,74 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
                       ),
                       const SizedBox(height: 12),
 
-                      // Current Value - Different UI for checkbox vs other types
-                      if (_selectedFieldType == 'checkbox') ...[
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade400),
-                            borderRadius: BorderRadius.circular(4),
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        title: const Text('Advanced Options', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                        children: [
+                          const SizedBox(height: 8),
+                          if (_selectedFieldType == 'checkbox')
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: CheckboxListTile(
+                                title: const Text('Current State', style: TextStyle(fontSize: 14)),
+                                subtitle: const Text('Current checkbox value', style: TextStyle(fontSize: 12)),
+                                value: _checkboxValue,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    _checkboxValue = value ?? false;
+                                    _valueTextController.text = _checkboxValue.toString();
+                                  });
+                                },
+                                controlAffinity: ListTileControlAffinity.leading,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                            )
+                          else
+                            TextFormField(
+                              controller: _valueTextController,
+                              decoration: const InputDecoration(
+                                labelText: 'Current Value',
+                                hintText: 'Enter current value',
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                border: OutlineInputBorder(),
+                              ),
+                              style: const TextStyle(fontSize: 14),
+                              maxLines: _selectedFieldType == 'multiline' ? 2 : 1,
+                              keyboardType: _selectedFieldType == 'number' ? TextInputType.number :
+                              _selectedFieldType == 'email' ? TextInputType.emailAddress :
+                              _selectedFieldType == 'phone' ? TextInputType.phone :
+                              TextInputType.text,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Enter current value';
+                                }
+                                return null;
+                              },
+                            ),
+                          const SizedBox(height: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: CheckboxListTile(
+                              title: const Text('Required Field', style: TextStyle(fontSize: 14)),
+                              subtitle: const Text('Must be filled for PDFs', style: TextStyle(fontSize: 12)),
+                              value: _isRequired,
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  _isRequired = value ?? false;
+                                });
+                              },
+                              controlAffinity: ListTileControlAffinity.leading,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
                           ),
-                          child: CheckboxListTile(
-                            title: const Text('Default State', style: TextStyle(fontSize: 14)),
-                            subtitle: const Text('Initial checkbox value', style: TextStyle(fontSize: 12)),
-                            value: _checkboxValue,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _checkboxValue = value ?? false;
-                                _valueTextController.text = _checkboxValue.toString();
-                              });
-                            },
-                            controlAffinity: ListTileControlAffinity.leading,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                        ),
-                      ] else ...[
-                        TextFormField(
-                          controller: _valueTextController,
-                          decoration: const InputDecoration(
-                            labelText: 'Default Value',
-                            hintText: 'Enter default value',
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            border: OutlineInputBorder(),
-                          ),
-                          style: const TextStyle(fontSize: 14),
-                          maxLines: _selectedFieldType == 'multiline' ? 2 : 1,
-                          keyboardType: _selectedFieldType == 'number' ? TextInputType.number :
-                          _selectedFieldType == 'email' ? TextInputType.emailAddress :
-                          _selectedFieldType == 'phone' ? TextInputType.phone :
-                          TextInputType.text,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Enter default value';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-
-                      // Required checkbox - compact
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: CheckboxListTile(
-                          title: const Text('Required Field', style: TextStyle(fontSize: 14)),
-                          subtitle: const Text('Must be filled for PDFs', style: TextStyle(fontSize: 12)),
-                          value: _isRequired,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              _isRequired = value ?? false;
-                            });
-                          },
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                        ),
+                        ],
                       ),
                     ],
                   ),
@@ -560,7 +524,7 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _handleAddField,
+                    onPressed: _isLoading ? null : _handleSaveChanges,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: RufkoTheme.primaryColor,
                       foregroundColor: Colors.white,
@@ -575,7 +539,7 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                       ),
                     )
-                        : const Text('Add Field'),
+                        : const Text('Save'),
                   ),
                 ],
               ),
@@ -586,17 +550,7 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
     );
   }
 
-  String _generateDisplayName(String fieldName) {
-    return fieldName
-        .replaceAll('_', ' ')
-        .split(' ')
-        .map((word) => word.isNotEmpty
-        ? '${word[0].toUpperCase()}${word.substring(1)}'
-        : '')
-        .join(' ');
-  }
-
-  Future<void> _handleAddField() async {
+  Future<void> _handleSaveChanges() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -606,28 +560,32 @@ class _AddCustomFieldDialogState extends State<AddCustomFieldDialog>
     });
 
     try {
-      debugPrint('🚀 Creating field with category: $_selectedFieldCategory');
+      debugPrint('💾 Saving field with category: $_selectedFieldCategory');
 
-      final newFieldData = CustomAppDataField(
+      final updatedField = CustomAppDataField(
+        id: widget.field.id,
         fieldName: _fieldNameController.text.trim(),
         displayName: _displayNameController.text.trim(),
         fieldType: _selectedFieldType,
         category: _selectedFieldCategory,
         currentValue: _valueTextController.text.trim(),
-        placeholder: null,
-        description: null,
+        placeholder: null, // Removed as requested
+        description: null, // Removed as requested
         isRequired: _isRequired,
+        sortOrder: widget.field.sortOrder,
+        createdAt: widget.field.createdAt,
+        updatedAt: DateTime.now(),
       );
 
-      debugPrint('🆕 Created field: ${newFieldData.fieldName} in category: ${newFieldData.category}');
-      Navigator.of(context).pop(newFieldData);
+      debugPrint('💾 Updated field: ${updatedField.fieldName} in category: ${updatedField.category}');
+      Navigator.of(context).pop(updatedField);
     } catch (e) {
-      debugPrint('❌ Error in add field dialog: $e');
+      debugPrint('❌ Error in edit field dialog: $e');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error adding field: $e'),
+            content: Text('Error saving field: $e'),
             backgroundColor: Colors.red,
           ),
         );
