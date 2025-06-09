@@ -6,6 +6,7 @@ class HomeLargeLayout extends StatelessWidget {
   final int selectedIndex;
   final List<BottomNavigationBarItem> navItems;
   final ValueChanged<int> onItemSelected;
+  final ValueChanged<int> onPageChanged;
   final PageController pageController;
   final List<Widget> pages;
   final Widget? floatingActionButton;
@@ -17,6 +18,7 @@ class HomeLargeLayout extends StatelessWidget {
     required this.onItemSelected,
     required this.pageController,
     required this.pages,
+    required this.onPageChanged,
     this.floatingActionButton,
   });
 
@@ -43,7 +45,7 @@ class HomeLargeLayout extends StatelessWidget {
           Expanded(
             child: PageView(
               controller: pageController,
-              onPageChanged: onItemSelected,
+              onPageChanged: onPageChanged,
               children: pages,
             ),
           ),
