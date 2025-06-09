@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/custom_app_data.dart';
 import '../../providers/app_state_provider.dart';
-import 'dialgos/add_custom_field_dialog.dart';
-import 'dialgos/edit_custom_field_dialog.dart';
+import 'dialgos/add_field_dialog.dart';
+import 'dialgos/edit_field_dialog.dart';
 import '../../utils/common_utils.dart';
 import '../../theme/rufko_theme.dart';
 import '../../mixins/template_tab_mixin.dart';
 
-class CustomAppDataScreen extends StatefulWidget {
-  const CustomAppDataScreen({super.key});
+class FieldsTab extends StatefulWidget {
+  const FieldsTab({super.key});
 
   @override
-  State<CustomAppDataScreen> createState() => _CustomAppDataScreenState();
+  State<FieldsTab> createState() => _FieldsTabState();
 }
 
-class _CustomAppDataScreenState extends State<CustomAppDataScreen> with TemplateTabMixin {
+class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
 
   // Implement required mixin properties
   @override
@@ -267,7 +267,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> with Template
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Custom App Data'),
+        title: const Text('Fields'),
         backgroundColor: RufkoTheme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -292,7 +292,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> with Template
     );
   }
 
-  // Field-specific helper methods (these are unique to custom fields)
+  // Field-specific helper methods (these are unique to fields)
   Color _getFieldTypeColor(String fieldType) {
     switch (fieldType) {
       case 'text': return Colors.blue;
@@ -358,7 +358,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> with Template
               categoryNames[categoryKey] = categoryName;
             }
 
-            return AddCustomFieldDialog(
+            return AddFieldDialog(
               categories: availableCategories,
               categoryNames: categoryNames,
             );
@@ -414,7 +414,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> with Template
               }
             }
 
-            return EditCustomFieldDialog(
+            return EditFieldDialog(
               field: field,
               categories: availableCategories,
               categoryNames: categoryNames,
@@ -457,7 +457,7 @@ class _CustomAppDataScreenState extends State<CustomAppDataScreen> with Template
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Delete Custom Field'),
+          title: const Text('Delete Field'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
