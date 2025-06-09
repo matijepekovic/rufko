@@ -320,10 +320,10 @@ class EmailTemplate extends HiveObject {
 
       if (field is Map<String, dynamic>) {
         fieldName = field['fieldName'] as String? ?? '';
-        category = field['category'] as String? ?? 'Fields';
+        category = field['category'] as String? ?? 'Custom Fields';
       } else {
         fieldName = field.fieldName as String? ?? '';
-        category = field.category as String? ?? 'Fields';
+        category = field.category as String? ?? 'Custom Fields';
       }
 
       if (fieldName.isNotEmpty) {

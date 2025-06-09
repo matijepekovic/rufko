@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/custom_app_data.dart';
 import '../../providers/app_state_provider.dart';
-import 'dialgos/add_field_dialog.dart';
-import 'dialgos/edit_field_dialog.dart';
+import 'dialgos/add_custom_field_dialog.dart';
+import 'dialgos/edit_custom_field_dialog.dart';
 import '../../utils/common_utils.dart';
 import '../../theme/rufko_theme.dart';
 import '../../mixins/template_tab_mixin.dart';
 
-class FieldsTab extends StatefulWidget {
-  const FieldsTab({super.key});
+class CustomAppDataScreen extends StatefulWidget {
+  const CustomAppDataScreen({super.key});
 
   @override
-  State<FieldsTab> createState() => _FieldsTabState();
+  State<CustomAppDataScreen> createState() => _CustomAppDataScreenState();
 }
 
-class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
+class _CustomAppDataScreenState extends State<CustomAppDataScreen> with TemplateTabMixin {
 
   // Implement required mixin properties
   @override
@@ -267,7 +267,7 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Fields'),
+        title: const Text('Custom App Data'),
         backgroundColor: RufkoTheme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -292,7 +292,7 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
     );
   }
 
-  // Field-specific helper methods (these are unique to fields)
+  // Field-specific helper methods (these are unique to custom fields)
   Color _getFieldTypeColor(String fieldType) {
     switch (fieldType) {
       case 'text': return Colors.blue;
@@ -358,7 +358,7 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
               categoryNames[categoryKey] = categoryName;
             }
 
-            return AddFieldDialog(
+            return AddCustomFieldDialog(
               categories: availableCategories,
               categoryNames: categoryNames,
             );
@@ -414,7 +414,7 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
               }
             }
 
-            return EditFieldDialog(
+            return EditCustomFieldDialog(
               field: field,
               categories: availableCategories,
               categoryNames: categoryNames,
@@ -457,7 +457,7 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Delete Field'),
+          title: const Text('Delete Custom Field'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
