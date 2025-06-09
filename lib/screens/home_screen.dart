@@ -424,9 +424,9 @@ class _HomeScreenState extends State<HomeScreen>
       ) {
     final iconSize = responsiveValue(
       context,
-      mobile: 20.0,
-      tablet: 24.0,
-      desktop: 28.0,
+      mobile: 24.0,
+      tablet: 28.0,
+      desktop: 32.0,
     );
 
     Widget cardContent = Card(
