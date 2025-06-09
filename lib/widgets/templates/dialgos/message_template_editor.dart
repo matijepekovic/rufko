@@ -541,6 +541,8 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
     final sampleData = <String, String>{};
 
     sampleData['customerName'] = 'John Smith';
+    sampleData['customerFirstName'] = 'John';
+    sampleData['customerLastName'] = 'Smith';
     sampleData['customerStreetAddress'] = '123 Main St';
     sampleData['customerCity'] = 'Seattle';
     sampleData['customerState'] = 'WA';

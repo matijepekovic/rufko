@@ -164,6 +164,8 @@ class MessageTemplate extends HiveObject {
     // Core customer fields
     allFields.addAll([
       'customerName',
+      'customerFirstName',
+      'customerLastName',
       'customerStreetAddress',
       'customerCity',
       'customerState',
@@ -254,6 +256,8 @@ class MessageTemplate extends HiveObject {
 
     categories['Customer Information'] = [
       'customerName',
+      'customerFirstName',
+      'customerLastName',
       'customerStreetAddress',
       'customerCity',
       'customerState',
@@ -396,6 +400,8 @@ class MessageTemplate extends HiveObject {
     // Standard field display names
     const displayNames = {
       'customerName': 'Customer Name',
+      'customerFirstName': 'Customer First Name',
+      'customerLastName': 'Customer Last Name',
       'customerStreetAddress': 'Customer Street Address',
       'customerCity': 'Customer City',
       'customerState': 'Customer State',
@@ -416,10 +422,6 @@ class MessageTemplate extends HiveObject {
       'taxRate': 'Tax Rate',
       'taxAmount': 'Tax Amount',
       'grandTotal': 'Grand Total',
-      'itemName': 'Item Name',
-      'itemQuantity': 'Item Quantity',
-      'itemUnitPrice': 'Item Unit Price',
-      'itemTotal': 'Item Total',
       'notes': 'Project Notes',
       'terms': 'Terms & Conditions',
       'upgradeQuoteText': 'Upgrade Quote Text',

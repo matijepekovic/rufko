@@ -156,6 +156,8 @@ class EmailTemplate extends HiveObject {
     // Core customer fields
     allFields.addAll([
       'customerName',
+      'customerFirstName',
+      'customerLastName',
       'customerStreetAddress',
       'customerCity',
       'customerState',
@@ -244,6 +246,8 @@ class EmailTemplate extends HiveObject {
 
     categories['Customer Information'] = [
       'customerName',
+      'customerFirstName',
+      'customerLastName',
       'customerStreetAddress',
       'customerCity',
       'customerState',
@@ -381,6 +385,8 @@ class EmailTemplate extends HiveObject {
     // Standard field display names
     const displayNames = {
       'customerName': 'Customer Name',
+      'customerFirstName': 'Customer First Name',
+      'customerLastName': 'Customer Last Name',
       'customerStreetAddress': 'Customer Street Address',
       'customerCity': 'Customer City',
       'customerState': 'Customer State',

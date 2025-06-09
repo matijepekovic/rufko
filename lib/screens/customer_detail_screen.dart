@@ -2234,6 +2234,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     return {
       // Customer Information
       'customerName': widget.customer.name,
+      'customerFirstName': widget.customer.name.split(' ').first,
+      'customerLastName': widget.customer.name.contains(' ')
+          ? widget.customer.name.split(' ').skip(1).join(' ')
+          : '',
       'customerPhone': widget.customer.phone ?? 'Not provided',
       'customerEmail': widget.customer.email ?? 'Not provided',
       'customerStreetAddress': widget.customer.streetAddress ?? '',

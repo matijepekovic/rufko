@@ -14,6 +14,7 @@ import '../models/pdf_template.dart';
 import '../models/customer.dart';
 import '../models/simplified_quote.dart';
 import '../models/quote.dart' as legacy_quote_model;
+import '../models/product.dart';
 import 'database_service.dart';
 
 class TemplateService {
@@ -351,6 +352,10 @@ class TemplateService {
 
     // === CUSTOMER INFORMATION ===
     map['customerName'] = customer.name;
+    final nameParts = customer.name.split(' ');
+    map['customerFirstName'] = nameParts.isNotEmpty ? nameParts.first : '';
+    map['customerLastName'] =
+        nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
     map['customerStreetAddress'] = customer.streetAddress ?? '[Street Address]';
     map['customerCity'] = customer.city ?? '[City]';
     map['customerState'] = customer.stateAbbreviation ?? '[ST]';
@@ -423,26 +428,25 @@ class TemplateService {
     }
     allProducts.addAll(quote.addons);
 
-    for (int i = 0; i < 5; i++) {
-      final productNum = i + 1;
-      final productKey = 'product$productNum';
 
-      if (i < allProducts.length) {
-        final product = allProducts[i];
-        map['${productKey}Name'] = product.productName;
-        map['${productKey}Qty'] = product.quantity.toString();
-        map['${productKey}UnitPrice'] = _currencyFormat.format(product.unitPrice);
-        map['${productKey}Total'] = _currencyFormat.format(product.totalPrice);
-        // NEW: Add product description mapping
-        map['${productKey}Description'] = product.description ?? '';
-      } else {
-        map['${productKey}Name'] = '';
-        map['${productKey}Qty'] = '';
-        map['${productKey}UnitPrice'] = '';
-        map['${productKey}Total'] = '';
-        // NEW: Add empty product description
-        map['${productKey}Description'] = '';
-      }
+    // Dynamically named product fields based on product names
+    final dynamicProducts = <Product>[];
+    for (final item in allProducts) {
+      final safeName = _createSafeFieldName(item.productName);
+      map['${safeName}Name'] = item.productName;
+      map['${safeName}Qty'] = item.quantity.toString();
+      map['${safeName}UnitPrice'] = _currencyFormat.format(item.unitPrice);
+      map['${safeName}Total'] = _currencyFormat.format(item.totalPrice);
+      map['${safeName}Description'] = item.description ?? '';
+
+      dynamicProducts.add(Product(
+        id: item.productId,
+        name: item.productName,
+        description: item.description,
+        unitPrice: item.unitPrice,
+        unit: item.unit,
+        category: '',
+      ));
     }
 
     // === OVERALL TOTALS ===
@@ -462,29 +466,14 @@ class TemplateService {
       map['taxAmount'] = _currencyFormat.format(taxAmount);
       map['grandTotal'] = _currencyFormat.format(grandTotal);
 
-      if (allProducts.isNotEmpty) {
-        final firstProduct = allProducts.first;
-        map['itemName'] = firstProduct.productName;
-        map['itemQuantity'] = firstProduct.quantity.toString();
-        map['itemUnitPrice'] = _currencyFormat.format(firstProduct.unitPrice);
-        map['itemTotal'] = _currencyFormat.format(firstProduct.totalPrice);
+        // Removed legacy itemName fields
       } else {
-        map['itemName'] = '';
-        map['itemQuantity'] = '';
-        map['itemUnitPrice'] = '';
-        map['itemTotal'] = '';
+        map['subtotal'] = _currencyFormat.format(0.00);
+        map['discount'] = _currencyFormat.format(0.00);
+        map['taxRate'] = '0.00%';
+        map['taxAmount'] = _currencyFormat.format(0.00);
+        map['grandTotal'] = _currencyFormat.format(0.00);
       }
-    } else {
-      map['subtotal'] = _currencyFormat.format(0.00);
-      map['discount'] = _currencyFormat.format(0.00);
-      map['taxRate'] = '0.00%';
-      map['taxAmount'] = _currencyFormat.format(0.00);
-      map['grandTotal'] = _currencyFormat.format(0.00);
-      map['itemName'] = '';
-      map['itemQuantity'] = '';
-      map['itemUnitPrice'] = '';
-      map['itemTotal'] = '';
-    }
 
     // === CUSTOM DATA OVERRIDES ===
     if (customDataOverrides != null) {
@@ -678,7 +667,9 @@ class TemplateService {
     // === ENSURE ALL FIELD TYPES HAVE VALUES ===
 
 
-    for (final fieldTypeKey in PDFTemplate.getQuoteFieldTypes()) {
+    for (final fieldTypeKey in PDFTemplate
+        .getFieldDefinitions(dynamicProducts, customAppDataFields)
+        .map((d) => d.appDataType)) {
       final existingValue = map[fieldTypeKey];
 
       // Generate better sample data for preview mode
@@ -774,4 +765,13 @@ class TemplateService {
     }
     return true;
   }
+}
+
+// Helper to generate a safe field name from a product name
+String _createSafeFieldName(String productName) {
+  return productName
+      .replaceAll(RegExp(r'[^\w\s]'), '')
+      .replaceAll(RegExp(r'\s+'), '')
+      .replaceAllMapped(RegExp(r'^\w'), (m) => m.group(0)!.toLowerCase())
+      .replaceAllMapped(RegExp(r'\s\w'), (m) => m.group(0)!.toUpperCase().replaceAll(' ', ''));
 }
