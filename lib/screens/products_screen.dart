@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 import '../providers/app_state_provider.dart';
 import '../models/product.dart';
 import 'products/product_form_dialog.dart';
@@ -176,6 +177,8 @@ class _ProductsScreenState extends State<ProductsScreen>
   Widget _buildProductsList(AppStateProvider appState, String categoryFilter) {
     List<Product> productsToDisplay = _getFilteredProducts(appState, categoryFilter);
 
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+
     if (productsToDisplay.isEmpty) {
       return _buildEmptyState(categoryFilter);
     }
@@ -183,19 +186,19 @@ class _ProductsScreenState extends State<ProductsScreen>
     return RefreshIndicator(
       onRefresh: () => appState.loadAllData(),
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isSmallScreen ? 8 : 16),
         itemCount: productsToDisplay.length,
         itemBuilder: (context, index) {
           final product = productsToDisplay[index];
-          return _buildProductCard(product);
+          return _buildProductCard(product, isSmallScreen);
         },
       ),
     );
   }
 
-  Widget _buildProductCard(Product product) {
+  Widget _buildProductCard(Product product, bool isSmall) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: isSmall ? 8 : 12),
       child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -203,27 +206,38 @@ class _ProductsScreenState extends State<ProductsScreen>
           onTap: () => _showProductDetails(product),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmall ? 12 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    // Product Icon
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _getCategoryColor(product.category).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
+                    // Product Icon or Image
+                    if (product.imagePath != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(product.imagePath!),
+                          width: isSmall ? 40 : 48,
+                          height: isSmall ? 40 : 48,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    else
+                      Container(
+                        width: isSmall ? 40 : 48,
+                        height: isSmall ? 40 : 48,
+                        decoration: BoxDecoration(
+                          color: _getCategoryColor(product.category).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          _getCategoryIcon(product.category),
+                          color: _getCategoryColor(product.category),
+                          size: isSmall ? 20 : 24,
+                        ),
                       ),
-                      child: Icon(
-                        _getCategoryIcon(product.category),
-                        color: _getCategoryColor(product.category),
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: isSmall ? 12 : 16),
 
                     // Product Info
                     Expanded(
@@ -235,14 +249,14 @@ class _ProductsScreenState extends State<ProductsScreen>
                               Expanded(
                                 child: Text(
                                   product.name,
-                                  style: const TextStyle(
-                                    fontSize: 16,
+                                  style: TextStyle(
+                                    fontSize: isSmall ? 14 : 16,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: EdgeInsets.symmetric(horizontal: isSmall ? 6 : 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: product.isActive ? Colors.green.shade100 : Colors.grey.shade200,
                                   borderRadius: BorderRadius.circular(12),
@@ -250,7 +264,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                                 child: Text(
                                   product.isActive ? 'Active' : 'Inactive',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: isSmall ? 10 : 12,
                                     fontWeight: FontWeight.w500,
                                     color: product.isActive ? Colors.green.shade700 : Colors.grey.shade600,
                                   ),
@@ -258,30 +272,30 @@ class _ProductsScreenState extends State<ProductsScreen>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 4),
+                            SizedBox(height: isSmall ? 2 : 4),
 
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: isSmall ? 4 : 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: _getCategoryColor(product.category).withValues(alpha: 0.1),
+                                  color: _getCategoryColor(product.category).withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
                                   product.category,
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: isSmall ? 10 : 11,
                                     fontWeight: FontWeight.w500,
                                     color: _getCategoryColor(product.category),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: isSmall ? 6 : 8),
                               Text(
                                 '\$${product.unitPrice.toStringAsFixed(2)}/${product.unit}',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: isSmall ? 12 : 14,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.grey[700],
                                 ),
@@ -290,11 +304,11 @@ class _ProductsScreenState extends State<ProductsScreen>
                           ),
 
                           if (product.description != null && product.description!.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            SizedBox(height: isSmall ? 2 : 4),
                             Text(
                               product.description!,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: isSmall ? 11 : 13,
                                 color: Colors.grey[600],
                               ),
                               maxLines: 2,
@@ -307,7 +321,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                   ],
                 ),
 
-                const SizedBox(height: 12),
+                  SizedBox(height: isSmall ? 8 : 12),
 
                 // Action buttons
                 Row(
@@ -328,8 +342,8 @@ class _ProductsScreenState extends State<ProductsScreen>
                           ),
                         ),
                       ),
-                    if (product.isAddon) ...[
-                      const SizedBox(width: 8),
+                      if (product.isAddon) ...[
+                        SizedBox(width: isSmall ? 4 : 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
@@ -372,8 +386,8 @@ class _ProductsScreenState extends State<ProductsScreen>
               ],
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -395,12 +409,14 @@ class _ProductsScreenState extends State<ProductsScreen>
       subtitle = 'Add your first product to get started';
     }
 
+    final isSmall = MediaQuery.of(context).size.width < 360;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           buildEmptyState(icon: icon, title: title, subtitle: subtitle),
-          const SizedBox(height: 32),
+          SizedBox(height: isSmall ? 16 : 32),
           if (searchQuery.isEmpty)
             ElevatedButton.icon(
               onPressed: () => _showAddProductDialog(context),
@@ -503,9 +519,11 @@ class _ProductsScreenState extends State<ProductsScreen>
   void _showProductDetails(Product product) {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
+      builder: (context) {
+        final isSmall = MediaQuery.of(context).size.width < 360;
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
           width: MediaQuery.of(context).size.width * 0.9,
           constraints: const BoxConstraints(maxHeight: 600),
           child: Column(
@@ -515,7 +533,7 @@ class _ProductsScreenState extends State<ProductsScreen>
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: _getCategoryColor(product.category).withValues(alpha: 0.1),
+                  color: _getCategoryColor(product.category).withOpacity(0.1),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(16),
                     topRight: Radius.circular(16),
@@ -523,12 +541,23 @@ class _ProductsScreenState extends State<ProductsScreen>
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      _getCategoryIcon(product.category),
-                      color: _getCategoryColor(product.category),
-                      size: 28,
-                    ),
-                    const SizedBox(width: 12),
+                    if (product.imagePath != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(product.imagePath!),
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    else
+                      Icon(
+                        _getCategoryIcon(product.category),
+                        color: _getCategoryColor(product.category),
+                        size: 28,
+                      ),
+                      SizedBox(width: isSmall ? 8 : 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,15 +595,15 @@ class _ProductsScreenState extends State<ProductsScreen>
                     children: [
                       if (product.description != null && product.description!.isNotEmpty) ...[
                         _buildDetailRow('Description', product.description!, Icons.description),
-                        const SizedBox(height: 16),
+                          SizedBox(height: isSmall ? 10 : 16),
                       ],
 
                       _buildDetailRow('Base Price', '\$${product.unitPrice.toStringAsFixed(2)} per ${product.unit}', Icons.attach_money),
-                      const SizedBox(height: 16),
+                      SizedBox(height: isSmall ? 10 : 16),
 
                       if (product.sku != null && product.sku!.isNotEmpty) ...[
                         _buildDetailRow('SKU', product.sku!, Icons.qr_code),
-                        const SizedBox(height: 16),
+                        SizedBox(height: isSmall ? 10 : 16),
                       ],
 
                       Row(
@@ -583,7 +612,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                             child: _buildStatusChip('Status', product.isActive ? 'Active' : 'Inactive',
                                 product.isActive ? Colors.green : Colors.grey),
                           ),
-                          const SizedBox(width: 12),
+                      SizedBox(width: isSmall ? 8 : 12),
                           Expanded(
                             child: _buildStatusChip('Type', product.isAddon ? 'Add-on' : 'Standard',
                                 product.isAddon ? Colors.orange : Colors.blue),
@@ -591,19 +620,19 @@ class _ProductsScreenState extends State<ProductsScreen>
                         ],
                       ),
 
-                      const SizedBox(height: 16),
+                          SizedBox(height: isSmall ? 10 : 16),
                       _buildStatusChip('Pricing', _getPricingTypeLabel(product.pricingType),
                           _getPricingTypeColor(product.pricingType)),
 
-                      if (product.enhancedLevelPrices.isNotEmpty) ...[
-                        const SizedBox(height: 20),
+                        if (product.enhancedLevelPrices.isNotEmpty) ...[
+                          SizedBox(height: isSmall ? 12 : 20),
                         Text(
                           'Level Pricing',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                          SizedBox(height: isSmall ? 8 : 12),
                         ...product.enhancedLevelPrices.map((level) => Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           padding: const EdgeInsets.all(12),
@@ -671,7 +700,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                         label: const Text('Edit Product'),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                      SizedBox(width: isSmall ? 8 : 12),
                     ElevatedButton(
                       onPressed: () => Navigator.pop(context),
                       child: const Text('Close'),
@@ -681,17 +710,18 @@ class _ProductsScreenState extends State<ProductsScreen>
               ),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
   Widget _buildDetailRow(String label, String value, IconData icon) {
+    final isSmall = MediaQuery.of(context).size.width < 360;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 20, color: Colors.grey[600]),
-        const SizedBox(width: 12),
+          SizedBox(width: isSmall ? 8 : 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -722,9 +752,9 @@ class _ProductsScreenState extends State<ProductsScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -780,12 +810,14 @@ class _ProductsScreenState extends State<ProductsScreen>
   void _showDeleteConfirmation(BuildContext context, Product product) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      builder: (context) {
+        final isSmall = MediaQuery.of(context).size.width < 360;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red.shade600),
-            const SizedBox(width: 12),
+      SizedBox(width: isSmall ? 8 : 12),
             const Text('Delete Product'),
           ],
         ),
@@ -813,7 +845,8 @@ class _ProductsScreenState extends State<ProductsScreen>
             child: const Text('Delete'),
           ),
         ],
-      ),
+      );
+    },
     );
   }
 
