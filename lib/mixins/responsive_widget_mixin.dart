@@ -13,30 +13,12 @@ mixin ResponsiveWidgetMixin on ResponsiveBreakpointsMixin, ResponsiveDimensionsM
     Widget? desktop,
     Widget? largeDesktop,
   }) {
-    if (windowSizeClass(context) == WindowSizeClass.expanded &&
-        largeDesktop != null) {
+    if (isDesktop(context) && largeDesktop != null && screenWidth(context) >= 1200) {
       return largeDesktop;
     }
     if (isDesktop(context)) return desktop ?? tablet ?? mobile;
     if (isTablet(context)) return tablet ?? mobile;
     return mobile;
-  }
-
-  /// Choose a widget based on the Material window size class.
-  Widget windowClassBuilder({
-    required BuildContext context,
-    required Widget compact,
-    Widget? medium,
-    Widget? expanded,
-  }) {
-    switch (windowSizeClass(context)) {
-      case WindowSizeClass.compact:
-        return compact;
-      case WindowSizeClass.medium:
-        return medium ?? compact;
-      case WindowSizeClass.expanded:
-        return expanded ?? medium ?? compact;
-    }
   }
 
   // Orientation builder helper
