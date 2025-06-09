@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:io';
-
-import '../../services/file_service.dart';
 
 import '../../models/product.dart';
 import '../../providers/app_state_provider.dart';
@@ -28,8 +25,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
   String _selectedUnit = 'each';
   bool _isActive = true;
   bool _isDiscountable = true;
-
-  String? _imagePath;
 
   // 3-Tier System State
   ProductPricingType _pricingType = ProductPricingType.simple;
@@ -179,35 +174,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Column(
-                  children: [
-                    GestureDetector(
-                      onTap: _pickImage,
-                      child: CircleAvatar(
-                        radius: isPhone ? 40 : 50,
-                        backgroundImage:
-                            _imagePath != null ? FileImage(File(_imagePath!)) : null,
-                        child: _imagePath == null
-                            ? Icon(Icons.camera_alt,
-                                size: isPhone ? 24 : 32,
-                                color: Colors.grey)
-                            : null,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: _pickImage,
-                      child: Text(_imagePath == null ? 'Add Photo' : 'Change Photo'),
-                    ),
-                    if (_imagePath != null)
-                      TextButton(
-                        onPressed: () => setState(() => _imagePath = null),
-                        child: const Text('Remove Photo'),
-                      ),
-                  ],
-                ),
-              ),
-              SizedBox(height: isPhone ? 20 : 24),
               _buildModernTextField(
                 controller: _nameController,
                 label: 'Product Name',
@@ -1103,7 +1069,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
       _isDiscountable = p.isDiscountable;
       _pricingType = p.pricingType;
       _isMainDifferentiator = p.isMainDifferentiator;
-      _imagePath = p.imagePath;
 
       _currentLevelKeys = p.enhancedLevelPrices.map((level) => level.levelId).toList();
       if (_currentLevelKeys.isEmpty && _pricingType != ProductPricingType.simple) {
@@ -1156,14 +1121,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
     }
   }
 
-  Future<void> _pickImage() async {
-    final path = await FileService.instance.pickAndSaveProductImage();
-    if (!mounted) return;
-    if (path != null) {
-      setState(() => _imagePath = path);
-    }
-  }
-
   void _saveProduct() {
     if (!_formKey.currentState!.validate()) {
       if (_nameController.text.isEmpty || _basePriceController.text.isEmpty) {
@@ -1209,7 +1166,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
         isDiscountable: _isDiscountable,
         isMainDifferentiator: _isMainDifferentiator,
         enableLevelPricing: _pricingType != ProductPricingType.simple,
-        imagePath: _imagePath,
       );
 
       widget.product!.enhancedLevelPrices.clear();
@@ -1234,7 +1190,6 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
         enableLevelPricing: _pricingType != ProductPricingType.simple,
         pricingType: _pricingType,
         enhancedLevelPrices: enhancedLevelPrices,
-        imagePath: _imagePath,
       );
 
       appState.addProduct(newProduct);
