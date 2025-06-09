@@ -3,7 +3,6 @@
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 import 'product.dart'; // 🔧 ADDED IMPORT FOR PRODUCT
-import 'field_definition.dart';
 import '../utils/common_utils.dart';
 
 part 'pdf_template.g.dart'; // This will be regenerated
@@ -109,73 +108,85 @@ class PDFTemplate extends HiveObject {
     }
   }
 
-  /// Return a combined list of all built-in, product and custom field definitions.
-  static List<FieldDefinition> getFieldDefinitions([
-    List<Product>? availableProducts,
-    List<dynamic>? customAppDataFields,
-  ]) {
-    final defs = <FieldDefinition>[...generateBaseFieldDefinitions()];
+  // 🚀 NEW: Dynamic field generation method
+  static List<String> getQuoteFieldTypes([List<Product>? availableProducts]) {
+    final baseFields = [
+      // Customer fields
+      'customerName',
+      'customerStreetAddress',
+      'customerCity',
+      'customerState',
+      'customerZipCode',
+      'customerFullAddress',
+      'customerPhone',
+      'customerEmail',
+
+      // Company fields
+      'companyName',
+      'companyAddress',
+      'companyPhone',
+      'companyEmail',
+
+      // Quote basic fields
+      'quoteNumber',
+      'quoteDate',
+      'validUntil',
+      'quoteStatus',
+      'todaysDate',
+
+      // Level 1 (Builder Grade) fields
+      'level1Name',
+      'level1Subtotal',
+      'level1Tax',
+      'level1TotalWithTax',
+
+      // Level 2 (Homeowner Grade) fields
+      'level2Name',
+      'level2Subtotal',
+      'level2Tax',
+      'level2TotalWithTax',
+
+      // Level 3 (Platinum Preferred) fields
+      'level3Name',
+      'level3Subtotal',
+      'level3Tax',
+      'level3TotalWithTax',
+
+      // Totals and calculations
+      'subtotal',
+      'taxRate',
+      'taxAmount',
+      'discount',
+      'grandTotal',
+
+      // Text fields
+      'notes',
+      'terms',
+      'upgradeQuoteText',
+
+    ];
+
+    // 🚀 Generate dynamic product fields
+    final productFields = <String>[];
 
     if (availableProducts != null && availableProducts.isNotEmpty) {
       for (final product in availableProducts) {
-        final safeName = _createSafeFieldName(product.name);
-        final category =
-            product.category.isEmpty ? 'Products' : '🏠 ${product.category}';
-        defs.addAll([
-          FieldDefinition(
-              appDataType: '${safeName}Name',
-              displayName: '${product.name} - Name',
-              category: category,
-              source: 'product.${product.id}.name'),
-          FieldDefinition(
-              appDataType: '${safeName}Qty',
-              displayName: '${product.name} - Qty',
-              category: category,
-              source: 'product.${product.id}.quantity'),
-          FieldDefinition(
-              appDataType: '${safeName}UnitPrice',
-              displayName: '${product.name} - Unit Price',
-              category: category,
-              source: 'product.${product.id}.unitPrice'),
-          FieldDefinition(
-              appDataType: '${safeName}Total',
-              displayName: '${product.name} - Total',
-              category: category,
-              source: 'product.${product.id}.total'),
-          FieldDefinition(
-              appDataType: '${safeName}Description',
-              displayName: '${product.name} - Description',
-              category: category,
-              source: 'product.${product.id}.description'),
+        // Create safe field name from product name
+        final safeProductName = _createSafeFieldName(product.name);
+
+        // Generate 5 fields for each product
+        productFields.addAll([
+          '${safeProductName}Name',
+          '${safeProductName}Qty',
+          '${safeProductName}UnitPrice',
+          '${safeProductName}Total',
+          '${safeProductName}Description',
         ]);
       }
     }
 
-    if (customAppDataFields != null && customAppDataFields.isNotEmpty) {
-      for (final field in customAppDataFields) {
-        final String fieldName;
-        final String displayName;
-        final String category;
-        if (field is Map<String, dynamic>) {
-          fieldName = field['fieldName'] as String? ?? '';
-          displayName = field['displayName'] as String? ?? fieldName;
-          category = field['category'] as String? ?? 'Fields';
-        } else {
-          fieldName = field.fieldName;
-          displayName = field.displayName;
-          category = field.category;
-        }
-        if (fieldName.isNotEmpty) {
-          defs.add(FieldDefinition(
-              appDataType: fieldName,
-              displayName: displayName,
-              category: category,
-              source: 'custom.$fieldName'));
-        }
-      }
-    }
 
-    return defs;
+    return [...baseFields, ...productFields];
   }
 
   // 🔧 Helper method to create safe field names
@@ -187,32 +198,272 @@ class PDFTemplate extends HiveObject {
         .replaceAllMapped(RegExp(r'\s\w'), (match) => match.group(0)!.toUpperCase().replaceAll(' ', '')); // Camel case
   }
 
-  /// Categorize field definitions for UI presentation.
-  static Map<String, List<String>> getCategorizedQuoteFieldTypes([
-    List<Product>? availableProducts,
-    List<dynamic>? customFields,
-  ]) {
-    final defs = getFieldDefinitions(availableProducts, customFields);
-    final Map<String, List<String>> map = {};
-    for (final def in defs) {
-      map.putIfAbsent(def.category, () => []).add(def.appDataType);
+  // 🚀 NEW: Get categorized field types for organized UI (FIXED VERSION)
+  // 🚀 NEW: Get categorized field types for organized UI (WITH CUSTOM FIELDS INTEGRATION)
+  static Map<String, List<String>> getCategorizedQuoteFieldTypes([List<Product>? availableProducts]) {
+    final categories = <String, List<String>>{
+      'Customer Information': [
+        'customerName', 'customerStreetAddress', 'customerCity', 'customerState',
+        'customerZipCode', 'customerFullAddress', 'customerPhone', 'customerEmail'
+      ],
+
+      'Company Information': [
+        'companyName', 'companyAddress', 'companyPhone', 'companyEmail'
+      ],
+
+      'Quote Information': [
+        'quoteNumber', 'quoteDate', 'validUntil', 'quoteStatus', 'todaysDate'
+      ],
+
+      'Quote Levels (3 levels)': [
+        'level1Name', 'level1Subtotal', 'level1Tax', 'level1TotalWithTax',
+        'level2Name', 'level2Subtotal', 'level2Tax', 'level2TotalWithTax',
+        'level3Name', 'level3Subtotal', 'level3Tax', 'level3TotalWithTax'
+      ],
+
+      'Calculations & Totals': [
+        'subtotal', 'taxRate', 'taxAmount', 'discount', 'grandTotal'
+      ],
+
+      'Text & Notes': [
+        'notes', 'terms', 'upgradeQuoteText'
+      ],
+
+      'Fields': [
+        'customText1', 'customText2', 'customText3',
+        'customNumeric1', 'customNumeric2',
+        'customDate1', 'customDate2',
+        'customBoolean1_for_checkbox', 'customBoolean2_for_checkbox'
+      ],
+    };
+
+    // 🚀 Add product categories dynamically
+    if (availableProducts != null && availableProducts.isNotEmpty) {
+      final productsByCategory = <String, List<Product>>{};
+
+      for (final product in availableProducts) {
+        final category = product.category.isEmpty ? 'Other' : product.category;
+        productsByCategory.putIfAbsent(category, () => []).add(product);
+      }
+
+      productsByCategory.forEach((categoryName, products) {
+        final categoryFields = <String>[];
+
+        for (final product in products) {
+          final safeProductName = _createSafeFieldName(product.name);
+          categoryFields.addAll([
+            '${safeProductName}Name',
+            '${safeProductName}Qty',
+            '${safeProductName}UnitPrice',
+            '${safeProductName}Total',
+          ]);
+        }
+
+        categories['🏠 $categoryName (${products.length} products)'] = categoryFields;
+      });
+    } else {
+      categories['Products (Legacy - 5 slots)'] = [
+        'product1Name', 'product1Qty', 'product1UnitPrice', 'product1Total',
+        'product2Name', 'product2Qty', 'product2UnitPrice', 'product2Total',
+        'product3Name', 'product3Qty', 'product3UnitPrice', 'product3Total',
+        'product4Name', 'product4Qty', 'product4UnitPrice', 'product4Total',
+        'product5Name', 'product5Qty', 'product5UnitPrice', 'product5Total',
+      ];
     }
-    return map;
+
+    return categories;
+  }
+
+// 🚀 NEW: Enhanced method that includes custom app data fields
+  static Map<String, List<String>> getCategorizedQuoteFieldTypesWithCustomFields(
+      List<Product>? availableProducts,
+      List<dynamic>? customAppDataFields, // Accept dynamic list from provider
+      ) {
+    // Start with base categories
+    final categories = getCategorizedQuoteFieldTypes(availableProducts);
+
+    // Process custom app data fields if provided
+    if (customAppDataFields != null && customAppDataFields.isNotEmpty) {
+      final customFieldsByCategory = <String, List<String>>{};
+
+      // Group custom fields by their categories
+      for (final field in customAppDataFields) {
+        // Handle both CustomAppDataField objects and Map representations
+        final String categoryKey;
+        final String fieldName;
+
+        if (field is Map<String, dynamic>) {
+          categoryKey = field['category'] as String? ?? 'custom';
+          fieldName = field['fieldName'] as String? ?? '';
+        } else {
+          // Assume it has category, fieldName, and displayName properties
+          categoryKey = field.category as String? ?? 'custom';
+          fieldName = field.fieldName as String? ?? '';
+        }
+
+        if (fieldName.isNotEmpty) {
+          customFieldsByCategory.putIfAbsent(categoryKey, () => []).add(fieldName);
+        }
+      }
+
+      // Category mapping: map custom categories to existing ones
+      final categoryMappings = {
+        'company': 'Company Information',
+        'contact': 'Contact Information', // Will create new if doesn't exist
+        'legal': 'Legal Information',
+        'pricing': 'Pricing Information',
+        'custom': 'Fields',
+      };
+
+      // Process each custom field category
+      customFieldsByCategory.forEach((customCategoryKey, customFields) {
+        final targetCategoryName =
+            categoryMappings[customCategoryKey] ??
+                formatCategoryName(customCategoryKey);
+
+        // Check if target category already exists (case-insensitive)
+        String? existingCategoryKey;
+        for (final existingKey in categories.keys) {
+          if (existingKey.toLowerCase().contains(
+              targetCategoryName.toLowerCase()) ||
+              targetCategoryName.toLowerCase().contains(
+                  existingKey.toLowerCase().replaceAll(
+                      RegExp(r'[^\w\s]'), ''))) {
+            existingCategoryKey = existingKey;
+            break;
+          }
+        }
+
+        if (existingCategoryKey != null) {
+          // Merge into existing category, but avoid duplicates
+          final existingFields = categories[existingCategoryKey]!;
+          for (final customField in customFields) {
+            if (!existingFields.contains(customField)) {
+              existingFields.add(customField);
+            }
+          }
+        } else {
+          // Create new category
+          categories[targetCategoryName] = customFields;
+        }
+      });
+
+    }
+
+    return categories;
   }
 
 
-  /// Display name helper for UI elements.
-  static String getFieldDisplayName(String appDataType,
-      [List<dynamic>? customAppDataFields]) {
-    final defs = getFieldDefinitions(null, customAppDataFields);
-    final match = defs.firstWhere(
-        (d) => d.appDataType == appDataType,
-        orElse: () => FieldDefinition(
-            appDataType: appDataType,
-            displayName: appDataType,
-            category: '',
-            source: ''));
-    return match.displayName;
+  // 🚀 UPDATED: Enhanced getFieldDisplayName method to handle dynamic product names
+  // 🚀 UPDATED: Enhanced getFieldDisplayName method to handle custom fields
+  static String getFieldDisplayName(String appDataType, [List<dynamic>? customAppDataFields]) {
+    final names = {
+      // Customer fields
+      'customerName': 'Customer Name',
+      'customerStreetAddress': 'Customer Street',
+      'customerCity': 'Customer City',
+      'customerState': 'Customer State/Pr.',
+      'customerZipCode': 'Customer Zip/Postal',
+      'customerFullAddress': 'Customer Full Address',
+      'customerPhone': 'Customer Phone',
+      'customerEmail': 'Customer Email',
+
+      // Company fields
+      'companyName': 'Company Name',
+      'companyAddress': 'Company Address',
+      'companyPhone': 'Company Phone',
+      'companyEmail': 'Company Email',
+
+      // Quote basic fields
+      'quoteNumber': 'Quote Number',
+      'quoteDate': 'Quote Date',
+      'validUntil': 'Valid Until',
+      'quoteStatus': 'Quote Status',
+      'todaysDate': 'Today\'s Date',
+
+      // Level fields (simplified)
+      'level1Name': 'Level 1 Name', 'level1Subtotal': 'Level 1 Subtotal',
+      'level1Tax': 'Level 1 Tax', 'level1TotalWithTax': 'Level 1 Total',
+      'level2Name': 'Level 2 Name', 'level2Subtotal': 'Level 2 Subtotal',
+      'level2Tax': 'Level 2 Tax', 'level2TotalWithTax': 'Level 2 Total',
+      'level3Name': 'Level 3 Name', 'level3Subtotal': 'Level 3 Subtotal',
+      'level3Tax': 'Level 3 Tax', 'level3TotalWithTax': 'Level 3 Total',
+
+      // Legacy product fields
+      'product1Name': 'Product 1 Name', 'product1Qty': 'Product 1 Qty',
+      'product1UnitPrice': 'Product 1 Unit Price', 'product1Total': 'Product 1 Total',
+      'product2Name': 'Product 2 Name', 'product2Qty': 'Product 2 Qty',
+      'product2UnitPrice': 'Product 2 Unit Price', 'product2Total': 'Product 2 Total',
+      'product3Name': 'Product 3 Name', 'product3Qty': 'Product 3 Qty',
+      'product3UnitPrice': 'Product 3 Unit Price', 'product3Total': 'Product 3 Total',
+      'product4Name': 'Product 4 Name', 'product4Qty': 'Product 4 Qty',
+      'product4UnitPrice': 'Product 4 Unit Price', 'product4Total': 'Product 4 Total',
+      'product5Name': 'Product 5 Name', 'product5Qty': 'Product 5 Qty',
+      'product5UnitPrice': 'Product 5 Unit Price', 'product5Total': 'Product 5 Total',
+
+      // Totals and calculations
+      'subtotal': 'Subtotal', 'discount': 'Discount', 'grandTotal': 'Grand Total',
+      'taxRate': 'Tax Rate (%)', 'taxAmount': 'Tax Amount',
+
+      // Text fields
+      'notes': 'Notes/Scope', 'terms': 'Terms & Conditions',
+      'upgradeQuoteText': 'Upgrade Quote Details',
+
+      // Custom fields
+      'customText1': 'Custom Text 1', 'customText2': 'Custom Text 2', 'customText3': 'Custom Text 3',
+      'customNumeric1': 'Custom Numeric 1', 'customNumeric2': 'Custom Numeric 2',
+      'customDate1': 'Custom Date 1', 'customDate2': 'Custom Date 2',
+      'customBoolean1_for_checkbox': 'Custom Checkbox 1', 'customBoolean2_for_checkbox': 'Custom Checkbox 2'
+    };
+
+    // First check if it's a known static field
+    if (names.containsKey(appDataType)) {
+      return names[appDataType]!;
+    }
+
+    // 🚀 Check custom app data fields
+    if (customAppDataFields != null) {
+      for (final field in customAppDataFields) {
+        final String fieldName;
+        final String currentValue;
+
+        if (field is Map<String, dynamic>) {
+          fieldName = field['fieldName'] as String? ?? '';
+          currentValue = field['currentValue'] as String? ?? '';
+        } else {
+          fieldName = field.fieldName as String? ?? '';
+          currentValue = field.currentValue as String? ?? '';
+        }
+
+        if (fieldName == appDataType) {
+          // Show field name + value if value exists, otherwise just field name
+          if (currentValue.isNotEmpty) {
+            return '$fieldName: $currentValue';
+          } else {
+            return fieldName;
+          }
+        }
+      }
+    }
+
+    // Handle dynamic product field names
+    if (appDataType.endsWith('Name')) {
+      final productName = appDataType.substring(0, appDataType.length - 4);
+      return '$productName - Name';
+    } else if (appDataType.endsWith('Qty')) {
+      final productName = appDataType.substring(0, appDataType.length - 3);
+      return '$productName - Quantity';
+    } else if (appDataType.endsWith('UnitPrice')) {
+      final productName = appDataType.substring(0, appDataType.length - 9);
+      return '$productName - Unit Price';
+    } else if (appDataType.endsWith('Total')) {
+      final productName = appDataType.substring(0, appDataType.length - 5);
+      return '$productName - Total';
+    }
+
+    // Fallback: Convert camelCase to readable format
+    String pretty = appDataType.replaceAllMapped(RegExp(r'[A-Z]'), (Match m) => ' ${m.group(0)}');
+    return pretty.trim();
   }
 
   Map<String, dynamic> toMap() {
