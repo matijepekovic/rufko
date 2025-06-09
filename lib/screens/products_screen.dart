@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
 import '../providers/app_state_provider.dart';
 import '../models/product.dart';
 import 'products/product_form_dialog.dart';
@@ -176,6 +177,8 @@ class _ProductsScreenState extends State<ProductsScreen>
   Widget _buildProductsList(AppStateProvider appState, String categoryFilter) {
     List<Product> productsToDisplay = _getFilteredProducts(appState, categoryFilter);
 
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+
     if (productsToDisplay.isEmpty) {
       return _buildEmptyState(categoryFilter);
     }
@@ -183,19 +186,19 @@ class _ProductsScreenState extends State<ProductsScreen>
     return RefreshIndicator(
       onRefresh: () => appState.loadAllData(),
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isSmallScreen ? 8 : 16),
         itemCount: productsToDisplay.length,
         itemBuilder: (context, index) {
           final product = productsToDisplay[index];
-          return _buildProductCard(product);
+          return _buildProductCard(product, isSmallScreen);
         },
       ),
     );
   }
 
-  Widget _buildProductCard(Product product) {
+  Widget _buildProductCard(Product product, bool isSmall) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: isSmall ? 8 : 12),
       child: Card(
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -203,27 +206,38 @@ class _ProductsScreenState extends State<ProductsScreen>
           onTap: () => _showProductDetails(product),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmall ? 12 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    // Product Icon
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _getCategoryColor(product.category).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
+                    // Product Icon or Image
+                    if (product.imagePath != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(product.imagePath!),
+                          width: isSmall ? 40 : 48,
+                          height: isSmall ? 40 : 48,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    else
+                      Container(
+                        width: isSmall ? 40 : 48,
+                        height: isSmall ? 40 : 48,
+                        decoration: BoxDecoration(
+                          color: _getCategoryColor(product.category).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          _getCategoryIcon(product.category),
+                          color: _getCategoryColor(product.category),
+                          size: isSmall ? 20 : 24,
+                        ),
                       ),
-                      child: Icon(
-                        _getCategoryIcon(product.category),
-                        color: _getCategoryColor(product.category),
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
+                    SizedBox(width: isSmall ? 12 : 16),
 
                     // Product Info
                     Expanded(
@@ -235,14 +249,14 @@ class _ProductsScreenState extends State<ProductsScreen>
                               Expanded(
                                 child: Text(
                                   product.name,
-                                  style: const TextStyle(
-                                    fontSize: 16,
+                                  style: TextStyle(
+                                    fontSize: isSmall ? 14 : 16,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: EdgeInsets.symmetric(horizontal: isSmall ? 6 : 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   color: product.isActive ? Colors.green.shade100 : Colors.grey.shade200,
                                   borderRadius: BorderRadius.circular(12),
@@ -250,7 +264,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                                 child: Text(
                                   product.isActive ? 'Active' : 'Inactive',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: isSmall ? 10 : 12,
                                     fontWeight: FontWeight.w500,
                                     color: product.isActive ? Colors.green.shade700 : Colors.grey.shade600,
                                   ),
@@ -263,7 +277,7 @@ class _ProductsScreenState extends State<ProductsScreen>
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: EdgeInsets.symmetric(horizontal: isSmall ? 4 : 6, vertical: 2),
                                 decoration: BoxDecoration(
                                   color: _getCategoryColor(product.category).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
@@ -271,17 +285,17 @@ class _ProductsScreenState extends State<ProductsScreen>
                                 child: Text(
                                   product.category,
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: isSmall ? 10 : 11,
                                     fontWeight: FontWeight.w500,
                                     color: _getCategoryColor(product.category),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: isSmall ? 6 : 8),
                               Text(
                                 '\$${product.unitPrice.toStringAsFixed(2)}/${product.unit}',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: isSmall ? 12 : 14,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.grey[700],
                                 ),
@@ -290,11 +304,11 @@ class _ProductsScreenState extends State<ProductsScreen>
                           ),
 
                           if (product.description != null && product.description!.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            SizedBox(height: isSmall ? 2 : 4),
                             Text(
                               product.description!,
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: isSmall ? 11 : 13,
                                 color: Colors.grey[600],
                               ),
                               maxLines: 2,
@@ -523,11 +537,22 @@ class _ProductsScreenState extends State<ProductsScreen>
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      _getCategoryIcon(product.category),
-                      color: _getCategoryColor(product.category),
-                      size: 28,
-                    ),
+                    if (product.imagePath != null)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(product.imagePath!),
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    else
+                      Icon(
+                        _getCategoryIcon(product.category),
+                        color: _getCategoryColor(product.category),
+                        size: 28,
+                      ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
