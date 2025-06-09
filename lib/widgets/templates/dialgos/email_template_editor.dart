@@ -592,6 +592,8 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
     final sampleData = <String, String>{};
 
     sampleData['customerName'] = 'John Smith';
+    sampleData['customerFirstName'] = 'John';
+    sampleData['customerLastName'] = 'Smith';
     sampleData['customerPhone'] = '(555) 123-4567';
     sampleData['customerEmail'] = 'john.smith@email.com';
     sampleData['customerFullAddress'] = '123 Main St, Seattle, WA 98101';
