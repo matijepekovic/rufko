@@ -1,4 +1,4 @@
-// lib/screens/home_screen.dart - CLEAN VERSION WITH BLUE THEME
+// lib/screens/home_screen.dart - PROPERLY RESPONSIVE WITH MIXINS
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +8,11 @@ import '../providers/app_state_provider.dart';
 import '../models/customer.dart';
 import '../models/simplified_quote.dart';
 import '../theme/rufko_theme.dart';
+import '../mixins/responsive_breakpoints_mixin.dart';
+import '../mixins/responsive_dimensions_mixin.dart';
+import '../mixins/responsive_spacing_mixin.dart';
+import '../mixins/responsive_text_mixin.dart';
+import '../mixins/responsive_widget_mixin.dart';
 
 import 'customers_screen.dart';
 import 'quotes_screen.dart';
@@ -26,7 +31,14 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with TickerProviderStateMixin,
+        ResponsiveBreakpointsMixin,
+        ResponsiveDimensionsMixin,
+        ResponsiveSpacingMixin,
+        ResponsiveTextMixin,
+        ResponsiveWidgetMixin {
+
   int _selectedIndex = 0;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -85,31 +97,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     final fab = _selectedIndex == 0 ? _buildFloatingActionButton() : null;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isLargeScreen = constraints.maxWidth >= 900;
-        if (isLargeScreen) {
-          return HomeLargeLayout(
-            selectedIndex: _selectedIndex,
-            navItems: _navItems,
-            onItemSelected: _onNavItemTapped,
-            onPageChanged: _onPageChanged,
-            pageController: _pageController,
-            pages: pages,
-            floatingActionButton: fab,
-          );
-        }
-
-        return HomeSmallLayout(
-          selectedIndex: _selectedIndex,
-          navItems: _navItems,
-          onItemSelected: _onNavItemTapped,
-          onPageChanged: _onPageChanged,
-          pageController: _pageController,
-          pages: pages,
-          floatingActionButton: fab,
-        );
-      },
+    return responsiveBuilder(
+      context: context,
+      mobile: HomeSmallLayout(
+        selectedIndex: _selectedIndex,
+        navItems: _navItems,
+        onItemSelected: _onNavItemTapped,
+        onPageChanged: _onPageChanged,
+        pageController: _pageController,
+        pages: pages,
+        floatingActionButton: fab,
+      ),
+      tablet: HomeSmallLayout(
+        selectedIndex: _selectedIndex,
+        navItems: _navItems,
+        onItemSelected: _onNavItemTapped,
+        onPageChanged: _onPageChanged,
+        pageController: _pageController,
+        pages: pages,
+        floatingActionButton: fab,
+      ),
+      desktop: HomeLargeLayout(
+        selectedIndex: _selectedIndex,
+        navItems: _navItems,
+        onItemSelected: _onNavItemTapped,
+        onPageChanged: _onPageChanged,
+        pageController: _pageController,
+        pages: pages,
+        floatingActionButton: fab,
+      ),
     );
   }
 
@@ -120,30 +136,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           return _buildLoadingState(appState.loadingMessage);
         }
 
-        return FadeTransition(
-          opacity: _fadeAnimation,
-          child: RefreshIndicator(
-            onRefresh: () => appState.loadAllData(),
-            child: CustomScrollView(
-              slivers: [
-                _buildModernSliverAppBar(appState),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildStatsOverview(appState),
-                        const SizedBox(height: 16),
-                        _buildRecentCustomers(appState),
-                        const SizedBox(height: 16),
-                        _buildRecentActivity(appState),
-                        const SizedBox(height: 24),
-                      ],
+        return responsiveSafeArea(
+          context: context,
+          top: false,
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: RefreshIndicator(
+              onRefresh: () => appState.loadAllData(),
+              child: CustomScrollView(
+                slivers: [
+                  _buildModernSliverAppBar(appState),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: screenPadding(context),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildStatsOverview(appState),
+                          SizedBox(height: spacingMD(context)),
+                          _buildRecentCustomers(appState),
+                          SizedBox(height: spacingMD(context)),
+                          _buildRecentActivity(appState),
+                          SizedBox(height: spacingLG(context)),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -151,48 +171,93 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-
   Widget _buildModernSliverAppBar(AppStateProvider appState) {
     final stats = appState.getDashboardStats();
-    final isNarrow = MediaQuery.of(context).size.width < 360;
-    final logoSize = isNarrow ? 80.0 : 120.0;
-    final spacing = isNarrow ? 12.0 : 24.0;
+
+    final expandedHeight = responsiveValue(
+      context,
+      mobile: 160.0,
+      tablet: 180.0,
+      desktop: 200.0,
+    );
+
+    final logoSize = responsiveValue(
+      context,
+      mobile: isXS(context) ? 60.0 : 80.0,
+      tablet: 100.0,
+      desktop: 120.0,
+    );
+
+    Widget buildLogo() {
+      return Container(
+        width: logoSize,
+        height: logoSize,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(logoSize * 0.17),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(logoSize * 0.17),
+          child: Image.asset(
+            'assets/images/logo/rufko_full_logo.png',
+            fit: BoxFit.cover,
+            cacheWidth: 315,
+            cacheHeight: 315,
+            errorBuilder: (context, error, stackTrace) {
+              debugPrint('Logo load error: $error');
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(logoSize * 0.17),
+                ),
+                child: Icon(
+                  Icons.roofing,
+                  color: RufkoTheme.primaryColor,
+                  size: logoSize * 0.5,
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
 
     Widget buildStats() {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             'Total Revenue',
-            style: TextStyle(
+            style: bodySmall(context).copyWith(
               color: Colors.white.withOpacity(0.9),
-              fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
           ),
-          Text(
-            NumberFormat.compactCurrency(symbol: r'$').format(stats['totalRevenue'] ?? 0.0),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              NumberFormat.compactCurrency(symbol: r'$').format(stats['totalRevenue'] ?? 0.0),
+              style: titleLarge(context).copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: spacingSM(context)),
           Text(
             'Active Quotes',
-            style: TextStyle(
+            style: bodySmall(context).copyWith(
               color: Colors.white.withOpacity(0.9),
-              fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
           ),
           Text(
             '${stats['activeQuotes'] ?? 0}',
-            style: const TextStyle(
+            style: titleLarge(context).copyWith(
               color: Colors.white,
-              fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -201,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
 
     return SliverAppBar(
-      expandedHeight: isNarrow ? 160 : 200,
+      expandedHeight: expandedHeight,
       floating: false,
       pinned: true,
       backgroundColor: Colors.white,
@@ -221,90 +286,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isNarrow)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: logoSize,
-                          height: logoSize,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Image.asset(
-                              'assets/images/logo/rufko_full_logo.png',
-                              fit: BoxFit.cover,
-                              cacheWidth: 315,
-                              cacheHeight: 315,
-                              errorBuilder: (context, error, stackTrace) {
-                                debugPrint('Logo load error: $error');
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const Icon(
-                                    Icons.roofing,
-                                    color: RufkoTheme.primaryColor,
-                                    size: 60,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: spacing),
-                        buildStats(),
-                      ],
-                    )
-                  else
-                    Row(
-                      children: [
-                        Container(
-                          width: logoSize,
-                          height: logoSize,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Image.asset(
-                              'assets/images/logo/rufko_full_logo.png',
-                              fit: BoxFit.cover,
-                              cacheWidth: 315,
-                              cacheHeight: 315,
-                              errorBuilder: (context, error, stackTrace) {
-                                debugPrint('Logo load error: $error');
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: const Icon(
-                                    Icons.roofing,
-                                    color: RufkoTheme.primaryColor,
-                                    size: 60,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: spacing),
-                        Expanded(child: buildStats()),
-                      ],
-                    ),
-                ],
+              padding: responsivePadding(context, horizontal: 2.5, vertical: 2),
+              child: orientationBuilder(
+                context: context,
+                portrait: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    buildLogo(),
+                    SizedBox(height: spacingMD(context)),
+                    Flexible(child: buildStats()),
+                  ],
+                ),
+                landscape: Row(
+                  children: [
+                    buildLogo(),
+                    SizedBox(width: spacingLG(context)),
+                    Expanded(child: buildStats()),
+                  ],
+                ),
               ),
             ),
           ),
@@ -323,7 +324,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-
   Widget _buildLoadingState(String message) {
     return Center(
       child: Column(
@@ -332,10 +332,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(Colors.blue.shade600),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: spacingLG(context)),
           Text(
             message.isNotEmpty ? message : 'Loading Dashboard...',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: titleMedium(context).copyWith(
               color: Colors.grey[600],
             ),
           ),
@@ -352,26 +352,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       children: [
         Text(
           'Overview',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+          style: headlineSmall(context).copyWith(
             color: Colors.grey[800],
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: spacingMD(context)),
         LayoutBuilder(
           builder: (context, constraints) {
-            final isNarrow = constraints.maxWidth < 360;
-            final crossAxisCount = isNarrow ? 1 : 2;
-            final cardWidth = (constraints.maxWidth - 16 * (crossAxisCount - 1)) / crossAxisCount;
-            final aspectRatio = cardWidth > 160 ? 1.8 : 2.2;
-            return GridView.count(
-              crossAxisCount: crossAxisCount,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: aspectRatio,
-              padding: EdgeInsets.zero,
+            final columns = getGridColumns(
+              context,
+              xs: 1,
+              sm: 2,
+              md: 2,
+              lg: 4,
+              xl: 4,
+            );
+
+            final cardWidth = (constraints.maxWidth - (spacingMD(context) * (columns - 1))) / columns;
+
+            return Wrap(
+              spacing: spacingMD(context),
+              runSpacing: spacingMD(context),
               children: [
                 _buildStatsCard(
                   'Total Customers',
@@ -379,6 +380,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Icons.people,
                   Colors.blue.shade600,
                       () => _navigateToTab(1),
+                  cardWidth,
                 ),
                 _buildStatsCard(
                   'Total Quotes',
@@ -386,6 +388,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Icons.description,
                   Colors.green.shade600,
                       () => _navigateToTab(2),
+                  cardWidth,
                 ),
                 _buildStatsCard(
                   'Active Products',
@@ -393,6 +396,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Icons.inventory,
                   Colors.purple.shade600,
                       () => _navigateToTab(3),
+                  cardWidth,
                 ),
                 _buildStatsCard(
                   'Monthly Revenue',
@@ -400,6 +404,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Icons.trending_up,
                   Colors.orange.shade600,
                   null,
+                  cardWidth,
                 ),
               ],
             );
@@ -409,42 +414,65 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildStatsCard(String title, String value, IconData icon, Color color, VoidCallback? onTap) {
-    return Card(
+  Widget _buildStatsCard(
+      String title,
+      String value,
+      IconData icon,
+      Color color,
+      VoidCallback? onTap,
+      double width,
+      ) {
+    final iconSize = responsiveValue(
+      context,
+      mobile: 20.0,
+      tablet: 24.0,
+      desktop: 28.0,
+    );
+
+    Widget cardContent = Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(spacingMD(context)),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(spacingMD(context)),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: cardPadding(context),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Flexible(
-                flex: 1,
+                flex: responsiveFlex(context, mobile: 1, tablet: 1),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
+                    Flexible(
+                      child: Container(
+                        padding: EdgeInsets.all(spacingSM(context)),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(spacingSM(context) * 1.5),
+                        ),
+                        child: Icon(icon, color: color, size: iconSize),
                       ),
-                      child: Icon(icon, color: color, size: 24),
                     ),
                     if (onTap != null)
-                      Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: iconSize * 0.6,
+                        color: Colors.grey[400],
+                      ),
                   ],
                 ),
               ),
+              SizedBox(height: spacingSM(context)),
               Flexible(
-                flex: 2,
+                flex: responsiveFlex(context, mobile: 2, tablet: 2),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Flexible(
                       child: FittedBox(
@@ -452,21 +480,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         alignment: Alignment.centerLeft,
                         child: Text(
                           value,
-                          style: const TextStyle(
-                            fontSize: 20,
+                          style: headlineSmall(context).copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
+                    SizedBox(height: spacingXS(context)),
                     Flexible(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
                         child: Text(
                           title,
-                          style: TextStyle(
-                            fontSize: 12,
+                          style: labelMedium(context).copyWith(
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w500,
                           ),
@@ -481,7 +508,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       ),
     );
+
+    return SizedBox(
+      width: width,
+      child: responsiveAspectRatio(
+        context: context,
+        child: cardContent,
+        mobileRatio: 2.2,
+        tabletRatio: 2.5,
+        desktopRatio: 2.8,
+      ),
+    );
   }
+
   Widget _buildRecentCustomers(AppStateProvider appState) {
     final recentCustomers = [...appState.customers]
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -492,27 +531,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Recent Customers',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[800],
+            Expanded(
+              child: Text(
+                'Recent Customers',
+                style: headlineSmall(context).copyWith(
+                  color: Colors.grey[800],
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             TextButton(
               onPressed: () => _navigateToTab(1),
-              child: const Text('View All'),
+              child: Text('View All', style: labelLarge(context)),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: spacingSM(context)),
 
         if (recentCustomers.isEmpty)
           _buildEmptyCustomersState()
         else
           Card(
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(spacingSM(context) * 1.5),
+            ),
             child: Column(
               children: recentCustomers.take(5).map((customer) {
                 final quoteCount = appState.getSimplifiedQuotesForCustomer(customer.id).length;
@@ -525,14 +568,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildCustomerListItem(Customer customer, int quoteCount) {
-    return SizedBox(
-      width: double.infinity,
-      child: ListTile(
+    return ListTile(
+      contentPadding: responsivePadding(context, horizontal: 2, vertical: 1),
       leading: CircleAvatar(
+        radius: responsiveValue(context, mobile: 18.0, tablet: 20.0, desktop: 22.0),
         backgroundColor: RufkoTheme.primaryColor.withValues(alpha: 0.1),
         child: Text(
           customer.name.isNotEmpty ? customer.name[0].toUpperCase() : 'C',
-          style: const TextStyle(
+          style: titleSmall(context).copyWith(
             fontWeight: FontWeight.bold,
             color: RufkoTheme.primaryColor,
           ),
@@ -540,52 +583,52 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       ),
       title: Text(
         customer.name,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+        style: titleSmall(context).copyWith(fontWeight: FontWeight.w600),
+        overflow: TextOverflow.ellipsis,
       ),
-        subtitle: Row(
-          children: [
-            if (customer.phone != null) ...[
-              Icon(Icons.phone, size: 14, color: Colors.grey[500]),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  customer.phone!,
-                  style: TextStyle(color: Colors.grey[600]),
-                  overflow: TextOverflow.ellipsis,
-                ),
+      subtitle: Row(
+        children: [
+          if (customer.phone != null) ...[
+            Icon(Icons.phone, size: labelSmall(context).fontSize, color: Colors.grey[500]),
+            SizedBox(width: spacingXS(context)),
+            Expanded(
+              child: Text(
+                customer.phone!,
+                style: bodySmall(context).copyWith(color: Colors.grey[600]),
+                overflow: TextOverflow.ellipsis,
               ),
-            ] else if (customer.email != null) ...[
-              Icon(Icons.email, size: 14, color: Colors.grey[500]),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  customer.email!,
-                  style: TextStyle(color: Colors.grey[600]),
-                  overflow: TextOverflow.ellipsis,
-                ),
+            ),
+          ] else if (customer.email != null) ...[
+            Icon(Icons.email, size: labelSmall(context).fontSize, color: Colors.grey[500]),
+            SizedBox(width: spacingXS(context)),
+            Expanded(
+              child: Text(
+                customer.email!,
+                style: bodySmall(context).copyWith(color: Colors.grey[600]),
+                overflow: TextOverflow.ellipsis,
               ),
-            ] else ...[
-              Expanded(
-                child: Text(
-                  'Added ${_formatDate(customer.createdAt)}',
-                  style: TextStyle(color: Colors.grey[600]),
-                  overflow: TextOverflow.ellipsis,
-                ),
+            ),
+          ] else ...[
+            Expanded(
+              child: Text(
+                'Added ${_formatDate(customer.createdAt)}',
+                style: bodySmall(context).copyWith(color: Colors.grey[600]),
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
+            ),
           ],
-        ),
+        ],
+      ),
       trailing: quoteCount > 0
           ? Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: responsivePadding(context, horizontal: 1, vertical: 0.5),
         decoration: BoxDecoration(
           color: Colors.blue.shade100,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(spacingSM(context)),
         ),
         child: Text(
           '$quoteCount quote${quoteCount == 1 ? '' : 's'}',
-          style: TextStyle(
-            fontSize: 12,
+          style: labelSmall(context).copyWith(
             fontWeight: FontWeight.w500,
             color: Colors.blue.shade700,
           ),
@@ -598,48 +641,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           builder: (context) => CustomerDetailScreen(customer: customer),
         ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildEmptyCustomersState() {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(spacingSM(context) * 1.5),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: responsivePadding(context, all: 4),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(spacingMD(context)),
               decoration: BoxDecoration(
                 color: Colors.blue.shade100,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.people_outline, size: 48, color: Colors.blue.shade600),
+              child: Icon(
+                Icons.people_outline,
+                size: responsiveValue(context, mobile: 36.0, tablet: 42.0, desktop: 48.0),
+                color: Colors.blue.shade600,
+              ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: spacingMD(context)),
             Text(
               'No customers yet',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: titleMedium(context).copyWith(
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[700],
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: spacingSM(context)),
             Text(
               'Add your first customer to get started',
-              style: TextStyle(color: Colors.grey[500]),
+              style: bodyMedium(context).copyWith(color: Colors.grey[500]),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => _navigateToTab(1),
-              icon: const Icon(Icons.add),
-              label: const Text('Add Customer'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue.shade600,
-                foregroundColor: Colors.white,
+            SizedBox(height: spacingMD(context)),
+            FractionallySizedBox(
+              widthFactor: responsiveValue(context, mobile: 0.8, tablet: 0.6, desktop: 0.5),
+              child: ElevatedButton.icon(
+                onPressed: () => _navigateToTab(1),
+                icon: const Icon(Icons.add),
+                label: Text('Add Customer', style: labelLarge(context)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade600,
+                  foregroundColor: Colors.white,
+                  padding: responsivePadding(context, horizontal: 2, vertical: 1.5),
+                ),
               ),
             ),
           ],
@@ -655,20 +707,22 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Recent Quotes',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[800],
+            Expanded(
+              child: Text(
+                'Recent Quotes',
+                style: headlineSmall(context).copyWith(
+                  color: Colors.grey[800],
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             TextButton(
               onPressed: () => _navigateToTab(2),
-              child: const Text('View All'),
+              child: Text('View All', style: labelLarge(context)),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: spacingSM(context)),
         _buildRecentQuotesList(appState),
       ],
     );
@@ -684,7 +738,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(spacingSM(context) * 1.5),
+      ),
       child: Column(
         children: recentQuotes.take(5).map((quote) {
           return _buildQuoteListItem(quote, appState);
@@ -696,7 +752,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildQuoteListItem(
       SimplifiedMultiLevelQuote quote, AppStateProvider appState) {
     final customer = appState.customers.firstWhere(
-      (c) => c.id == quote.customerId,
+          (c) => c.id == quote.customerId,
       orElse: () => Customer(name: 'Unknown Customer'),
     );
 
@@ -705,25 +761,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       representativeTotal = quote.getDisplayTotalForLevel(quote.levels.first.id);
     }
 
-    return SizedBox(
-      width: double.infinity,
-      child: ListTile(
+    return ListTile(
+      contentPadding: responsivePadding(context, horizontal: 2, vertical: 1),
       leading: Container(
-        width: 40,
-        height: 40,
+        width: responsiveValue(context, mobile: 36.0, tablet: 40.0, desktop: 44.0),
+        height: responsiveValue(context, mobile: 36.0, tablet: 40.0, desktop: 44.0),
         decoration: BoxDecoration(
           color: _getStatusColor(quote.status).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(spacingSM(context)),
         ),
         child: Icon(
           _getQuoteStatusIcon(quote.status),
           color: _getStatusColor(quote.status),
-          size: 20,
+          size: responsiveValue(context, mobile: 18.0, tablet: 20.0, desktop: 22.0),
         ),
       ),
       title: Text(
         'Quote ${quote.quoteNumber}',
-        style: const TextStyle(fontWeight: FontWeight.w600),
+        style: titleSmall(context).copyWith(fontWeight: FontWeight.w600),
+        overflow: TextOverflow.ellipsis,
       ),
       subtitle: Column(
         mainAxisSize: MainAxisSize.min,
@@ -731,22 +787,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         children: [
           Text(
             customer.name,
+            style: bodySmall(context),
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: spacingXS(context)),
           Row(
             children: [
               Flexible(
+                flex: responsiveFlex(context, mobile: 1),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: responsivePadding(context, horizontal: 0.75, vertical: 0.25),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade100,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(spacingSM(context) * 0.5),
                   ),
                   child: Text(
                     '${quote.levels.length} level${quote.levels.length == 1 ? "" : "s"}',
-                    style: TextStyle(
-                      fontSize: 10,
+                    style: labelSmall(context).copyWith(
                       fontWeight: FontWeight.w500,
                       color: Colors.blue.shade700,
                     ),
@@ -754,11 +811,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: spacingSM(context)),
               Expanded(
+                flex: responsiveFlex(context, mobile: 2),
                 child: Text(
                   _formatDate(quote.createdAt),
-                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  style: labelSmall(context).copyWith(color: Colors.grey[500]),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -766,18 +824,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ],
       ),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            NumberFormat.compactCurrency(symbol: r'$').format(representativeTotal),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
+      trailing: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          NumberFormat.compactCurrency(symbol: r'$').format(representativeTotal),
+          style: titleMedium(context).copyWith(
+            fontWeight: FontWeight.bold,
           ),
-        ],
+        ),
       ),
       onTap: () => Navigator.push(
         context,
@@ -788,48 +842,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildEmptyQuotesState() {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(spacingSM(context) * 1.5),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: responsivePadding(context, all: 4),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(spacingMD(context)),
               decoration: BoxDecoration(
                 color: Colors.green.shade100,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.description_outlined, size: 48, color: Colors.green.shade600),
+              child: Icon(
+                Icons.description_outlined,
+                size: responsiveValue(context, mobile: 36.0, tablet: 42.0, desktop: 48.0),
+                color: Colors.green.shade600,
+              ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: spacingMD(context)),
             Text(
               'No quotes yet',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: titleMedium(context).copyWith(
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[700],
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: spacingSM(context)),
             Text(
               'Create your first quote to get started',
-              style: TextStyle(color: Colors.grey[500]),
+              style: bodyMedium(context).copyWith(color: Colors.grey[500]),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => _navigateToTab(2),
-              icon: const Icon(Icons.add),
-              label: const Text('Create Quote'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green.shade600,
-                foregroundColor: Colors.white,
+            SizedBox(height: spacingMD(context)),
+            FractionallySizedBox(
+              widthFactor: responsiveValue(context, mobile: 0.8, tablet: 0.6, desktop: 0.5),
+              child: ElevatedButton.icon(
+                onPressed: () => _navigateToTab(2),
+                icon: const Icon(Icons.add),
+                label: Text('Create Quote', style: labelLarge(context)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                  padding: responsivePadding(context, horizontal: 2, vertical: 1.5),
+                ),
               ),
             ),
           ],
@@ -844,7 +907,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: RufkoTheme.primaryColor,
       foregroundColor: Colors.white,
       icon: const Icon(Icons.add),
-      label: const Text('Quick Create'),
+      label: Text(
+        'Quick Create',
+        style: labelLarge(context),
+      ),
     );
   }
 
@@ -908,69 +974,79 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => Container(
-        margin: const EdgeInsets.all(16),
+        margin: EdgeInsets.all(spacingMD(context)),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(spacingLG(context)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(Icons.add, color: Colors.blue.shade600),
+        child: responsiveSafeArea(
+          context: context,
+          bottom: true,
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: responsivePadding(context, all: 2.5),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(spacingSM(context)),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade100,
+                          borderRadius: BorderRadius.circular(spacingSM(context)),
+                        ),
+                        child: Icon(Icons.add, color: Colors.blue.shade600),
+                      ),
+                      SizedBox(width: spacingSM(context)),
+                      Text(
+                        'Quick Create',
+                        style: titleLarge(context).copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Quick Create',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                _buildQuickActionTile(
+                  'New Customer',
+                  'Add a new customer to your database',
+                  Icons.person_add,
+                  Colors.blue.shade600,
+                      () {
+                    Navigator.pop(context);
+                    _navigateToTab(1);
+                  },
+                ),
+                _buildQuickActionTile(
+                  'New Quote',
+                  'Create a professional roofing estimate',
+                  Icons.note_add,
+                  Colors.green.shade600,
+                      () {
+                    Navigator.pop(context);
+                    _navigateToTab(2);
+                  },
+                ),
+                _buildQuickActionTile(
+                  'New Product',
+                  'Add products to your inventory',
+                  Icons.add_box,
+                  Colors.orange.shade600,
+                      () {
+                    Navigator.pop(context);
+                    _navigateToTab(3);
+                  },
+                ),
+                SizedBox(height: spacingLG(context)),
+              ],
             ),
-            _buildQuickActionTile(
-              'New Customer',
-              'Add a new customer to your database',
-              Icons.person_add,
-              Colors.blue.shade600,
-                  () {
-                Navigator.pop(context);
-                _navigateToTab(1);
-              },
-            ),
-            _buildQuickActionTile(
-              'New Quote',
-              'Create a professional roofing estimate',
-              Icons.note_add,
-              Colors.green.shade600,
-                  () {
-                Navigator.pop(context);
-                _navigateToTab(2);
-              },
-            ),
-            _buildQuickActionTile(
-              'New Product',
-              'Add products to your inventory',
-              Icons.add_box,
-              Colors.orange.shade600,
-                  () {
-                Navigator.pop(context);
-                _navigateToTab(3);
-              },
-            ),
-            const SizedBox(height: 20),
-          ],
+          ),
         ),
       ),
     );
@@ -978,19 +1054,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildQuickActionTile(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
     return ListTile(
+      contentPadding: responsivePadding(context, horizontal: 2.5, vertical: 1),
       leading: Container(
-        padding: const EdgeInsets.all(8),
+        padding: EdgeInsets.all(spacingSM(context)),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(spacingSM(context)),
         ),
         child: Icon(icon, color: color),
       ),
       title: Text(
         title,
-        style: const TextStyle(fontWeight: FontWeight.w600),
+        style: titleSmall(context).copyWith(fontWeight: FontWeight.w600),
       ),
-      subtitle: Text(subtitle),
+      subtitle: Text(subtitle, style: bodySmall(context)),
       onTap: onTap,
     );
   }
