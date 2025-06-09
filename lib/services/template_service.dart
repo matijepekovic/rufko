@@ -14,7 +14,6 @@ import '../models/pdf_template.dart';
 import '../models/customer.dart';
 import '../models/simplified_quote.dart';
 import '../models/quote.dart' as legacy_quote_model;
-import '../models/product.dart';
 import 'database_service.dart';
 
 class TemplateService {
@@ -424,7 +423,6 @@ class TemplateService {
     }
     allProducts.addAll(quote.addons);
 
-    // Legacy 5-slot fields for backwards compatibility
     for (int i = 0; i < 5; i++) {
       final productNum = i + 1;
       final productKey = 'product$productNum';
@@ -435,34 +433,16 @@ class TemplateService {
         map['${productKey}Qty'] = product.quantity.toString();
         map['${productKey}UnitPrice'] = _currencyFormat.format(product.unitPrice);
         map['${productKey}Total'] = _currencyFormat.format(product.totalPrice);
+        // NEW: Add product description mapping
         map['${productKey}Description'] = product.description ?? '';
       } else {
         map['${productKey}Name'] = '';
         map['${productKey}Qty'] = '';
         map['${productKey}UnitPrice'] = '';
         map['${productKey}Total'] = '';
+        // NEW: Add empty product description
         map['${productKey}Description'] = '';
       }
-    }
-
-    // Dynamically named product fields based on product names
-    final dynamicProducts = <Product>[];
-    for (final item in allProducts) {
-      final safeName = _createSafeFieldName(item.productName);
-      map['${safeName}Name'] = item.productName;
-      map['${safeName}Qty'] = item.quantity.toString();
-      map['${safeName}UnitPrice'] = _currencyFormat.format(item.unitPrice);
-      map['${safeName}Total'] = _currencyFormat.format(item.totalPrice);
-      map['${safeName}Description'] = item.description ?? '';
-
-      dynamicProducts.add(Product(
-        id: item.productId,
-        name: item.productName,
-        description: item.description,
-        unitPrice: item.unitPrice,
-        unit: item.unit,
-        category: '',
-      ));
     }
 
     // === OVERALL TOTALS ===
@@ -698,9 +678,7 @@ class TemplateService {
     // === ENSURE ALL FIELD TYPES HAVE VALUES ===
 
 
-    for (final fieldTypeKey in PDFTemplate
-        .getFieldDefinitions(dynamicProducts, customAppDataFields)
-        .map((d) => d.appDataType)) {
+    for (final fieldTypeKey in PDFTemplate.getQuoteFieldTypes()) {
       final existingValue = map[fieldTypeKey];
 
       // Generate better sample data for preview mode
@@ -796,13 +774,4 @@ class TemplateService {
     }
     return true;
   }
-}
-
-// Helper to generate a safe field name from a product name
-String _createSafeFieldName(String productName) {
-  return productName
-      .replaceAll(RegExp(r'[^\w\s]'), '')
-      .replaceAll(RegExp(r'\s+'), '')
-      .replaceAllMapped(RegExp(r'^\w'), (m) => m.group(0)!.toLowerCase())
-      .replaceAllMapped(RegExp(r'\s\w'), (m) => m.group(0)!.toUpperCase().replaceAll(' ', ''));
 }
