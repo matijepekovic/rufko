@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 
 mixin ResponsiveDimensionsMixin {
   // Screen dimensions
-  double screenWidth(BuildContext context) => MediaQuery.of(context).size.width;
-  double screenHeight(BuildContext context) => MediaQuery.of(context).size.height;
-  EdgeInsets screenPadding(BuildContext context) => MediaQuery.of(context).padding;
-  EdgeInsets viewInsets(BuildContext context) => MediaQuery.of(context).viewInsets;
+  double screenWidth(BuildContext context) => MediaQuery.sizeOf(context).width;
+  double screenHeight(BuildContext context) => MediaQuery.sizeOf(context).height;
+  EdgeInsets screenPadding(BuildContext context) => MediaQuery.paddingOf(context);
+  EdgeInsets viewInsets(BuildContext context) => MediaQuery.viewInsetsOf(context);
 
   // Orientation
   Orientation orientation(BuildContext context) => MediaQuery.of(context).orientation;
@@ -33,6 +33,19 @@ mixin ResponsiveDimensionsMixin {
     if (width >= 900) return desktop ?? tablet ?? mobile;
     if (width >= 600) return tablet ?? mobile;
     return mobile;
+  }
+
+  /// Responsive value using Material window size classes.
+  T windowClassValue<T>(
+    BuildContext context, {
+    required T compact,
+    T? medium,
+    T? expanded,
+  }) {
+    final width = screenWidth(context);
+    if (width >= 1240) return expanded ?? medium ?? compact;
+    if (width >= 600) return medium ?? compact;
+    return compact;
   }
 
   // Get percentage of screen width/height
