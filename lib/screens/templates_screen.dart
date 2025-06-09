@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
 import 'template_editor_screen.dart';
-import '../widgets/templates/custom_app_data_tab.dart';
+import '../widgets/templates/fields_tab.dart';
 import '../widgets/templates/pdf_templates_tab.dart';
 import '../widgets/templates/message_templates_tab.dart';
 import '../widgets/templates/email_templates_tab.dart';
@@ -13,7 +13,7 @@ import '../widgets/templates/dialgos/message_template_editor.dart';
 import '../widgets/templates/dialgos/email_template_editor.dart';
 import 'category_management_screen.dart';
 import '../models/custom_app_data.dart';
-import '../widgets/templates/dialgos/add_custom_field_dialog.dart';
+import '../widgets/templates/dialgos/add_field_dialog.dart';
 
 class TemplatesScreen extends StatefulWidget {
   const TemplatesScreen({super.key});
@@ -61,7 +61,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                     PdfTemplatesTab(),
                     MessageTemplatesTab(),
                     EmailTemplatesTab(),
-                    CustomAppDataScreen(),
+                    FieldsTab(),
                   ],
                 ),
               ),
@@ -154,12 +154,12 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               label: const Text('New Email Template'),
               backgroundColor: Colors.orange,
             );
-          case 3: // Custom Fields tab
+          case 3: // Fields tab
             return FloatingActionButton.extended(
               heroTag: "custom_fields_fab",
               onPressed: _createNewCustomField,
               icon: const Icon(Icons.add),
-              label: const Text('New Custom Field'),
+              label: const Text('New Field'),
               backgroundColor: RufkoTheme.primaryColor,
             );
           default:
@@ -236,7 +236,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Header - matching add_custom_field_dialog style
+                    // Header - matching add_field_dialog style
                     Container(
                       padding: const EdgeInsets.fromLTRB(20, 16, 16, 8),
                       decoration: const BoxDecoration(
@@ -367,7 +367,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                       ),
                     ),
 
-                    // Actions - matching add_custom_field_dialog style
+                    // Actions - matching add_field_dialog style
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -562,9 +562,9 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   }
 
   void _createNewCustomField() async {
-    // Use the static method from AddCustomFieldDialog which handles everything properly
+    // Use the static method from AddFieldDialog which handles everything properly
     try {
-      final result = await AddCustomFieldDialog.show(context);
+      final result = await AddFieldDialog.show(context);
 
       if (result != null && mounted) {
         final appState = context.read<AppStateProvider>();

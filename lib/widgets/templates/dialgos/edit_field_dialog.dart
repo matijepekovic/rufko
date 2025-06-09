@@ -1,4 +1,4 @@
-// lib/widgets/edit_custom_field_dialog.dart
+// lib/widgets/edit_field_dialog.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,12 +7,12 @@ import '../../../providers/app_state_provider.dart';
 import '../../../mixins/field_type_mixin.dart';
 import '../../../theme/rufko_theme.dart';
 
-class EditCustomFieldDialog extends StatefulWidget {
+class EditFieldDialog extends StatefulWidget {
   final CustomAppDataField field;
   final List<String> categories;
   final Map<String, String> categoryNames;
 
-  const EditCustomFieldDialog({
+  const EditFieldDialog({
     super.key,
     required this.field,
     required this.categories,
@@ -73,7 +73,7 @@ class EditCustomFieldDialog extends StatefulWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Create a new category for custom fields:',
+                        'Create a new category for fields:',
                         style: TextStyle(fontSize: 14, color: Colors.grey),
                       ),
                       const SizedBox(height: 16),
@@ -158,10 +158,10 @@ class EditCustomFieldDialog extends StatefulWidget {
   }
 
   @override
-  State<EditCustomFieldDialog> createState() => _EditCustomFieldDialogState();
+  State<EditFieldDialog> createState() => _EditFieldDialogState();
 }
 
-class _EditCustomFieldDialogState extends State<EditCustomFieldDialog>
+class _EditFieldDialogState extends State<EditFieldDialog>
     with FieldTypeMixin {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _fieldNameController;
@@ -318,7 +318,7 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog>
                         onChanged: (String? newValue) async {
                           if (newValue == _createNewCategoryValue) {
                             // Show create category dialog
-                            final newCategory = await EditCustomFieldDialog._createNewCategoryAndReturn(context);
+                            final newCategory = await EditFieldDialog._createNewCategoryAndReturn(context);
                             if (newCategory != null && mounted) {
                               // Update the local categories and select the new one
                               final appState = context.read<AppStateProvider>();
@@ -434,71 +434,75 @@ class _EditCustomFieldDialogState extends State<EditCustomFieldDialog>
                       ),
                       const SizedBox(height: 12),
 
-                      // Current Value - Different UI for checkbox vs other types
-                      if (_selectedFieldType == 'checkbox') ...[
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade400),
-                            borderRadius: BorderRadius.circular(4),
+                      ExpansionTile(
+                        tilePadding: EdgeInsets.zero,
+                        title: const Text('Advanced Options', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                        children: [
+                          const SizedBox(height: 8),
+                          if (_selectedFieldType == 'checkbox')
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade400),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: CheckboxListTile(
+                                title: const Text('Current State', style: TextStyle(fontSize: 14)),
+                                subtitle: const Text('Current checkbox value', style: TextStyle(fontSize: 12)),
+                                value: _checkboxValue,
+                                onChanged: (bool? value) {
+                                  setState(() {
+                                    _checkboxValue = value ?? false;
+                                    _valueTextController.text = _checkboxValue.toString();
+                                  });
+                                },
+                                controlAffinity: ListTileControlAffinity.leading,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                              ),
+                            )
+                          else
+                            TextFormField(
+                              controller: _valueTextController,
+                              decoration: const InputDecoration(
+                                labelText: 'Current Value',
+                                hintText: 'Enter current value',
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                border: OutlineInputBorder(),
+                              ),
+                              style: const TextStyle(fontSize: 14),
+                              maxLines: _selectedFieldType == 'multiline' ? 2 : 1,
+                              keyboardType: _selectedFieldType == 'number' ? TextInputType.number :
+                              _selectedFieldType == 'email' ? TextInputType.emailAddress :
+                              _selectedFieldType == 'phone' ? TextInputType.phone :
+                              TextInputType.text,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Enter current value';
+                                }
+                                return null;
+                              },
+                            ),
+                          const SizedBox(height: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: CheckboxListTile(
+                              title: const Text('Required Field', style: TextStyle(fontSize: 14)),
+                              subtitle: const Text('Must be filled for PDFs', style: TextStyle(fontSize: 12)),
+                              value: _isRequired,
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  _isRequired = value ?? false;
+                                });
+                              },
+                              controlAffinity: ListTileControlAffinity.leading,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                            ),
                           ),
-                          child: CheckboxListTile(
-                            title: const Text('Current State', style: TextStyle(fontSize: 14)),
-                            subtitle: const Text('Current checkbox value', style: TextStyle(fontSize: 12)),
-                            value: _checkboxValue,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _checkboxValue = value ?? false;
-                                _valueTextController.text = _checkboxValue.toString();
-                              });
-                            },
-                            controlAffinity: ListTileControlAffinity.leading,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                        ),
-                      ] else ...[
-                        TextFormField(
-                          controller: _valueTextController,
-                          decoration: const InputDecoration(
-                            labelText: 'Current Value',
-                            hintText: 'Enter current value',
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            border: OutlineInputBorder(),
-                          ),
-                          style: const TextStyle(fontSize: 14),
-                          maxLines: _selectedFieldType == 'multiline' ? 2 : 1,
-                          keyboardType: _selectedFieldType == 'number' ? TextInputType.number :
-                          _selectedFieldType == 'email' ? TextInputType.emailAddress :
-                          _selectedFieldType == 'phone' ? TextInputType.phone :
-                          TextInputType.text,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Enter current value';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-
-                      // Required checkbox - compact
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: CheckboxListTile(
-                          title: const Text('Required Field', style: TextStyle(fontSize: 14)),
-                          subtitle: const Text('Must be filled for PDFs', style: TextStyle(fontSize: 12)),
-                          value: _isRequired,
-                          onChanged: (bool? value) {
-                            setState(() {
-                              _isRequired = value ?? false;
-                            });
-                          },
-                          controlAffinity: ListTileControlAffinity.leading,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                        ),
+                        ],
+                      ),
                       ),
                     ],
                   ),

@@ -234,7 +234,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen>
       // Start with empty list
       List<Map<String, dynamic>> relevantCategories = [];
 
-      // For Custom Fields, ALWAYS add protected "inspection" category first
+      // For Fields, ALWAYS add protected "inspection" category first
       if (templateType == 'Fields') {
         relevantCategories.add({
           'id': 'protected_inspection',
