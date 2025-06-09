@@ -8,8 +8,6 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 
 import '../models/pdf_template.dart';
-import '../models/product.dart';
-import '../models/field_definition.dart';
 import '../providers/app_state_provider.dart';
 import 'pdf_preview_screen.dart';
 import '../theme/rufko_theme.dart';
@@ -501,118 +499,64 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     final availableProducts = appState.products;
     final customFields = appState.customAppDataFields;
 
-    final TextEditingController searchController = TextEditingController();
-    String searchTerm = '';
+    final categorizedFields = PDFTemplate.getCategorizedQuoteFieldTypesWithCustomFields(
+      availableProducts,
+      customFields,
+    );
 
-    return StatefulBuilder(
-      builder: (context, setState) {
-        final categorizedFields =
-            PDFTemplate.getCategorizedQuoteFieldTypes(availableProducts, customFields);
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: categorizedFields.length,
+      itemBuilder: (context, categoryIndex) {
+        final categoryName = categorizedFields.keys.elementAt(categoryIndex);
+        final categoryFields = categorizedFields[categoryName]!;
 
-        final filteredCategories = <String, List<String>>{};
-        categorizedFields.forEach((key, value) {
-          final filtered =
-              value.where((v) => v.toLowerCase().contains(searchTerm)).toList();
-          if (filtered.isNotEmpty || key.toLowerCase().contains(searchTerm)) {
-            filteredCategories[key] = filtered;
-          }
-        });
-
-        return Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TextField(
-                controller: searchController,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'Search fields',
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ExpansionTile(
+            title: Row(
+              children: [
+                _getCategoryIcon(categoryName),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    categoryName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
-                onChanged: (val) => setState(() {
-                  searchTerm = val.toLowerCase();
-                }),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: filteredCategories.length,
-                itemBuilder: (context, categoryIndex) {
-                  final categoryName =
-                      filteredCategories.keys.elementAt(categoryIndex);
-                  final categoryFields = filteredCategories[categoryName]!;
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ExpansionTile(
-                      title: Row(
-                        children: [
-                          _getCategoryIcon(categoryName),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              categoryName,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Container(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade100,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              '${categoryFields.length}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.blue.shade700,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      initiallyExpanded: categoryName.contains('Customer') ||
-                          categoryName.contains('Quote Information'),
-                      children: categoryFields
-                          .map((appDataType) => _buildFieldSelectionItem(
-                              appDataType,
-                              pdfFieldInfo,
-                              customFields,
-                              availableProducts))
-                          .toList(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${categoryFields.length}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.bold,
                     ),
-                  );
-                },
-              ),
+                  ),
+                ),
+              ],
             ),
-          ],
+            initiallyExpanded: categoryName.contains('Customer') || categoryName.contains('Quote Information'),
+            children: categoryFields.map((appDataType) =>
+                _buildFieldSelectionItem(appDataType, pdfFieldInfo, customFields)).toList(),
+          ),
         );
       },
     );
   }
 
-  Widget _buildFieldSelectionItem(
-      String appDataType,
-      Map<String, dynamic> pdfFieldInfo,
-      List<dynamic> customFields,
-      List<Product> products,) {
+  Widget _buildFieldSelectionItem(String appDataType, Map<String, dynamic> pdfFieldInfo, List<dynamic> customFields) {
     // Check if this app data type is already mapped to another PDF field
     final existingMapping = _currentTemplate!.fieldMappings
         .where((m) => m.appDataType == appDataType && m.pdfFormFieldName.isNotEmpty)
         .firstOrNull;
 
     final isAlreadyMapped = existingMapping != null && !existingMapping.appDataType.startsWith('unmapped_');
-
-    final def = PDFTemplate
-        .getFieldDefinitions(products, customFields)
-        .firstWhere((d) => d.appDataType == appDataType,
-            orElse: () => FieldDefinition(
-                appDataType: appDataType,
-                displayName: appDataType,
-                category: '',
-                source: ''));
 
     return ListTile(
       leading: Container(
@@ -634,13 +578,13 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       ),
       subtitle: isAlreadyMapped
           ? Text(
-              'Already mapped to: ${existingMapping.pdfFormFieldName}',
-              style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
-            )
+        'Already mapped to: ${existingMapping.pdfFormFieldName}',
+        style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
+      )
           : Text(
-              'Source: ${def.source}',
-              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
-            ),
+        _getFieldHint(appDataType),
+        style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+      ),
       trailing: Icon(
         isAlreadyMapped ? Icons.swap_horiz : Icons.add_link,
         color: isAlreadyMapped ? Colors.orange.shade600 : Colors.green.shade600,
