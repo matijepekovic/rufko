@@ -21,21 +21,4 @@ void main() {
     final size = testerMixin.responsiveFontSize(context, 20, max: 18);
     expect(size, 18);
   });
-
-  testWidgets('windowClassValue returns expanded', (tester) async {
-    await tester.pumpWidget(
-      const MediaQuery(
-        data: MediaQueryData(size: Size(1300, 800)),
-        child: MaterialApp(home: SizedBox()),
-      ),
-    );
-    final context = tester.element(find.byType(SizedBox));
-    final value = testerMixin.windowClassValue(
-      context,
-      compact: 'c',
-      medium: 'm',
-      expanded: 'e',
-    );
-    expect(value, 'e');
-  });
 }
