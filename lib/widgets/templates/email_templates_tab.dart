@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/email_template.dart';
 import '../../providers/app_state_provider.dart';
-import '../../screens/email_template_editor_screen.dart';
+import 'dialgos/email_template_editor.dart';
 import '../../mixins/template_tab_mixin.dart';
 
 class EmailTemplatesTab extends StatefulWidget {

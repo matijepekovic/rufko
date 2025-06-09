@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../models/message_template.dart';
 import '../../providers/app_state_provider.dart';
-import '../../screens/message_template_editor_screen.dart';
+import 'dialgos/message_template_editor.dart';
 import '../../mixins/template_tab_mixin.dart';
 
 class MessageTemplatesTab extends StatefulWidget {

@@ -71,11 +71,19 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     }
   }
 
+  // In your template_editor_screen.dart, replace the _loadTemplateDetails method with this:
+
   void _loadTemplateDetails() {
     if (_currentTemplate == null) return;
     setState(() {
       _totalPagesInPdf = _currentTemplate!.totalPages;
-      _selectedCategoryKey = _currentTemplate!.userCategoryKey;
+
+      // Only update category if we don't already have a preselected one (for new templates)
+      // This preserves the category selected in the dialog
+      if (_selectedCategoryKey == null) {
+        _selectedCategoryKey = _currentTemplate!.userCategoryKey;
+      }
+
       var detectedFieldsRaw = _currentTemplate!.metadata['detectedPdfFields'];
       if (detectedFieldsRaw is List) {
         _detectedPdfFieldsList = List<Map<String, dynamic>>.from(

@@ -9,11 +9,11 @@ import '../widgets/templates/pdf_templates_tab.dart';
 import '../widgets/templates/message_templates_tab.dart';
 import '../widgets/templates/email_templates_tab.dart';
 import '../theme/rufko_theme.dart';
-import 'message_template_editor_screen.dart';
-import 'email_template_editor_screen.dart';
+import '../widgets/templates/dialgos/message_template_editor.dart';
+import '../widgets/templates/dialgos/email_template_editor.dart';
 import 'category_management_screen.dart';
 import '../models/custom_app_data.dart';
-import '../widgets/add_custom_field_dialog.dart';
+import '../widgets/templates/dialgos/add_custom_field_dialog.dart';
 
 class TemplatesScreen extends StatefulWidget {
   const TemplatesScreen({super.key});
@@ -205,6 +205,8 @@ class _TemplatesScreenState extends State<TemplatesScreen>
     }
   }
 
+  // Replace the _showCategorySelectionDialog method in templates_screen.dart with this:
+
   Future<String?> _showCategorySelectionDialog() async {
     final appState = context.read<AppStateProvider>();
     final allCategories = await appState.getAllTemplateCategories();
@@ -212,49 +214,330 @@ class _TemplatesScreenState extends State<TemplatesScreen>
 
     if (!mounted) return null;
 
+    // If no categories exist, go directly to create one
+    if (pdfCategories.isEmpty) {
+      return _createNewCategoryAndReturn();
+    }
+
+    String? selectedCategory = pdfCategories.first['key'] as String;
+
     return showDialog<String>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Select Template Category'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // "No Category" option
-              ListTile(
-                leading: const Icon(Icons.folder_outlined),
-                title: const Text('No Category'),
-                subtitle: const Text('Create template without a specific category'),
-                onTap: () => Navigator.pop(context, null),
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              insetPadding: const EdgeInsets.all(16),
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.7,
+                  maxWidth: MediaQuery.of(context).size.width * 0.95,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header - matching add_custom_field_dialog style
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 16, 8),
+                      decoration: const BoxDecoration(
+                        color: RufkoTheme.primaryColor,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.folder, color: Colors.white, size: 20),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Select Category',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Content - Categories List
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Choose a category for your new PDF template:',
+                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Categories as radio buttons - compact style
+                            ...pdfCategories.map<Widget>((category) {
+                              final categoryKey = category['key'] as String;
+                              final categoryName = category['name'] as String;
+                              final isSelected = selectedCategory == categoryKey;
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: isSelected ? RufkoTheme.primaryColor : Colors.grey.shade300,
+                                    width: isSelected ? 2 : 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: RadioListTile<String>(
+                                  value: categoryKey,
+                                  groupValue: selectedCategory,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      selectedCategory = value;
+                                    });
+                                  },
+                                  title: Text(
+                                    categoryName,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                    ),
+                                  ),
+                                  secondary: Icon(
+                                    Icons.description,
+                                    color: isSelected ? RufkoTheme.primaryColor : Colors.grey,
+                                    size: 20,
+                                  ),
+                                  activeColor: RufkoTheme.primaryColor,
+                                  dense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                              );
+                            }).toList(),
+
+                            const SizedBox(height: 16),
+
+                            // Create new category option - styled like add custom field
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: ListTile(
+                                leading: Icon(Icons.add, color: RufkoTheme.primaryColor, size: 20),
+                                title: const Text(
+                                  'Create New Category',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                ),
+                                subtitle: const Text(
+                                  'Add a new template category',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                onTap: () async {
+                                  Navigator.pop(context);
+                                  final newCategory = await _createNewCategoryAndReturn();
+                                  if (newCategory != null && mounted) {
+                                    // Restart the process with the new category
+                                    final finalCategory = await _showCategorySelectionDialog();
+                                    if (finalCategory != null) {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => TemplateEditorScreen(
+                                            preselectedCategory: finalCategory,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                },
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                dense: true,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Actions - matching add_custom_field_dialog style
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: selectedCategory != null
+                                ? () => Navigator.of(context).pop(selectedCategory)
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: RufkoTheme.primaryColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            ),
+                            child: const Text('Select'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const Divider(),
-              // User-defined categories
-              ...pdfCategories.map<Widget>((category) {
-                return ListTile(
-                  leading: const Icon(Icons.description),
-                  title: Text(category['name'] as String),
-                  onTap: () => Navigator.pop(context, category['key'] as String),
-                );
-              }),
-              const Divider(),
-              // Option to create new category
-              ListTile(
-                leading: const Icon(Icons.add, color: Colors.blue),
-                title: const Text('Create New Category'),
-                subtitle: const Text('Add a new template category'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showTemplateSettings(); // This opens category management
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+            );
+          },
+        );
+      },
+    );
+  }
+
+// Also add this new method to templates_screen.dart:
+  Future<String?> _createNewCategoryAndReturn() async {
+    final TextEditingController controller = TextEditingController();
+
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.95,
             ),
-          ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header - matching style
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 16, 8),
+                  decoration: const BoxDecoration(
+                    color: RufkoTheme.primaryColor,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.add_circle, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Create Category',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Enter a name for your new PDF template category:',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: controller,
+                        decoration: const InputDecoration(
+                          labelText: 'Category Name',
+                          hintText: 'e.g., Residential, Commercial, Estimates',
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(),
+                        ),
+                        style: const TextStyle(fontSize: 14),
+                        autofocus: true,
+                        textCapitalization: TextCapitalization.words,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Actions
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final categoryName = controller.text.trim();
+                          if (categoryName.isNotEmpty) {
+                            try {
+                              final appState = context.read<AppStateProvider>();
+                              final categoryKey = categoryName.toLowerCase().replaceAll(' ', '_');
+
+                              await appState.addTemplateCategory('pdf_templates', categoryKey, categoryName);
+
+                              if (mounted) {
+                                Navigator.of(context).pop(categoryKey);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Created category: $categoryName'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error creating category: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: RufkoTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        ),
+                        child: const Text('Create'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -278,52 +561,28 @@ class _TemplatesScreenState extends State<TemplatesScreen>
     );
   }
 
-  void _createNewCustomField() {
-    // Get the app state provider
-    final appState = context.read<AppStateProvider>();
+  void _createNewCustomField() async {
+    // Use the static method from AddCustomFieldDialog which handles everything properly
+    try {
+      final result = await AddCustomFieldDialog.show(context);
 
-    // Get categories synchronously from already-loaded data
-    final allTemplateCategories = appState.templateCategories;
-    final customFieldCategories = allTemplateCategories
-        .where((cat) => cat.templateType == 'custom_fields')
-        .toList();
+      if (result != null && mounted) {
+        final appState = context.read<AppStateProvider>();
 
-    final availableCategories = <String>['custom'];
-    final categoryNames = <String, String>{'custom': 'Custom Fields'};
+        await appState.addCustomAppDataField(result);
 
-    // Add loaded categories
-    for (final category in customFieldCategories) {
-      availableCategories.add(category.key);
-      categoryNames[category.key] = category.name;
-    }
-
-    showDialog<CustomAppDataField?>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return AddCustomFieldDialog(
-          categories: availableCategories,
-          categoryNames: categoryNames,
-        );
-      },
-    ).then((returnedValue) {
-      if (returnedValue != null && mounted) {
-        appState.addCustomAppDataField(returnedValue).then((_) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Added custom field: ${returnedValue.displayName}'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        }).catchError((error) {
-          _showErrorSnackBar('Error adding field: $error');
-        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Added custom field: ${result.displayName}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
-    }).catchError((error) {
-      _showErrorSnackBar('Error: $error');
-    });
+    } catch (error) {
+      _showErrorSnackBar('Error adding field: $error');
+    }
   }
 
   void _showTemplateSettings() {

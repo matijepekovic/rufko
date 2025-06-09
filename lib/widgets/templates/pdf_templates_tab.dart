@@ -85,6 +85,8 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> with TemplateTabMixin
       MaterialPageRoute(
         builder: (context) => TemplateEditorScreen(
           existingTemplate: existingItem as PDFTemplate?,
+          // Don't pass preselectedCategory for existing templates
+          // New templates are handled by templates_screen.dart
         ),
       ),
     );
@@ -177,7 +179,8 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> with TemplateTabMixin
                     ],
                   ),
 
-                  if (template.templateType.isNotEmpty) ...[
+                  // Show category instead of template type
+                  if (template.userCategoryKey != null && template.userCategoryKey!.isNotEmpty) ...[
                     SizedBox(height: isVerySmall ? 2 : 3),
                     Container(
                       padding: EdgeInsets.symmetric(
@@ -191,7 +194,7 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> with TemplateTabMixin
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'Type: ${template.templateType}',
+                        'Category: ${template.userCategoryKey}',
                         style: TextStyle(
                             fontSize: isVerySmall ? 9 : 10,
                             fontWeight: FontWeight.w500
@@ -297,6 +300,7 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> with TemplateTabMixin
     return Consumer<AppStateProvider>(
       builder: (context, appState, child) {
         return buildMainLayout(); // This comes from the mixin!
+        // Note: No floating action button here - it's handled by templates_screen.dart
       },
     );
   }
