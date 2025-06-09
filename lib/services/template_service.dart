@@ -678,7 +678,9 @@ class TemplateService {
     // === ENSURE ALL FIELD TYPES HAVE VALUES ===
 
 
-    for (final fieldTypeKey in PDFTemplate.getQuoteFieldTypes()) {
+    for (final fieldTypeKey in PDFTemplate
+        .getFieldDefinitions()
+        .map((d) => d.appDataType)) {
       final existingValue = map[fieldTypeKey];
 
       // Generate better sample data for preview mode
