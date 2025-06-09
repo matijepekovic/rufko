@@ -112,10 +112,10 @@ class TemplateValidator {
   /// Validate individual FieldMapping properties
   static void _validateFieldMapping(FieldMapping field, PDFTemplate template, TemplateValidationResult result) {
     if (field.appDataType.isEmpty || field.appDataType.startsWith('unmapped_')) {
-      result.addWarning('Field linked to PDF field "${field.pdfFormFieldName}" has no App Data Source assigned.');
+      result.addWarning('Field linked to PDF field "${field.pdfFormFieldName}" has no Field Source assigned.');
     }
     if (field.pdfFormFieldName.isEmpty) {
-      result.addError('App Data Source "${PDFTemplate.getFieldDisplayName(field.appDataType)}" is not linked to any PDF Form Field.');
+      result.addError('Field Source "${PDFTemplate.getFieldDisplayName(field.appDataType)}" is not linked to any PDF Form Field.');
     }
 
     // Validate visual hints if they are populated (they are optional now)
