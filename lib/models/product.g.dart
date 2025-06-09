@@ -82,14 +82,13 @@ class ProductAdapter extends TypeAdapter<Product> {
       pricingType: fields[18] as ProductPricingType?,
       createdAt: fields[8] as DateTime?,
       updatedAt: fields[9] as DateTime?,
-      imagePath: fields[19] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Product obj) {
     writer
-      ..writeByte(20)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -127,9 +126,7 @@ class ProductAdapter extends TypeAdapter<Product> {
       ..writeByte(17)
       ..write(obj.enableLevelPricing)
       ..writeByte(18)
-      ..write(obj.pricingType)
-      ..writeByte(19)
-      ..write(obj.imagePath);
+      ..write(obj.pricingType);
   }
 
   @override
