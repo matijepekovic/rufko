@@ -6,14 +6,12 @@ import 'responsive_breakpoints_mixin.dart';
 mixin ResponsiveTextMixin on ResponsiveBreakpointsMixin {
   // Base font size scale
   double _baseFontScale(BuildContext context) {
-    switch (windowSizeClass(context)) {
-      case WindowSizeClass.compact:
-        return 0.9;
-      case WindowSizeClass.medium:
-        return 1.0;
-      case WindowSizeClass.expanded:
-        return 1.1;
-    }
+    if (isXS(context)) return 0.85;
+    if (isSM(context)) return 0.92;
+    if (isMD(context)) return 1.0;
+    if (isLG(context)) return 1.05;
+    if (isXL(context)) return 1.1;
+    return 1.15;
   }
 
   // Responsive font size
