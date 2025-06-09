@@ -64,11 +64,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     setState(() {
       _selectedIndex = index;
     });
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+    _pageController.jumpToPage(index);
+  }
+
+  void _onPageChanged(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
@@ -91,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             selectedIndex: _selectedIndex,
             navItems: _navItems,
             onItemSelected: _onNavItemTapped,
+            onPageChanged: _onPageChanged,
             pageController: _pageController,
             pages: pages,
             floatingActionButton: fab,
@@ -101,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           selectedIndex: _selectedIndex,
           navItems: _navItems,
           onItemSelected: _onNavItemTapped,
+          onPageChanged: _onPageChanged,
           pageController: _pageController,
           pages: pages,
           floatingActionButton: fab,
