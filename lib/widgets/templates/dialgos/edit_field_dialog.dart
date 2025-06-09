@@ -53,8 +53,8 @@ class EditFieldDialog extends StatefulWidget {
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                          ),
                         ),
+                      ),
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
@@ -502,7 +502,6 @@ class _EditFieldDialogState extends State<EditFieldDialog>
                             ),
                           ),
                         ],
-                      ),
                       ),
                     ],
                   ),

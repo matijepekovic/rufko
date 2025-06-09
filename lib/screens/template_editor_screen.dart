@@ -687,7 +687,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       pdfFormFieldName: pdfFieldName,
       detectedPdfFieldType: PdfFormFieldType.values.firstWhere(
             (e) => e.toString() == pdfFieldInfo['type'],
-        orElse: () => PdfFormFieldType. unknown,
+        orElse: () => PdfFormFieldType.unknown,
       ),
       pageNumber: pdfFieldInfo['page'] as int,
     );
@@ -722,7 +722,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
     setState(() {
       mapping.pdfFormFieldName = '';
-      mapping.detectedPdfFieldType = PdfFormFieldType. unknown;
+      mapping.detectedPdfFieldType = PdfFormFieldType.unknown;
       mapping.visualX = null;
       mapping.visualY = null;
       mapping.visualWidth = null;
@@ -744,7 +744,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       builder: (context) => AlertDialog(
         title: const Text('How to Map Fields'),
         content: const Text(
-          'Select a field from the list to link it with the chosen PDF field. '\
+          'Select a field from the list to link it with the chosen PDF field. '
           'Existing links can be replaced by choosing another field.',
         ),
         actions: [

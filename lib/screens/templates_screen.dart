@@ -12,7 +12,6 @@ import '../theme/rufko_theme.dart';
 import '../widgets/templates/dialgos/message_template_editor.dart';
 import '../widgets/templates/dialgos/email_template_editor.dart';
 import 'category_management_screen.dart';
-import '../models/custom_app_data.dart';
 import '../widgets/templates/dialgos/add_field_dialog.dart';
 
 class TemplatesScreen extends StatefulWidget {
