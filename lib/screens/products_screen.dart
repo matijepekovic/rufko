@@ -1,10 +1,11 @@
-// lib/screens/products_screen.dart - MODERN UI VERSION (NO IMPORT BUTTONS)
+// lib/screens/products_screen.dart - ORIGINAL OPTIMIZED VERSION WITH EXTERNAL PRODUCTCARD
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
 import '../models/product.dart';
 import 'products/product_form_dialog.dart';
+import '../widgets/product_card.dart'; // Use our clean ProductCard
 import '../mixins/search_mixin.dart';
 import '../mixins/sort_menu_mixin.dart';
 import '../mixins/empty_state_mixin.dart';
@@ -172,7 +173,6 @@ class _ProductsScreenState extends State<ProductsScreen>
     );
   }
 
-
   Widget _buildProductsList(AppStateProvider appState, String categoryFilter) {
     List<Product> productsToDisplay = _getFilteredProducts(appState, categoryFilter);
 
@@ -187,192 +187,15 @@ class _ProductsScreenState extends State<ProductsScreen>
         itemCount: productsToDisplay.length,
         itemBuilder: (context, index) {
           final product = productsToDisplay[index];
-          return _buildProductCard(product);
+          // Use our clean external ProductCard widget
+          return ProductCard(
+            product: product,
+            onTap: null, // Do nothing on tap
+            onEdit: () => _showEditProductDialog(context, product),
+            onDelete: () => _showDeleteConfirmation(context, product),
+            onToggleActive: () => _toggleProductStatus(product),
+          );
         },
-      ),
-    );
-  }
-
-  Widget _buildProductCard(Product product) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: InkWell(
-          onTap: () => _showProductDetails(product),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    // Product Icon
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _getCategoryColor(product.category).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        _getCategoryIcon(product.category),
-                        color: _getCategoryColor(product.category),
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-
-                    // Product Info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  product.name,
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: product.isActive ? Colors.green.shade100 : Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  product.isActive ? 'Active' : 'Inactive',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: product.isActive ? Colors.green.shade700 : Colors.grey.shade600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _getCategoryColor(product.category).withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  product.category,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
-                                    color: _getCategoryColor(product.category),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '\$${product.unitPrice.toStringAsFixed(2)}/${product.unit}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.grey[700],
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          if (product.description != null && product.description!.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              product.description!,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey[600],
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 12),
-
-                // Action buttons
-                Row(
-                  children: [
-                    if (product.pricingType != ProductPricingType.simple)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          _getPricingTypeLabel(product.pricingType),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.blue.shade700,
-                          ),
-                        ),
-                      ),
-                    if (product.isAddon) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Add-on',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.orange.shade700,
-                          ),
-                        ),
-                      ),
-                    ],
-                    const Spacer(),
-
-                    // Active/Inactive toggle
-                    Switch(
-                      value: product.isActive,
-                      onChanged: (value) => _toggleProductStatus(product),
-                      activeColor: Theme.of(context).primaryColor,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-
-                    // Action buttons
-                    IconButton(
-                      icon: Icon(Icons.edit_outlined, color: Colors.blue.shade600),
-                      onPressed: () => _showEditProductDialog(context, product),
-                      tooltip: 'Edit Product',
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete_outline, color: Colors.red.shade600),
-                      onPressed: () => _showDeleteConfirmation(context, product),
-                      tooltip: 'Delete Product',
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -457,6 +280,324 @@ class _ProductsScreenState extends State<ProductsScreen>
     ).toList();
   }
 
+  void _showProductDetails(Product product) {
+    showDialog(
+      context: context,
+      builder: (context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final isPhone = constraints.maxWidth < 600;
+
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Container(
+              width: isPhone ? constraints.maxWidth * 0.95 : 500,
+              constraints: BoxConstraints(
+                maxHeight: isPhone ? constraints.maxHeight * 0.8 : 600,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Clean Header
+                  Container(
+                    padding: EdgeInsets.all(isPhone ? 16 : 20),
+                    decoration: BoxDecoration(
+                      color: _getCategoryColor(product.category).withValues(alpha: 0.1),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: isPhone ? 40 : 48,
+                          height: isPhone ? 40 : 48,
+                          decoration: BoxDecoration(
+                            color: _getCategoryColor(product.category).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            _getCategoryIcon(product.category),
+                            color: _getCategoryColor(product.category),
+                            size: isPhone ? 20 : 24,
+                          ),
+                        ),
+                        SizedBox(width: isPhone ? 12 : 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                product.name,
+                                style: TextStyle(
+                                  fontSize: isPhone ? 16 : 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                product.category,
+                                style: TextStyle(
+                                  fontSize: isPhone ? 13 : 14,
+                                  color: _getCategoryColor(product.category),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close, size: isPhone ? 20 : 24),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Clean Content
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(isPhone ? 16 : 20),
+                      child: Column(
+                        children: [
+                          // Price Card
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.all(isPhone ? 16 : 20),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  '\${product.unitPrice.toStringAsFixed(2)}',
+                                  style: TextStyle(
+                                    fontSize: isPhone ? 24 : 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                ),
+                                Text(
+                                  'per ${product.unit}',
+                                  style: TextStyle(
+                                    fontSize: isPhone ? 14 : 16,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          if (product.description != null && product.description!.isNotEmpty) ...[
+                            SizedBox(height: isPhone ? 16 : 20),
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(isPhone ? 12 : 16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                product.description!,
+                                style: TextStyle(
+                                  fontSize: isPhone ? 14 : 15,
+                                  color: Colors.grey[700],
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+
+                          SizedBox(height: isPhone ? 16 : 20),
+
+                          // Status Row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: EdgeInsets.all(isPhone ? 12 : 16),
+                                  decoration: BoxDecoration(
+                                    color: product.isActive ? Colors.green[50] : Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: product.isActive ? Colors.green[200]! : Colors.grey[300]!,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        product.isActive ? Icons.check_circle : Icons.cancel,
+                                        color: product.isActive ? Colors.green[600] : Colors.grey[600],
+                                        size: isPhone ? 20 : 24,
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        product.isActive ? 'Active' : 'Inactive',
+                                        style: TextStyle(
+                                          fontSize: isPhone ? 12 : 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: product.isActive ? Colors.green[600] : Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: isPhone ? 8 : 12),
+                              Expanded(
+                                child: Container(
+                                  padding: EdgeInsets.all(isPhone ? 12 : 16),
+                                  decoration: BoxDecoration(
+                                    color: product.isDiscountable ? Colors.blue[50] : Colors.orange[50],
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: product.isDiscountable ? Colors.blue[200]! : Colors.orange[200]!,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        product.isDiscountable ? Icons.local_offer : Icons.block,
+                                        color: product.isDiscountable ? Colors.blue[600] : Colors.orange[600],
+                                        size: isPhone ? 20 : 24,
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        product.isDiscountable ? 'Discountable' : 'No Discount',
+                                        style: TextStyle(
+                                          fontSize: isPhone ? 12 : 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: product.isDiscountable ? Colors.blue[600] : Colors.orange[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          // Level Pricing (if exists)
+                          if (product.enhancedLevelPrices.isNotEmpty) ...[
+                            SizedBox(height: isPhone ? 16 : 20),
+                            Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.all(isPhone ? 12 : 16),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.blue[200]!),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(Icons.layers, color: Colors.blue[700], size: isPhone ? 16 : 18),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Pricing Levels',
+                                        style: TextStyle(
+                                          fontSize: isPhone ? 14 : 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: isPhone ? 8 : 12),
+                                  ...product.enhancedLevelPrices.map((level) => Padding(
+                                    padding: EdgeInsets.only(bottom: isPhone ? 6 : 8),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          level.levelName,
+                                          style: TextStyle(
+                                            fontSize: isPhone ? 13 : 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        Text(
+                                          '\${level.price.toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            fontSize: isPhone ? 13 : 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blue[700],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Clean Footer
+                  Container(
+                    padding: EdgeInsets.all(isPhone ? 16 : 20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _showEditProductDialog(context, product);
+                            },
+                            icon: Icon(Icons.edit, size: isPhone ? 16 : 18),
+                            label: Text(
+                              'Edit',
+                              style: TextStyle(fontSize: isPhone ? 14 : 15),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                vertical: isPhone ? 12 : 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: isPhone ? 8 : 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: ElevatedButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                vertical: isPhone ? 12 : 16,
+                              ),
+                            ),
+                            child: Text(
+                              'Close',
+                              style: TextStyle(fontSize: isPhone ? 14 : 15),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   // Helper methods for styling
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
@@ -485,279 +626,6 @@ class _ProductsScreenState extends State<ProductsScreen>
         return Icons.engineering;
       default:
         return Icons.inventory_2;
-    }
-  }
-
-  String _getPricingTypeLabel(ProductPricingType type) {
-    switch (type) {
-      case ProductPricingType.mainDifferentiator:
-        return 'Main';
-      case ProductPricingType.subLeveled:
-        return 'Sub-Level';
-      case ProductPricingType.simple:
-        return 'Simple';
-    }
-  }
-
-
-  void _showProductDetails(Product product) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.9,
-          constraints: const BoxConstraints(maxHeight: 600),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: _getCategoryColor(product.category).withValues(alpha: 0.1),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _getCategoryIcon(product.category),
-                      color: _getCategoryColor(product.category),
-                      size: 28,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            product.name,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            product.category,
-                            style: TextStyle(
-                              color: _getCategoryColor(product.category),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Content
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (product.description != null && product.description!.isNotEmpty) ...[
-                        _buildDetailRow('Description', product.description!, Icons.description),
-                        const SizedBox(height: 16),
-                      ],
-
-                      _buildDetailRow('Base Price', '\$${product.unitPrice.toStringAsFixed(2)} per ${product.unit}', Icons.attach_money),
-                      const SizedBox(height: 16),
-
-                      if (product.sku != null && product.sku!.isNotEmpty) ...[
-                        _buildDetailRow('SKU', product.sku!, Icons.qr_code),
-                        const SizedBox(height: 16),
-                      ],
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildStatusChip('Status', product.isActive ? 'Active' : 'Inactive',
-                                product.isActive ? Colors.green : Colors.grey),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildStatusChip('Type', product.isAddon ? 'Add-on' : 'Standard',
-                                product.isAddon ? Colors.orange : Colors.blue),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-                      _buildStatusChip('Pricing', _getPricingTypeLabel(product.pricingType),
-                          _getPricingTypeColor(product.pricingType)),
-
-                      if (product.enhancedLevelPrices.isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        Text(
-                          'Level Pricing',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        ...product.enhancedLevelPrices.map((level) => Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      level.levelName,
-                                      style: const TextStyle(fontWeight: FontWeight.w600),
-                                    ),
-                                    if (level.description != null)
-                                      Text(
-                                        level.description!,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                '\$${level.price.toStringAsFixed(2)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-
-              // Footer
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(16),
-                    bottomRight: Radius.circular(16),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _showEditProductDialog(context, product);
-                        },
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Edit Product'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Close'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value, IconData icon) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[600],
-                ),
-              ),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusChip(String label, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getPricingTypeColor(ProductPricingType type) {
-    switch (type) {
-      case ProductPricingType.mainDifferentiator:
-        return Colors.blue.shade600;
-      case ProductPricingType.subLeveled:
-        return Colors.orange.shade600;
-      case ProductPricingType.simple:
-        return Colors.green.shade600;
     }
   }
 
@@ -822,5 +690,3 @@ class _ProductsScreenState extends State<ProductsScreen>
     context.read<AppStateProvider>().updateProduct(product);
   }
 }
-
-// Enhanced Product Form Dialog with 3-Tier System (keeping the existing implementation)

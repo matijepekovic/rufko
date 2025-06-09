@@ -35,6 +35,8 @@ class _MessageTemplatesTabState extends State<MessageTemplatesTab> with Template
   @override
   String get categoryType => 'message_templates';
 
+
+
   // Implement required data methods
   @override
   List<dynamic> getAllItems() {
@@ -45,6 +47,13 @@ class _MessageTemplatesTabState extends State<MessageTemplatesTab> with Template
   List<dynamic> getFilteredItems() {
     var filtered = getAllItems().cast<MessageTemplate>();
 
+    // Always exclude templates without valid categories
+    filtered = filtered.where((t) =>
+    t.userCategoryKey != null &&
+        t.userCategoryKey!.isNotEmpty
+    ).toList();
+
+    // Then filter by selected category if not 'all'
     if (selectedCategory != 'all') {
       filtered = filtered.where((t) => t.userCategoryKey == selectedCategory).toList();
     }
@@ -356,12 +365,46 @@ class _MessageTemplatesTabState extends State<MessageTemplatesTab> with Template
   }
 
   void _deleteTemplate(MessageTemplate template) {
-    // Use single item delete (different from bulk delete in mixin)
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Template'),
-        content: Text('Are you sure you want to delete "${template.templateName}"?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to delete "${template.templateName}"?'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Template: ${template.templateName}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  if (template.description.isNotEmpty)
+                    Text('Description: ${template.description}'),
+                  Text('Category: ${template.userCategoryKey ?? 'Unknown'}'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'This action cannot be undone.',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

@@ -1,4 +1,4 @@
-// lib/widgets/product_card.dart - ENHANCED WITH DISCOUNT INFO
+// lib/widgets/product_card.dart - CLEAN & SIMPLE DESIGN
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -24,412 +24,261 @@ class ProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final currencyFormat = NumberFormat.currency(symbol: '\$');
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: product.isActive ? 2 : 1,
-      color: product.isActive ? null : Colors.grey[50],
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header Row
-              Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isPhone = constraints.maxWidth < 600;
+
+        return Card(
+          margin: EdgeInsets.only(bottom: isPhone ? 8 : 12),
+          elevation: product.isActive ? 2 : 1,
+          color: product.isActive ? null : Colors.grey[50],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: EdgeInsets.all(isPhone ? 12 : 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: _getCategoryColor(product.category).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      _getCategoryIcon(product.category),
-                      color: _getCategoryColor(product.category),
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                product.name,
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: product.isActive ? null : Colors.grey[600],
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            // Status badges
-                            Wrap(
-                              spacing: 4,
-                              children: [
-                                if (!product.isActive)
-                                  _buildStatusBadge('INACTIVE', Colors.grey),
-                                if (product.isAddon)
-                                  _buildStatusBadge('ADDON', Colors.orange),
-                                if (!product.isDiscountable)
-                                  _buildStatusBadge('NO DISCOUNT', Colors.red),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: _getCategoryColor(product.category).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: _getCategoryColor(product.category).withValues(alpha: 0.3),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Text(
-                                product.category.toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: _getCategoryColor(product.category),
-                                ),
-                              ),
-                            ),
-                            if (product.sku != null) ...[
-                              const SizedBox(width: 8),
-                              Text(
-                                'SKU: ${product.sku}',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      switch (value) {
-                        case 'edit':
-                          onEdit?.call();
-                          break;
-                        case 'toggle':
-                          onToggleActive?.call();
-                          break;
-                        case 'delete':
-                          onDelete?.call();
-                          break;
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, size: 18),
-                            SizedBox(width: 8),
-                            Text('Edit'),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: 'toggle',
-                        child: Row(
-                          children: [
-                            Icon(
-                              product.isActive ? Icons.visibility_off : Icons.visibility,
-                              size: 18,
-                              color: product.isActive ? Colors.orange : Colors.green,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(product.isActive ? 'Deactivate' : 'Activate'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, size: 18, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Delete', style: TextStyle(color: Colors.red)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-
-              if (product.description != null && product.description!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
+                  // Header Row - Name, Price, Toggle
+                  Row(
                     children: [
-                      Icon(
-                        Icons.description_outlined,
-                        size: 16,
-                        color: Colors.grey[600],
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          product.description!,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[700],
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                      // Product Icon
+                      Container(
+                        width: isPhone ? 32 : 40,
+                        height: isPhone ? 32 : 40,
+                        decoration: BoxDecoration(
+                          color: _getCategoryColor(product.category).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          _getCategoryIcon(product.category),
+                          color: _getCategoryColor(product.category),
+                          size: isPhone ? 16 : 20,
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
 
-              const SizedBox(height: 12),
+                      SizedBox(width: isPhone ? 8 : 12),
 
-              // Base Price Section
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.2),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
+                      // Product Name & Category
+                      Expanded(
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Base Price',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[600],
+                              product.name,
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                fontSize: isPhone ? 16 : 18,
+                                color: product.isActive ? null : Colors.grey[600],
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 2),
+                            SizedBox(height: 2),
                             Text(
-                              currencyFormat.format(product.unitPrice),
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
+                              product.category,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: isPhone ? 13 : 14,
+                                color: _getCategoryColor(product.category),
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
                         ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              'Per Unit',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[600],
-                              ),
+                      ),
+
+                      // Price
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            currencyFormat.format(product.unitPrice),
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: isPhone ? 16 : 18,
+                              color: Theme.of(context).primaryColor,
                             ),
-                            const SizedBox(height: 2),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: Colors.grey[300]!,
-                                  width: 1,
-                                ),
-                              ),
-                              child: Text(
-                                product.unit,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
+                          ),
+                          Text(
+                            'per ${product.unit}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontSize: isPhone ? 12 : 13,
+                              color: Colors.grey[600],
                             ),
-                          ],
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(width: isPhone ? 12 : 16),
+
+                      // Active Toggle Switch with Label
+                      Column(
+                        children: [
+                          Text(
+                            'Active',
+                            style: TextStyle(
+                              fontSize: isPhone ? 11 : 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Transform.scale(
+                            scale: isPhone ? 0.9 : 1.0,
+                            child: Switch(
+                              value: product.isActive,
+                              onChanged: onToggleActive != null ? (_) => onToggleActive!() : null,
+                              activeColor: Colors.green,
+                              inactiveThumbColor: Colors.grey[400],
+                              inactiveTrackColor: Colors.grey[300],
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  // Description (if exists)
+                  if (product.description != null && product.description!.isNotEmpty) ...[
+                    SizedBox(height: isPhone ? 10 : 12),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(isPhone ? 10 : 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        product.description!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: isPhone ? 13 : 14,
+                          color: Colors.grey[700],
+                          height: 1.3,
                         ),
-                      ],
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
-                ),
-              ),
 
-              // NEW - Level Pricing Section (if available)
-              if (product.activeLevels.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Colors.orange.shade200,
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                  // Level Pricing Info (if exists)
+                  if (product.activeLevels.isNotEmpty) ...[
+                    SizedBox(height: isPhone ? 10 : 12),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(isPhone ? 10 : 12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue[200]!, width: 1),
+                      ),
+                      child: Row(
                         children: [
-                          Icon(Icons.layers_outlined, size: 16, color: Colors.orange.shade700),
-                          const SizedBox(width: 6),
+                          Icon(Icons.layers_outlined, size: isPhone ? 16 : 18, color: Colors.blue[700]),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '${product.activeLevels.length} pricing levels available',
+                              style: TextStyle(
+                                fontSize: isPhone ? 13 : 14,
+                                color: Colors.blue[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
                           Text(
-                            'Level Pricing Available',
+                            '${currencyFormat.format(product.activeLevels.first.price)} - ${currencyFormat.format(product.activeLevels.last.price)}',
                             style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange.shade700,
+                              fontSize: isPhone ? 12 : 13,
+                              color: Colors.blue[600],
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 4,
-                        children: product.activeLevels.take(3).map((level) =>
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.shade100,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                '${level.levelName}: ${currencyFormat.format(level.price)}',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.orange.shade800,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                        ).toList(),
-                      ),
-                      if (product.activeLevels.length > 3)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            '+${product.activeLevels.length - 3} more levels',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.orange.shade600,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                  ],
 
-              const SizedBox(height: 12),
+                  SizedBox(height: isPhone ? 10 : 12),
 
-              // Footer Row with enhanced info
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Updated ${DateFormat('MMM dd, yyyy').format(product.updatedAt)}',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                      // NEW - Additional product info
-                      Row(
-                        children: [
-                          if (product.isDiscountable) ...[
-                            Icon(Icons.local_offer, size: 12, color: Colors.green[600]),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Discountable',
-                              style: TextStyle(fontSize: 10, color: Colors.green[600]),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          if (product.maxLevels > 3)
-                            Text(
-                              'Max ${product.maxLevels} levels',
-                              style: TextStyle(fontSize: 10, color: Colors.grey[600]),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
+                  // Bottom Row - Status & Actions
                   Row(
                     children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: product.isActive ? Colors.green : Colors.grey,
-                          borderRadius: BorderRadius.circular(4),
+                      // Status Indicators
+                      Expanded(
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            if (!product.isDiscountable)
+                              _buildSimpleBadge('No Discount', Colors.orange, isPhone),
+                            if (product.isAddon)
+                              _buildSimpleBadge('Add-on', Colors.purple, isPhone),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        product.isActive ? 'Active' : 'Inactive',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: product.isActive ? Colors.green : Colors.grey,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color: Colors.grey[400],
+
+                      // Action Buttons
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            onPressed: onEdit,
+                            icon: Icon(Icons.edit_outlined, size: isPhone ? 22 : 24),
+                            color: Colors.blue[600],
+                            padding: EdgeInsets.all(isPhone ? 6 : 8),
+                            constraints: BoxConstraints(
+                              minWidth: isPhone ? 40 : 44,
+                              minHeight: isPhone ? 40 : 44,
+                            ),
+                            tooltip: 'Edit Product',
+                          ),
+                          SizedBox(width: isPhone ? 4 : 6),
+                          IconButton(
+                            onPressed: onDelete,
+                            icon: Icon(Icons.delete_outline, size: isPhone ? 22 : 24),
+                            color: Colors.red[600],
+                            padding: EdgeInsets.all(isPhone ? 6 : 8),
+                            constraints: BoxConstraints(
+                              minWidth: isPhone ? 40 : 44,
+                              minHeight: isPhone ? 40 : 44,
+                            ),
+                            tooltip: 'Delete Product',
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildStatusBadge(String text, Color color) {
+  Widget _buildSimpleBadge(String text, Color color, bool isPhone) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: EdgeInsets.symmetric(
+        horizontal: isPhone ? 8 : 10,
+        vertical: isPhone ? 4 : 5,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
+          fontSize: isPhone ? 11 : 12,
+          fontWeight: FontWeight.w600,
           color: color,
         ),
       ),
@@ -440,17 +289,17 @@ class ProductCard extends StatelessWidget {
     switch (category.toLowerCase()) {
       case 'roofing':
       case 'materials':
-        return Colors.blue;
+        return Colors.blue[600]!;
       case 'gutters':
-        return Colors.teal;
+        return Colors.teal[600]!;
       case 'flashing':
-        return Colors.orange;
+        return Colors.orange[600]!;
       case 'labor':
-        return Colors.purple;
+        return Colors.purple[600]!;
       case 'other':
-        return Colors.grey;
+        return Colors.grey[600]!;
       default:
-        return Colors.indigo;
+        return Colors.indigo[600]!;
     }
   }
 

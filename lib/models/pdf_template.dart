@@ -4,7 +4,6 @@ import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 import 'product.dart'; // 🔧 ADDED IMPORT FOR PRODUCT
 import 'field_definition.dart';
-import '../utils/common_utils.dart';
 
 part 'pdf_template.g.dart'; // This will be regenerated
 

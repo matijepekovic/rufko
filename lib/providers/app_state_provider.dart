@@ -1202,19 +1202,35 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
+  // Replace your current togglePDFTemplateActive method (around line 676) with this:
+
   Future<void> togglePDFTemplateActive(String templateId) async {
     try {
-      await _db.toggleTemplateActive(templateId);
-      final template = _pdfTemplates.firstWhere((t) => t.id == templateId);
-      template.isActive = !template.isActive;
-      notifyListeners();
-      if (kDebugMode) {
-        debugPrint('🔄 Toggled PDF template active: ${template.templateName} -> ${template.isActive}');
+      debugPrint('🔄 AppState: Toggling PDF template active: $templateId');
+      final index = _pdfTemplates.indexWhere((t) => t.id == templateId);
+      if (index != -1) {
+        final template = _pdfTemplates[index];
+
+        // Create updated template with new status and timestamp
+        final updatedTemplate = template.clone();
+        updatedTemplate.isActive = !template.isActive;
+        updatedTemplate.updatedAt = DateTime.now();
+
+        // Save to database
+        await _db.savePDFTemplate(updatedTemplate);
+
+        // Update in memory list
+        _pdfTemplates[index] = updatedTemplate;
+
+        // Notify listeners
+        notifyListeners();
+
+        debugPrint('✅ AppState: PDF template toggled and notified: ${updatedTemplate.templateName} -> ${updatedTemplate.isActive}');
+      } else {
+        debugPrint('❌ AppState: PDF template not found for toggle: $templateId');
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Error toggling PDF template active: $e');
-      }
+      debugPrint('❌ AppState: Error toggling PDF template: $e');
       rethrow;
     }
   }

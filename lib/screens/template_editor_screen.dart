@@ -681,16 +681,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     return Icon(iconData, size: 18, color: iconColor);
   }
 
-  String _getFieldHint(String appDataType) {
-    if (appDataType.contains('Name')) return 'Product name';
-    if (appDataType.contains('Qty')) return 'Quantity';
-    if (appDataType.contains('UnitPrice')) return 'Price per unit';
-    if (appDataType.contains('Total')) return 'Line total';
-    if (appDataType.contains('customer')) return 'Customer info';
-    if (appDataType.contains('company')) return 'Your business info';
-    if (appDataType.contains('level')) return 'Quote level data';
-    return 'Tap to link with PDF field';
-  }
 
   void _confirmMapping(String appDataType, Map<String, dynamic> pdfFieldInfo, bool isReplacing) {
     final pdfFieldName = pdfFieldInfo['name'] as String;

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/product.dart';
 import '../../providers/app_state_provider.dart';
+
 class ProductFormDialog extends StatefulWidget {
   final Product? product;
   const ProductFormDialog({super.key, this.product});
@@ -25,6 +26,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
   String _selectedUnit = 'each';
   bool _isActive = true;
   bool _isDiscountable = true;
+  bool _settingsExpanded = false; // For collapsible settings
 
   // 3-Tier System State
   ProductPricingType _pricingType = ProductPricingType.simple;
@@ -65,10 +67,10 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
         final isPhone = constraints.maxWidth < 600;
 
         return Dialog(
-          insetPadding: EdgeInsets.all(isPhone ? 8 : 16),
+          insetPadding: EdgeInsets.all(isPhone ? 4 : 16),
           child: SizedBox(
             width: isPhone ? constraints.maxWidth * 0.98 : 600,
-            height: isPhone ? constraints.maxHeight * 0.92 : constraints.maxHeight * 0.85,
+            height: isPhone ? constraints.maxHeight * 0.95 : constraints.maxHeight * 0.85,
             child: Column(
               children: [
                 _buildHeader(isPhone),
@@ -97,7 +99,10 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
 
   Widget _buildHeader(bool isPhone) {
     return Container(
-      padding: EdgeInsets.all(isPhone ? 12 : 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: isPhone ? 8 : 16,
+        vertical: isPhone ? 8 : 12,
+      ),
       decoration: BoxDecoration(
         color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
         borderRadius: const BorderRadius.only(
@@ -110,9 +115,9 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
           Icon(
             _isEditing ? Icons.edit_note : Icons.add_box,
             color: Theme.of(context).primaryColor,
-            size: isPhone ? 20 : 24,
+            size: isPhone ? 18 : 24,
           ),
-          SizedBox(width: isPhone ? 8 : 12),
+          SizedBox(width: isPhone ? 6 : 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,23 +126,29 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                   _isEditing ? 'Edit Product' : 'Create New Product',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    fontSize: isPhone ? 16 : 18,
+                    fontSize: isPhone ? 14 : 18,
                   ),
                 ),
-                Text(
-                  _getPricingTypeDescription(),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                    fontSize: isPhone ? 11 : 12,
+                if (!isPhone)
+                  Text(
+                    _getPricingTypeDescription(),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey[600],
+                      fontSize: 12,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
           IconButton(
             icon: const Icon(Icons.close),
             onPressed: () => Navigator.pop(context),
-            iconSize: isPhone ? 20 : 24,
+            iconSize: isPhone ? 18 : 24,
+            padding: EdgeInsets.all(isPhone ? 4 : 8),
+            constraints: BoxConstraints(
+              minWidth: isPhone ? 32 : 40,
+              minHeight: isPhone ? 32 : 40,
+            ),
           ),
         ],
       ),
@@ -152,12 +163,21 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
         labelColor: Theme.of(context).primaryColor,
         unselectedLabelColor: Colors.grey[600],
         indicatorColor: Theme.of(context).primaryColor,
-        labelStyle: TextStyle(fontSize: isPhone ? 12 : 14, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: TextStyle(fontSize: isPhone ? 12 : 14),
+        labelStyle: TextStyle(fontSize: isPhone ? 16 : 20, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: TextStyle(fontSize: isPhone ? 18 : 22),
         tabs: [
-          Tab(icon: Icon(Icons.info_outline, size: isPhone ? 16 : 18), text: 'Basic Info'),
-          Tab(icon: Icon(Icons.tune, size: isPhone ? 16 : 18), text: 'Product Type'),
-          Tab(icon: Icon(Icons.layers_outlined, size: isPhone ? 16 : 18), text: 'Pricing Levels'),
+          Tab(
+            icon: Icon(Icons.info_outline, size: isPhone ? 16 : 20),
+            text: isPhone ? 'Info' : 'Basic Info',
+          ),
+          Tab(
+            icon: Icon(Icons.tune, size: isPhone ? 16 : 20),
+            text: isPhone ? 'Type' : 'Product Type',
+          ),
+          Tab(
+            icon: Icon(Icons.layers_outlined, size: isPhone ? 16 : 20),
+            text: isPhone ? 'Levels' : 'Pricing Levels',
+          ),
         ],
       ),
     );
@@ -170,28 +190,28 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
         final units = appState.appSettings?.productUnits ?? ['each', 'sq ft', 'lin ft', 'hour', 'day'];
 
         return SingleChildScrollView(
-          padding: EdgeInsets.all(isPhone ? 16 : 20),
+          padding: EdgeInsets.all(isPhone ? 14 : 22),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildModernTextField(
+              _buildCompactTextField(
                 controller: _nameController,
                 label: 'Product Name',
                 icon: Icons.label_outline,
                 isPhone: isPhone,
                 validator: (v) => v == null || v.isEmpty ? 'Product name is required' : null,
               ),
-              SizedBox(height: isPhone ? 16 : 20),
-              _buildModernTextField(
+              SizedBox(height: isPhone ? 14 : 18),
+              _buildCompactTextField(
                 controller: _descriptionController,
                 label: 'Description',
                 icon: Icons.notes,
                 isPhone: isPhone,
                 maxLines: isPhone ? 2 : 3,
-                hint: 'Describe what this product is and its key features...',
+                hint: 'Describe what this product is...',
               ),
-              SizedBox(height: isPhone ? 16 : 20),
-              _buildModernTextField(
+              SizedBox(height: isPhone ? 14 : 18),
+              _buildCompactTextField(
                 controller: _basePriceController,
                 label: 'Base Unit Price',
                 icon: Icons.attach_money,
@@ -199,11 +219,11 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                 keyboardType: TextInputType.number,
                 validator: (v) => v == null || (double.tryParse(v) == null || double.parse(v) < 0) ? 'Enter a valid price' : null,
               ),
-              SizedBox(height: isPhone ? 16 : 20),
+              SizedBox(height: isPhone ? 14 : 18),
               Row(
                 children: [
                   Expanded(
-                    child: _buildModernDropdown<String>(
+                    child: _buildCompactDropdown<String>(
                       value: _selectedCategory,
                       label: 'Category',
                       icon: Icons.category,
@@ -212,9 +232,9 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                       onChanged: (v) => setState(() => _selectedCategory = v!),
                     ),
                   ),
-                  SizedBox(width: isPhone ? 12 : 16),
+                  SizedBox(width: isPhone ? 14 : 18),
                   Expanded(
-                    child: _buildModernDropdown<String>(
+                    child: _buildCompactDropdown<String>(
                       value: _selectedUnit,
                       label: 'Unit',
                       icon: Icons.straighten,
@@ -225,33 +245,10 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                   ),
                 ],
               ),
-              SizedBox(height: isPhone ? 24 : 32),
-              Text(
-                'Product Settings',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).primaryColor,
-                  fontSize: isPhone ? 16 : 18,
-                ),
-              ),
-              SizedBox(height: isPhone ? 16 : 20),
-              _buildModernSwitch(
-                title: 'Active Product',
-                subtitle: 'Available for use in quotes and estimates',
-                value: _isActive,
-                onChanged: (v) => setState(() => _isActive = v),
-                icon: Icons.visibility,
-                isPhone: isPhone,
-              ),
-              SizedBox(height: isPhone ? 16 : 20),
-              _buildModernSwitch(
-                title: 'Discountable Product',
-                subtitle: 'Can be affected by quote discounts and promotions',
-                value: _isDiscountable,
-                onChanged: (v) => setState(() => _isDiscountable = v),
-                icon: Icons.local_offer_outlined,
-                isPhone: isPhone,
-              ),
+              SizedBox(height: isPhone ? 18 : 26),
+
+              // Collapsible Settings Section
+              _buildCollapsibleSettings(isPhone),
             ],
           ),
         );
@@ -259,60 +256,155 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
     );
   }
 
+  Widget _buildCollapsibleSettings(bool isPhone) {
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: ExpansionTile(
+        title: Row(
+          children: [
+            Icon(
+              Icons.settings,
+              color: Theme.of(context).primaryColor,
+              size: isPhone ? 16 : 20,
+            ),
+            SizedBox(width: isPhone ? 6 : 8),
+            Text(
+              'Advanced Options',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: isPhone ? 13 : 16,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+          ],
+        ),
+        initiallyExpanded: _settingsExpanded,
+        onExpansionChanged: (expanded) {
+          setState(() => _settingsExpanded = expanded);
+        },
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              isPhone ? 8 : 16,
+              0,
+              isPhone ? 8 : 16,
+              isPhone ? 8 : 16,
+            ),
+            child: Column(
+              children: [
+                _buildCompactSwitch(
+                  title: 'Active Product',
+                  subtitle: 'Available for quotes',
+                  value: _isActive,
+                  onChanged: (v) => setState(() => _isActive = v),
+                  icon: Icons.visibility,
+                  isPhone: isPhone,
+                ),
+                SizedBox(height: isPhone ? 8 : 12),
+                _buildCompactSwitch(
+                  title: 'Discountable',
+                  subtitle: 'Affected by discounts',
+                  value: _isDiscountable,
+                  onChanged: (v) => setState(() => _isDiscountable = v),
+                  icon: Icons.local_offer_outlined,
+                  isPhone: isPhone,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildProductTypeTab(bool isPhone) {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(isPhone ? 16 : 20),
+      padding: EdgeInsets.all(isPhone ? 14 : 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '🎯 Choose Product Type',
+            'Choose Product Type',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
-              fontSize: isPhone ? 18 : 22,
+              fontSize: isPhone ? 17 : 22,
             ),
           ),
-          SizedBox(height: isPhone ? 8 : 12),
+          SizedBox(height: isPhone ? 8 : 10),
           Text(
             'Select how this product behaves in quotes:',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: Colors.grey[600],
-              fontSize: isPhone ? 14 : 16,
+              fontSize: isPhone ? 13 : 16,
             ),
           ),
-          SizedBox(height: isPhone ? 24 : 32),
+          SizedBox(height: isPhone ? 18 : 24),
 
-          _buildProductTypeCard(
-            type: ProductPricingType.mainDifferentiator,
-            title: '🏠 Main Differentiator',
-            subtitle: 'Sets quote column headers',
-            description: 'Creates Builder/Homeowner/Platinum columns.\nExample: Roofing Shingles with different quality levels.',
-            color: Colors.blue,
-            example: 'Builder (\$120) | Homeowner (\$180) | Platinum (\$240)',
-            isPhone: isPhone,
-          ),
-          SizedBox(height: isPhone ? 16 : 20),
-
-          _buildProductTypeCard(
-            type: ProductPricingType.subLeveled,
-            title: '🌧️ Sub-Leveled Options',
-            subtitle: 'Independent internal choices',
-            description: 'Customer picks ONE option regardless of main product level.\nExample: Gutters with/without mesh.',
-            color: Colors.orange,
-            example: 'Basic Gutters (\$8) OR Mesh Gutters (\$18)',
-            isPhone: isPhone,
-          ),
-          SizedBox(height: isPhone ? 16 : 20),
-
-          _buildProductTypeCard(
-            type: ProductPricingType.simple,
-            title: '👷 Simple Product',
-            subtitle: 'Same price everywhere',
-            description: 'One price used across all quote levels.\nExample: Labor, nails, installation.',
-            color: Colors.green,
-            example: 'Labor: \$85/hour (same for all roof types)',
-            isPhone: isPhone,
-          ),
+          // Compact Product Type Cards for Mobile
+          if (isPhone) ...[
+            _buildCompactProductTypeCard(
+              type: ProductPricingType.mainDifferentiator,
+              title: 'Pricing Tier',
+              subtitle: 'Sets quote column headers',
+              example: 'Builder | Standard | Premium ',
+              color: Colors.blue,
+              isPhone: isPhone,
+            ),
+            SizedBox(height: 16),
+            _buildCompactProductTypeCard(
+              type: ProductPricingType.subLeveled,
+              title: 'Material Swap',
+              subtitle: 'Pick one material option inside a package',
+              example: 'Basic Gutters OR Mesh Gutters',
+              color: Colors.orange,
+              isPhone: isPhone,
+            ),
+            SizedBox(height: 16),
+            _buildCompactProductTypeCard(
+              type: ProductPricingType.simple,
+              title: 'Simple Product',
+              subtitle: 'Regular',
+              example: 'Same price for all',
+              color: Colors.green,
+              isPhone: isPhone,
+            ),
+          ] else ...[
+            // Full cards for larger screens
+            _buildProductTypeCard(
+              type: ProductPricingType.mainDifferentiator,
+              title: 'Pricing Tier',
+              subtitle: 'Sets quote column headers',
+              description: 'Creates Builder/Homeowner/Platinum columns.\nExample: Roofing Shingles with different quality levels.',
+              color: Colors.blue,
+              example: 'Builder (\$120) | Homeowner (\$180) | Platinum (\$240)',
+              isPhone: isPhone,
+            ),
+            SizedBox(height: 16),
+            _buildProductTypeCard(
+              type: ProductPricingType.subLeveled,
+              title: 'Material Swap',
+              subtitle: 'Pick one material option inside a package',
+              description: 'Customer picks ONE option regardless of main product level.\nExample: Gutters with/without mesh.',
+              color: Colors.orange,
+              example: 'Basic Gutters OR Mesh Gutters',
+              isPhone: isPhone,
+            ),
+            SizedBox(height: 16),
+            _buildProductTypeCard(
+              type: ProductPricingType.simple,
+              title: ' Simple Product',
+              subtitle: 'Same price everywhere',
+              description: 'One price used across all quote levels.\nExample: Labor, nails, installation.',
+              color: Colors.green,
+              example: 'Labor: \$85/hour (same for all roof types)',
+              isPhone: isPhone,
+            ),
+          ],
         ],
       ),
     );
@@ -320,136 +412,115 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
 
   Widget _buildPricingLevelsTab(bool isPhone) {
     if (_pricingType == ProductPricingType.simple) {
-      return SingleChildScrollView(
-        padding: EdgeInsets.all(isPhone ? 16 : 20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(height: isPhone ? 60 : 80),
-            Icon(Icons.check_circle, size: isPhone ? 64 : 80, color: Colors.green.shade400),
-            SizedBox(height: isPhone ? 16 : 24),
-            Text(
-              'Simple Product Selected',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: isPhone ? 18 : 22,
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(isPhone ? 16 : 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.check_circle, size: isPhone ? 48 : 64, color: Colors.green.shade400),
+              SizedBox(height: isPhone ? 12 : 16),
+              Text(
+                'Simple Product Selected',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: isPhone ? 16 : 20,
+                ),
               ),
-            ),
-            SizedBox(height: isPhone ? 8 : 12),
-            Text(
-              'This product uses the base price across all quote levels.\nNo additional configuration needed.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-                fontSize: isPhone ? 14 : 16,
+              SizedBox(height: isPhone ? 6 : 8),
+              Text(
+                'This product uses the base price across all quote levels.\nNo additional configuration needed.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[600],
+                  fontSize: isPhone ? 12 : 14,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
 
     return SingleChildScrollView(
-      padding: EdgeInsets.all(isPhone ? 16 : 20),
+      padding: EdgeInsets.all(isPhone ? 14 : 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(isPhone ? 8 : 10),
-                decoration: BoxDecoration(
-                  color: _getPricingTypeColor().withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.layers, color: _getPricingTypeColor(), size: isPhone ? 20 : 24),
-              ),
-              SizedBox(width: isPhone ? 12 : 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _pricingType == ProductPricingType.mainDifferentiator
-                          ? 'Main Differentiator Levels'
-                          : 'Sub-Level Options',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: isPhone ? 18 : 22,
-                      ),
-                    ),
-                    Text(
-                      _pricingType == ProductPricingType.mainDifferentiator
-                          ? 'These create the quote column headers'
-                          : 'Customer picks ONE of these options',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
-                        fontSize: isPhone ? 12 : 14,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: isPhone ? 16 : 20),
+          // Compact Header for Mobile
           Container(
             padding: EdgeInsets.all(isPhone ? 12 : 16),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.blue.shade200),
+              color: _getPricingTypeColor().withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: _getPricingTypeColor().withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: Colors.blue.shade600, size: isPhone ? 16 : 18),
-                SizedBox(width: isPhone ? 8 : 12),
+                Icon(Icons.layers, color: _getPricingTypeColor(), size: isPhone ? 18 : 22),
+                SizedBox(width: isPhone ? 10 : 14),
                 Expanded(
-                  child: Text(
-                    _pricingType == ProductPricingType.mainDifferentiator
-                        ? 'These levels appear as separate columns in quotes for side-by-side comparison.'
-                        : 'Customer chooses one option independent of the main product level.',
-                    style: TextStyle(
-                      fontSize: isPhone ? 12 : 14,
-                      color: Colors.blue.shade700,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _pricingType == ProductPricingType.mainDifferentiator
+                            ? 'Pricing Tier Levels'
+                            : 'Material Swap',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: isPhone ? 15 : 18,
+                        ),
+                      ),
+                      Text(
+                        _pricingType == ProductPricingType.mainDifferentiator
+                            ? 'Quote column headers'
+                            : 'Customer picks ONE',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[600],
+                          fontSize: isPhone ? 11 : 13,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(height: isPhone ? 24 : 32),
+          SizedBox(height: isPhone ? 16 : 20),
 
-          // Level configuration cards
+          // Compact Level Cards
           ...List.generate(_currentLevelKeys.length, (index) {
             final levelKey = _currentLevelKeys[index];
             final cardColor = _getLevelCardColor(index);
 
             return Container(
-              margin: EdgeInsets.only(bottom: isPhone ? 16 : 20),
+              margin: EdgeInsets.only(bottom: isPhone ? 12 : 16),
               decoration: BoxDecoration(
                 border: Border.all(color: cardColor.withValues(alpha: 0.3)),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 color: cardColor.withValues(alpha: 0.05),
               ),
               child: Column(
                 children: [
-                  // Card header
+                  // Compact header
                   Container(
-                    padding: EdgeInsets.all(isPhone ? 16 : 20),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isPhone ? 12 : 16,
+                      vertical: isPhone ? 10 : 12,
+                    ),
                     decoration: BoxDecoration(
                       color: cardColor.withValues(alpha: 0.1),
                       borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
+                        topLeft: Radius.circular(10),
+                        topRight: Radius.circular(10),
                       ),
                     ),
                     child: Row(
                       children: [
                         Container(
-                          width: isPhone ? 32 : 36,
-                          height: isPhone ? 32 : 36,
+                          width: isPhone ? 28 : 32,
+                          height: isPhone ? 28 : 32,
                           decoration: BoxDecoration(
                             color: cardColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
@@ -460,104 +531,80 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: cardColor,
-                                fontSize: isPhone ? 14 : 16,
+                                fontSize: isPhone ? 13 : 15,
                               ),
                             ),
                           ),
                         ),
-                        SizedBox(width: isPhone ? 12 : 16),
+                        SizedBox(width: isPhone ? 10 : 12),
                         Expanded(
                           child: Text(
                             _pricingType == ProductPricingType.mainDifferentiator
-                                ? 'Level ${index + 1} Configuration'
-                                : 'Option ${index + 1} Configuration',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                ? 'Level ${index + 1}'
+                                : 'Option ${index + 1}',
+                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: cardColor,
-                              fontSize: isPhone ? 15 : 17,
+                              fontSize: isPhone ? 14 : 16,
                             ),
                           ),
                         ),
                         if (_currentLevelKeys.length > 1)
                           IconButton(
-                            icon: Icon(Icons.remove_circle_outline, color: Colors.red.shade400, size: isPhone ? 20 : 24),
+                            icon: Icon(Icons.remove_circle_outline, color: Colors.red.shade400, size: isPhone ? 18 : 22),
                             onPressed: () => _removeLevel(index),
-                            tooltip: 'Remove this level',
+                            padding: EdgeInsets.all(isPhone ? 4 : 6),
+                            constraints: BoxConstraints(
+                              minWidth: isPhone ? 32 : 36,
+                              minHeight: isPhone ? 32 : 36,
+                            ),
                           ),
                       ],
                     ),
                   ),
 
-                  // Card content
+                  // Compact content
                   Padding(
-                    padding: EdgeInsets.all(isPhone ? 16 : 20),
+                    padding: EdgeInsets.all(isPhone ? 12 : 16),
                     child: Column(
                       children: [
                         // Level name
-                        TextFormField(
-                          controller: _levelNameControllers[levelKey],
-                          decoration: InputDecoration(
-                            labelText: _pricingType == ProductPricingType.mainDifferentiator ? 'Level Name' : 'Option Name',
-                            hintText: _pricingType == ProductPricingType.mainDifferentiator ? 'Builder Grade' : 'Basic Version',
-                            border: const OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.label_outline, color: cardColor, size: isPhone ? 18 : 20),
-                            helperText: _pricingType == ProductPricingType.mainDifferentiator
-                                ? 'This name appears as column header'
-                                : 'Customer sees this option name',
-                            helperStyle: TextStyle(fontSize: isPhone ? 11 : 12),
-                            labelStyle: TextStyle(fontSize: isPhone ? 14 : 16),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: isPhone ? 12 : 16,
-                              vertical: isPhone ? 12 : 16,
-                            ),
-                          ),
-                          style: TextStyle(fontSize: isPhone ? 14 : 16),
+                        _buildCompactTextField(
+                          controller: _levelNameControllers[levelKey]!,
+                          label: _pricingType == ProductPricingType.mainDifferentiator ? 'Level Name' : 'Option Name',
+                          icon: Icons.label_outline,
+                          isPhone: isPhone,
                           validator: (v) => v == null || v.isEmpty ? 'Name is required' : null,
+                          hint: _pricingType == ProductPricingType.mainDifferentiator ? 'Builder Grade' : 'Basic Version',
                         ),
-                        SizedBox(height: isPhone ? 16 : 20),
+                        SizedBox(height: isPhone ? 10 : 14),
 
-                        // Level description
-                        TextFormField(
-                          controller: _levelDescriptionControllers[levelKey],
-                          decoration: InputDecoration(
-                            labelText: 'Description (Optional)',
-                            hintText: 'Describe what makes this different...',
-                            border: const OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.description_outlined, color: cardColor, size: isPhone ? 18 : 20),
-                            helperText: 'Explains value differences to customers',
-                            helperStyle: TextStyle(fontSize: isPhone ? 11 : 12),
-                            labelStyle: TextStyle(fontSize: isPhone ? 14 : 16),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: isPhone ? 12 : 16,
-                              vertical: isPhone ? 12 : 16,
-                            ),
+                        // Level description (more compact on mobile)
+                        if (!isPhone || _levelDescriptionControllers[levelKey]!.text.isNotEmpty)
+                          Column(
+                            children: [
+                              _buildCompactTextField(
+                                controller: _levelDescriptionControllers[levelKey]!,
+                                label: 'Description',
+                                icon: Icons.description_outlined,
+                                isPhone: isPhone,
+                                maxLines: isPhone ? 2 : 3,
+                                hint: 'Optional description...',
+                              ),
+                              SizedBox(height: isPhone ? 10 : 14),
+                            ],
                           ),
-                          style: TextStyle(fontSize: isPhone ? 14 : 16),
-                          maxLines: 2,
-                        ),
-                        SizedBox(height: isPhone ? 16 : 20),
 
                         // Level price
-                        TextFormField(
-                          controller: _levelPriceControllers[levelKey],
-                          decoration: InputDecoration(
-                            labelText: 'Price',
-                            prefixText: '\$ ',
-                            border: const OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.attach_money, color: cardColor, size: isPhone ? 18 : 20),
-                            hintText: _basePriceController.text.isNotEmpty
-                                ? 'Defaults to \$${_basePriceController.text}'
-                                : 'e.g. 150.00',
-                            helperText: 'Leave empty to use base price',
-                            helperStyle: TextStyle(fontSize: isPhone ? 11 : 12),
-                            labelStyle: TextStyle(fontSize: isPhone ? 14 : 16),
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: isPhone ? 12 : 16,
-                              vertical: isPhone ? 12 : 16,
-                            ),
-                          ),
-                          style: TextStyle(fontSize: isPhone ? 14 : 16),
+                        _buildCompactTextField(
+                          controller: _levelPriceControllers[levelKey]!,
+                          label: 'Price',
+                          icon: Icons.attach_money,
+                          isPhone: isPhone,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          hint: _basePriceController.text.isNotEmpty
+                              ? 'Defaults to \${_basePriceController.text}'
+                              : 'e.g. 150.00',
                           validator: (v) {
                             if (v != null && v.isNotEmpty) {
                               final price = double.tryParse(v);
@@ -576,18 +623,228 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
             );
           }),
 
-          // Add/Remove level controls
-          SizedBox(height: isPhone ? 16 : 20),
-          _buildLevelControls(isPhone),
+          // Compact level controls
+          SizedBox(height: isPhone ? 12 : 18),
+          _buildCompactLevelControls(isPhone),
         ],
       ),
     );
   }
 
+  // Compact helper widgets
+  Widget _buildCompactTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required bool isPhone,
+    String? hint,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withValues(alpha: 0.7), size: isPhone ? 20 : 22),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        labelStyle: TextStyle(fontSize: isPhone ? 14 : 15),
+        hintStyle: TextStyle(fontSize: isPhone ? 13 : 14),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isPhone ? 14 : 18,
+          vertical: isPhone ? 14 : 18,
+        ),
+        isDense: isPhone,
+      ),
+      style: TextStyle(fontSize: isPhone ? 15 : 17),
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      validator: validator,
+    );
+  }
 
-  Widget _buildLevelControls(bool isPhone) {
+  Widget _buildCompactDropdown<T>({
+    required T value,
+    required String label,
+    required IconData icon,
+    required List<T> items,
+    required bool isPhone,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return DropdownButtonFormField<T>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withValues(alpha: 0.7), size: isPhone ? 20 : 22),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        labelStyle: TextStyle(fontSize: isPhone ? 14 : 15),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isPhone ? 14 : 18,
+          vertical: isPhone ? 14 : 18,
+        ),
+        isDense: isPhone,
+      ),
+      style: TextStyle(fontSize: isPhone ? 15 : 17, color: Colors.black),
+      items: items.map((item) => DropdownMenuItem<T>(
+        value: item,
+        child: Text(item.toString()),
+      )).toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildCompactSwitch({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required IconData icon,
+    required bool isPhone,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(isPhone ? 14 : 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Theme.of(context).primaryColor, size: isPhone ? 20 : 22),
+          SizedBox(width: isPhone ? 12 : 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: isPhone ? 15 : 17,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: isPhone ? 13 : 15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Transform.scale(
+            scale: isPhone ? 1.0 : 1.1,
+            child: Switch(
+              value: value,
+              onChanged: onChanged,
+              activeColor: Theme.of(context).primaryColor,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactProductTypeCard({
+    required ProductPricingType type,
+    required String title,
+    required String subtitle,
+    required String example,
+    required Color color,
+    required bool isPhone,
+  }) {
+    final isSelected = _pricingType == type;
+
+    return InkWell(
+      onTap: () => _setPricingType(type),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? color.withValues(alpha: 0.05) : Colors.white,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  color: color,
+                  size: 24,
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? color : Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                example,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactLevelControls(bool isPhone) {
     final maxLevels = _pricingType == ProductPricingType.mainDifferentiator ? 6 : 4;
-    final minLevels = _pricingType == ProductPricingType.mainDifferentiator ? 2 : 2;
+    final minLevels = 2;
 
     return Row(
       children: [
@@ -595,36 +852,40 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
           Expanded(
             child: OutlinedButton.icon(
               onPressed: () => _removeLevel(_currentLevelKeys.length - 1),
-              icon: Icon(Icons.remove, size: isPhone ? 16 : 18),
+              icon: Icon(Icons.remove, size: isPhone ? 18 : 20),
               label: Text(
-                'Remove (${_currentLevelKeys.length} total)',
-                style: TextStyle(fontSize: isPhone ? 12 : 14),
+                isPhone ? 'Remove' : 'Remove (${_currentLevelKeys.length} total)',
+                style: TextStyle(fontSize: isPhone ? 13 : 15),
               ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.red.shade600,
                 padding: EdgeInsets.symmetric(
-                  horizontal: isPhone ? 8 : 12,
-                  vertical: isPhone ? 6 : 8,
+                  horizontal: isPhone ? 10 : 14,
+                  vertical: isPhone ? 8 : 10,
                 ),
+                minimumSize: Size(0, isPhone ? 44 : 48),
               ),
             ),
           ),
-        if (_currentLevelKeys.length > minLevels) SizedBox(width: isPhone ? 8 : 12),
+        if (_currentLevelKeys.length > minLevels) SizedBox(width: isPhone ? 10 : 14),
         Expanded(
           child: ElevatedButton.icon(
             onPressed: _currentLevelKeys.length < maxLevels ? _addLevel : null,
-            icon: Icon(Icons.add, size: isPhone ? 16 : 18),
+            icon: Icon(Icons.add, size: isPhone ? 18 : 20),
             label: Text(
-              'Add ${_pricingType == ProductPricingType.mainDifferentiator ? 'Level' : 'Option'} (${_currentLevelKeys.length}/$maxLevels)',
-              style: TextStyle(fontSize: isPhone ? 12 : 14),
+              isPhone
+                  ? 'Add (${_currentLevelKeys.length}/$maxLevels)'
+                  : 'Add ${_pricingType == ProductPricingType.mainDifferentiator ? 'Level' : 'Option'} (${_currentLevelKeys.length}/$maxLevels)',
+              style: TextStyle(fontSize: isPhone ? 13 : 15),
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green.shade600,
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(
-                horizontal: isPhone ? 8 : 12,
-                vertical: isPhone ? 6 : 8,
+                horizontal: isPhone ? 10 : 14,
+                vertical: isPhone ? 8 : 10,
               ),
+              minimumSize: Size(0, isPhone ? 44 : 48),
             ),
           ),
         ),
@@ -634,7 +895,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
 
   Widget _buildFooter(bool isPhone) {
     return Container(
-      padding: EdgeInsets.all(isPhone ? 12 : 16),
+      padding: EdgeInsets.all(isPhone ? 14 : 18),
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: const BorderRadius.only(
@@ -649,28 +910,30 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
             onPressed: () => Navigator.pop(context),
             style: OutlinedButton.styleFrom(
               padding: EdgeInsets.symmetric(
-                horizontal: isPhone ? 16 : 20,
-                vertical: isPhone ? 8 : 12,
+                horizontal: isPhone ? 18 : 22,
+                vertical: isPhone ? 10 : 14,
               ),
+              minimumSize: Size(0, isPhone ? 44 : 48),
             ),
             child: Text(
               'Cancel',
-              style: TextStyle(fontSize: isPhone ? 13 : 15),
+              style: TextStyle(fontSize: isPhone ? 14 : 16),
             ),
           ),
-          SizedBox(width: isPhone ? 8 : 12),
+          SizedBox(width: isPhone ? 10 : 14),
           ElevatedButton.icon(
             onPressed: _saveProduct,
-            icon: Icon(_isEditing ? Icons.update : Icons.add, size: isPhone ? 16 : 18),
+            icon: Icon(_isEditing ? Icons.update : Icons.add, size: isPhone ? 18 : 20),
             label: Text(
-              _isEditing ? 'Update Product' : 'Create Product',
-              style: TextStyle(fontSize: isPhone ? 13 : 15),
+              _isEditing ? 'Update' : 'Create',
+              style: TextStyle(fontSize: isPhone ? 14 : 16),
             ),
             style: ElevatedButton.styleFrom(
               padding: EdgeInsets.symmetric(
-                horizontal: isPhone ? 16 : 20,
-                vertical: isPhone ? 8 : 12,
+                horizontal: isPhone ? 18 : 22,
+                vertical: isPhone ? 10 : 14,
               ),
+              minimumSize: Size(0, isPhone ? 44 : 48),
             ),
           ),
         ],
@@ -678,7 +941,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
     );
   }
 
-  // All the helper methods and widget builders continue here...
+  // Keep all existing helper methods for the full product type cards
   Widget _buildProductTypeCard({
     required ProductPricingType type,
     required String title,
@@ -835,136 +1098,7 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
     );
   }
 
-  Widget _buildModernTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required bool isPhone,
-    String? hint,
-    int maxLines = 1,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withValues(alpha: 0.7), size: isPhone ? 18 : 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(isPhone ? 8 : 10)),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(isPhone ? 8 : 10),
-          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        labelStyle: TextStyle(fontSize: isPhone ? 12 : 14),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: isPhone ? 8 : 12,
-          vertical: isPhone ? 8 : 12,
-        ),
-      ),
-      style: TextStyle(fontSize: isPhone ? 13 : 15),
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      validator: validator,
-    );
-  }
-
-  Widget _buildModernDropdown<T>({
-    required T value,
-    required String label,
-    required IconData icon,
-    required List<T> items,
-    required bool isPhone,
-    required ValueChanged<T?> onChanged,
-  }) {
-    return DropdownButtonFormField<T>(
-      value: value,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: Theme.of(context).primaryColor.withValues(alpha: 0.7), size: isPhone ? 18 : 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(isPhone ? 8 : 10)),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(isPhone ? 8 : 10),
-          borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        labelStyle: TextStyle(fontSize: isPhone ? 12 : 14),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: isPhone ? 8 : 12,
-          vertical: isPhone ? 8 : 12,
-        ),
-      ),
-      style: TextStyle(fontSize: isPhone ? 13 : 15, color: Colors.black),
-      items: items.map((item) => DropdownMenuItem<T>(
-        value: item,
-        child: Text(item.toString()),
-      )).toList(),
-      onChanged: onChanged,
-    );
-  }
-
-  Widget _buildModernSwitch({
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    required IconData icon,
-    required bool isPhone,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(isPhone ? 12 : 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(isPhone ? 8 : 10),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(isPhone ? 6 : 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: Theme.of(context).primaryColor, size: isPhone ? 16 : 20),
-          ),
-          SizedBox(width: isPhone ? 12 : 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: isPhone ? 14 : 16,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: isPhone ? 11 : 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: Theme.of(context).primaryColor,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Helper Methods
+  // Keep all existing helper methods
   String _getPricingTypeDescription() {
     switch (_pricingType) {
       case ProductPricingType.mainDifferentiator:
@@ -1201,6 +1335,4 @@ class _ProductFormDialogState extends State<ProductFormDialog> with TickerProvid
 
     Navigator.pop(context);
   }
-
 }
-

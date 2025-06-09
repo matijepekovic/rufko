@@ -268,12 +268,12 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> with TemplateTabMixin
                     ),
                   ),
                   const PopupMenuItem(
-                    value: 'duplicate',
+                    value: 'rename',
                     child: Row(
                       children: [
-                        Icon(Icons.copy, size: 16),
+                        Icon(Icons.edit_outlined, size: 16),
                         SizedBox(width: 8),
-                        Text('Duplicate'),
+                        Text('Rename'),
                       ],
                     ),
                   ),
@@ -324,8 +324,8 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> with TemplateTabMixin
           ),
         );
         break;
-      case 'duplicate':
-        _duplicateTemplate(template);
+      case 'rename':
+        _renameTemplate(template);
         break;
       case 'delete':
         _deleteTemplate(template);
@@ -372,17 +372,143 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> with TemplateTabMixin
     }
   }
 
-  void _duplicateTemplate(PDFTemplate template) async {
-    try {
-      final duplicatedTemplate = template.clone();
-      duplicatedTemplate.templateName = '${template.templateName} (Copy)';
+  void _renameTemplate(PDFTemplate template) {
+    final TextEditingController controller = TextEditingController(text: template.templateName);
 
-      await context.read<AppStateProvider>().addPDFTemplate(duplicatedTemplate);
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          insetPadding: const EdgeInsets.all(16),
+          child: Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.95,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 16, 8),
+                  decoration: const BoxDecoration(
+                    color: RufkoTheme.primaryColor,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.edit_outlined, color: Colors.white, size: 20),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Rename Template',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: const Icon(Icons.close, color: Colors.white, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Current name: ${template.templateName}',
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: controller,
+                        decoration: const InputDecoration(
+                          labelText: 'New Template Name',
+                          hintText: 'Enter a new name for this template',
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: OutlineInputBorder(),
+                        ),
+                        style: const TextStyle(fontSize: 14),
+                        autofocus: true,
+                        textCapitalization: TextCapitalization.words,
+                        onFieldSubmitted: (value) {
+                          // Allow Enter key to submit
+                          if (value.trim().isNotEmpty && value.trim() != template.templateName) {
+                            Navigator.of(context).pop();
+                            _performRename(template, value.trim());
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Actions
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          final newName = controller.text.trim();
+                          if (newName.isNotEmpty && newName != template.templateName) {
+                            Navigator.of(context).pop();
+                            _performRename(template, newName);
+                          } else {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: RufkoTheme.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        ),
+                        child: const Text('Rename'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+// ADD this helper method to handle the actual rename operation:
+  void _performRename(PDFTemplate template, String newName) async {
+    try {
+      // Modify the original template directly - DON'T clone
+      template.templateName = newName;
+      template.updatedAt = DateTime.now();
+
+      // Update in the app state using the same template object
+      await context.read<AppStateProvider>().updatePDFTemplate(template);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Template duplicated successfully'),
+          SnackBar(
+            content: Text('Renamed template to: $newName'),
             backgroundColor: Colors.green,
           ),
         );
@@ -391,7 +517,7 @@ class _PdfTemplatesTabState extends State<PdfTemplatesTab> with TemplateTabMixin
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error duplicating template: $e'),
+            content: Text('Error renaming template: $e'),
             backgroundColor: Colors.red,
           ),
         );

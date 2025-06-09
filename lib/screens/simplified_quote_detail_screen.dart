@@ -96,12 +96,12 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
                       ),
                     ),
                     const PopupMenuItem(
-                      value: 'duplicate',
+                      value: 'rename',
                       child: Row(
                         children: [
-                          Icon(Icons.copy, size: 18),
+                          Icon(Icons.edit_outlined, size: 16),
                           SizedBox(width: 8),
-                          Text('Duplicate Quote'),
+                          Text('Rename'),
                         ],
                       ),
                     ),

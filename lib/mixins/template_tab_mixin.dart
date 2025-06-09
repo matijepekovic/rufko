@@ -9,7 +9,7 @@ mixin TemplateTabMixin<T extends StatefulWidget> on State<T> {
 
   // Search/filter state
   String _searchQuery = '';
-  String _selectedCategory = 'all';
+  String _selectedCategory = 'all'; // Back to 'all' as default
 
   // Abstract methods each tab must implement
   Color get primaryColor;
@@ -298,7 +298,7 @@ mixin TemplateTabMixin<T extends StatefulWidget> on State<T> {
     );
   }
 
-  // FIXED: This is the key method that needed modification
+  // FIXED: Brought back "All Categories" option
   Widget buildSearchAndFilterBar(bool isVerySmall) {
     return Container(
       padding: EdgeInsets.all(isVerySmall ? 8 : 12),
@@ -327,7 +327,7 @@ mixin TemplateTabMixin<T extends StatefulWidget> on State<T> {
           // Filter Chips and Actions
           Row(
             children: [
-              // Filter chips - CONDITIONAL RENDERING BASED ON SELECTION MODE
+              // Filter chips - RESTORED ALL CATEGORIES OPTION
               Expanded(
                 child: SizedBox(
                   height: isVerySmall ? 32 : 36,
@@ -342,7 +342,7 @@ mixin TemplateTabMixin<T extends StatefulWidget> on State<T> {
                       return ListView(
                         scrollDirection: Axis.horizontal,
                         children: [
-                          // NORMAL MODE: Show all chips
+                          // NORMAL MODE: Show all chips INCLUDING "All Categories"
                           if (!_isSelectionMode) ...[
                             Container(
                               margin: const EdgeInsets.only(left: 8, right: 8),

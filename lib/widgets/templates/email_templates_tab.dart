@@ -35,6 +35,8 @@ class _EmailTemplatesTabState extends State<EmailTemplatesTab> with TemplateTabM
   @override
   String get categoryType => 'email_templates';
 
+
+
   // Implement required data methods
   @override
   List<dynamic> getAllItems() {
@@ -45,6 +47,13 @@ class _EmailTemplatesTabState extends State<EmailTemplatesTab> with TemplateTabM
   List<dynamic> getFilteredItems() {
     var filtered = getAllItems().cast<EmailTemplate>();
 
+    // Always exclude templates without valid categories
+    filtered = filtered.where((t) =>
+    t.userCategoryKey != null &&
+        t.userCategoryKey!.isNotEmpty
+    ).toList();
+
+    // Then filter by selected category if not 'all'
     if (selectedCategory != 'all') {
       filtered = filtered.where((t) => t.userCategoryKey == selectedCategory).toList();
     }
@@ -441,7 +450,7 @@ class _EmailTemplatesTabState extends State<EmailTemplatesTab> with TemplateTabM
                     Text('Description: ${template.description}'),
                   if (template.subject.isNotEmpty)
                     Text('Subject: ${template.subject}'),
-                  Text('Category: ${template.userCategoryKey ?? 'No Category'}'),
+                  Text('Category: ${template.userCategoryKey ?? 'Unknown'}'),
                   if (template.isHtml)
                     const Text('Type: HTML Email'),
                 ],
