@@ -3071,7 +3071,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Go to Templates → Fields\nand create fields with "Inspection" category',
+                  'Go to Templates → Custom App Data Fields\nand create fields with "Inspection" category',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey[500],
                   ),
@@ -3080,10 +3080,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 const SizedBox(height: 24),
                 ElevatedButton.icon(
                   onPressed: () {
-                    // Navigate to fields screen (placeholder for now)
+                    // Navigate to custom fields screen (placeholder for now)
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Navigation to Fields coming soon'),
+                        content: Text('Navigation to Custom Fields coming soon'),
                         backgroundColor: Colors.blue,
                       ),
                     );

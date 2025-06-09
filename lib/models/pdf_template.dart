@@ -229,7 +229,7 @@ class PDFTemplate extends HiveObject {
         'notes', 'terms', 'upgradeQuoteText'
       ],
 
-      'Fields': [
+      'Custom Fields': [
         'customText1', 'customText2', 'customText3',
         'customNumeric1', 'customNumeric2',
         'customDate1', 'customDate2',
@@ -312,7 +312,7 @@ class PDFTemplate extends HiveObject {
         'contact': 'Contact Information', // Will create new if doesn't exist
         'legal': 'Legal Information',
         'pricing': 'Pricing Information',
-        'custom': 'Fields',
+        'custom': 'Custom App Data',
       };
 
       // Process each custom field category

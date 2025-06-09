@@ -479,13 +479,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                 icon: const Icon(Icons.close),
                 onPressed: () => Navigator.pop(context),
               ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.help_outline),
-                  tooltip: 'Mapping help',
-                  onPressed: _showMappingHelp,
-                ),
-              ],
             ),
             body: _buildAppDataFieldsList(pdfFieldInfo),
           ),
@@ -734,25 +727,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       const SnackBar(
         content: Text("Field mapping removed."),
         backgroundColor: Colors.orange,
-      ),
-    );
-  }
-
-  void _showMappingHelp() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('How to Map Fields'),
-        content: const Text(
-          'Select a field from the list to link it with the chosen PDF field. '\
-          'Existing links can be replaced by choosing another field.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
       ),
     );
   }

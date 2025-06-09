@@ -701,8 +701,8 @@ class DatabaseService {
       await _mediaBox.clear();
       await _settingsBox.clear();
       await _pdfTemplateBox.clear();
-      await _customAppDataFieldBox.clear(); // ADDED: Clear fields
-      await _inspectionDocumentBox.clear(); // ADDED: Clear fields
+      await _customAppDataFieldBox.clear(); // ADDED: Clear custom fields
+      await _inspectionDocumentBox.clear(); // ADDED: Clear custom fields
       await _categoriesBox.clear(); // Clear template categories
       await _messageTemplateBox.clear();
       await _emailTemplateBox.clear();
@@ -1091,7 +1091,7 @@ class DatabaseService {
         return _emailTemplateBox.values
             .where((t) => t.category == categoryKey)
             .length;
-      case 'Fields': // This refers to the category of CustomAppDataField itself
+      case 'Custom Fields': // This refers to the category of CustomAppDataField itself
         return _customAppDataFieldBox.values
             .where((f) => f.category == categoryKey)
             .length;
