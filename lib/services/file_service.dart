@@ -36,31 +36,6 @@ class FileService {
     return newPath;
   }
 
-  /// Pick an image for a product and store it under `product_images`.
-  /// Returns the saved file path or `null` if no image was selected.
-  Future<String?> pickAndSaveProductImage({
-    XFile? image,
-    Directory? baseDirectory,
-  }) async {
-    final picker = ImagePicker();
-    final XFile? selectedImage =
-        image ?? await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512, imageQuality: 85);
-
-    if (selectedImage == null) return null;
-
-    final directory = baseDirectory ?? await getApplicationDocumentsDirectory();
-    final imgDir = Directory('${directory.path}/product_images');
-    if (!await imgDir.exists()) {
-      await imgDir.create(recursive: true);
-    }
-    final extension = selectedImage.path.split('.').last;
-    final fileName =
-        'product_${DateTime.now().millisecondsSinceEpoch}.$extension';
-    final newPath = '${imgDir.path}/$fileName';
-    await File(selectedImage.path).copy(newPath);
-    return newPath;
-  }
-
   /// Save exported [data] to a json file in the application documents
   /// directory. Returns the written file path.
   Future<String> saveExportedData(
