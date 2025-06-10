@@ -1895,6 +1895,8 @@ class _AddProductDialogState extends State<_AddProductDialog> {
     );
   }
 
+}
+
 // NEW: Custom item dialog
 class _CustomItemDialog extends StatefulWidget {
   final Function(CustomLineItem) onItemAdded;
