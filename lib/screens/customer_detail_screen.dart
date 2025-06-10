@@ -16,6 +16,7 @@ import 'simplified_quote_screen.dart';
 import 'simplified_quote_detail_screen.dart';
 import '../mixins/file_sharing_mixin.dart';
 import '../mixins/communication_actions_mixin.dart';
+import '../mixins/customer_communication_mixin.dart';
 import 'customer_detail/enhanced_communication_dialog.dart';
 import 'customer_detail/media_details_dialog.dart';
 import 'customer_detail/media_tab_controller.dart';
@@ -40,7 +41,11 @@ class CustomerDetailScreen extends StatefulWidget {
 }
 
 class _CustomerDetailScreenState extends State<CustomerDetailScreen>
-    with TickerProviderStateMixin, FileSharingMixin, CommunicationActionsMixin {
+    with
+        TickerProviderStateMixin,
+        FileSharingMixin,
+        CommunicationActionsMixin,
+        CustomerCommunicationMixin {
   late TabController _tabController;
   final TextEditingController _communicationController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
@@ -51,6 +56,15 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   bool _isSelectionMode = false;
   Set<String> _selectedMediaIds = <String>{};
   late MediaTabController _mediaController;
+
+  @override
+  Customer get customer => widget.customer;
+
+  @override
+  void previewAndSendSMS(dynamic template) => _previewAndSendSMS(template);
+
+  @override
+  void previewAndSendEmail(dynamic template) => _previewAndSendEmail(template);
 
   @override
   void initState() {
@@ -217,10 +231,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   InfoTab(
                     customer: widget.customer,
                     formatDate: formatCommunicationDate,
-                    onTemplateEmail: _showTemplateEmailPicker,
-                    onTemplateSMS: _showTemplateSMSPicker,
-                    onQuickCommunication: _showQuickCommunicationOptions,
-                    onAddCommunication: _addCommunication,
+                    onTemplateEmail: showTemplateEmailPicker,
+                    onTemplateSMS: showTemplateSMSPicker,
+                    onQuickCommunication: showQuickCommunicationOptions,
+                    onAddCommunication: addCommunication,
                   ),
                   QuotesTab(
                     customer: widget.customer,
@@ -449,98 +463,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           const Tab(icon: Icon(Icons.assignment), text: 'Inspection'),
           const Tab(icon: Icon(Icons.photo_library), text: 'Media'),
         ],
-      ),
-    );
-  }
-  void _showTemplateSMSPicker() {
-    final appState = context.read<AppStateProvider>();
-    final messageTemplates = appState.activeMessageTemplates;
-
-    if (messageTemplates.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No message templates available. Create templates first.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.9,
-        minChildSize: 0.5,
-        expand: false,
-        builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.sms, color: Colors.purple),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Choose SMS Template',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Select a template to send to ${widget.customer.name}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: messageTemplates.length,
-                  itemBuilder: (context, index) {
-                    final template = messageTemplates[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.purple.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.sms, color: Colors.purple),
-                        ),
-                        title: Text(
-                          template.templateName,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          '${template.category} • ${template.description}',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _previewAndSendSMS(template);
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -830,98 +752,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     };
   }
 
-  void _showTemplateEmailPicker() {
-    final appState = context.read<AppStateProvider>();
-    final emailTemplates = appState.activeEmailTemplates;
-
-    if (emailTemplates.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No email templates available. Create templates first.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.9,
-        minChildSize: 0.5,
-        expand: false,
-        builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.email, color: Theme.of(context).primaryColor),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Choose Email Template',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Select a template to send to ${widget.customer.name}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: ListView.builder(
-                  controller: scrollController,
-                  itemCount: emailTemplates.length,
-                  itemBuilder: (context, index) {
-                    final template = emailTemplates[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.email, color: Colors.blue),
-                        ),
-                        title: Text(
-                          template.templateName,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          '${template.category} • ${template.description}',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                        onTap: () {
-                          Navigator.pop(context);
-                          _previewAndSendEmail(template);
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
   void _editSMSBeforeSending(dynamic template, String originalMessage) {
     final messageController = TextEditingController(text: originalMessage);
 
@@ -1688,17 +1518,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
 
-  void _addCommunication() {
-    showDialog(
-      context: context,
-      builder: (context) => EnhancedCommunicationDialog(
-        customer: widget.customer,
-        onCommunicationAdded: () {
-          setState(() {}); // Refresh the UI
-        },
-      ),
-    );
-  }
 
   void _navigateToCreateQuoteScreen() {
     Navigator.push(
@@ -1768,7 +1587,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               title: const Text('Quick Communication'),
               onTap: () {
                 Navigator.pop(context);
-                _showQuickCommunicationOptions();
+                showQuickCommunicationOptions();
               },
             ),
           ],
@@ -1777,314 +1596,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   } // <-- Proper closing brace for _showQuickActions
 
-  // Quick communication options - SEPARATE METHOD
-  void _showQuickCommunicationOptions() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.9,
-        minChildSize: 0.5,
-        expand: false,
-        builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(24),
-          child: SingleChildScrollView(
-            controller: scrollController,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.flash_on, color: Theme.of(context).primaryColor),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Quick Communication',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Contact ${widget.customer.name} directly',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Real communication actions
-                _buildRealCommTile(
-                    'Call Customer',
-                    widget.customer.phone != null ? 'Call ${widget.customer.phone}' : 'No phone number',
-                    Icons.phone,
-                    Colors.green,
-                    widget.customer.phone != null ? () => makePhoneCall(widget.customer.phone!) : null
-                ),
-
-                _buildRealCommTile(
-                    'Send Email',
-                    widget.customer.email != null ? 'Email ${widget.customer.email}' : 'No email address',
-                    Icons.email,
-                    Colors.blue,
-                    widget.customer.email != null ? () => sendEmail(widget.customer.email!) : null
-                ),
-
-                _buildRealCommTile(
-                    'Send Text Message',
-                    widget.customer.phone != null ? 'Text ${widget.customer.phone}' : 'No phone number',
-                    Icons.sms,
-                    Colors.purple,
-                    widget.customer.phone != null ? () => sendSMS(widget.customer.phone!) : null
-                ),
-
-                const Divider(height: 32),
-
-                // Quick logging actions
-                Text(
-                  'Quick Log Entry',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                _buildQuickCommTile('Initial Contact', 'Customer inquiry received', Icons.contact_phone, Colors.blue, () => _addQuickNote('📞 Initial contact - Customer interested in roofing services')),
-                _buildQuickCommTile('Quote Sent', 'Quote delivered to customer', Icons.send, Colors.green, () => _showQuoteSentDialog()),
-                _buildQuickCommTile('Site Visit', 'Schedule or log site visit', Icons.location_on, Colors.orange, () => _showSiteVisitDialog()),
-                _buildQuickCommTile('Follow-up Needed', 'Set reminder note', Icons.schedule, Colors.amber, () => _showFollowUpDialog()),
-
-                // Add some bottom padding to ensure scrolling works well
-                const SizedBox(height: 32),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-
-
-  Widget _buildQuickCommTile(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        onTap: () {
-          Navigator.pop(context);
-          onTap();
-        },
-      ),
-    );
-  }
-
-  Widget _buildRealCommTile(String title, String subtitle, IconData icon, Color color, VoidCallback? onTap) {
-    final bool isEnabled = onTap != null;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isEnabled ? color.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-              icon,
-              color: isEnabled ? color : Colors.grey,
-              size: 24
-          ),
-        ),
-        title: Text(
-            title,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: isEnabled ? null : Colors.grey,
-            )
-        ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            color: isEnabled ? null : Colors.grey,
-          ),
-        ),
-        trailing: isEnabled
-            ? const Icon(Icons.launch, size: 16)
-            : const Icon(Icons.block, size: 16, color: Colors.grey),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        enabled: isEnabled,
-        onTap: onTap != null ? () {
-          Navigator.pop(context);
-          onTap();
-        } : null,
-      ),
-    );
-  }
-
-  void _addQuickNote(String message) {
-    widget.customer.addCommunication(message);
-    context.read<AppStateProvider>().updateCustomer(widget.customer);
-    setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Communication logged'), backgroundColor: Colors.green),
-    );
-  }
-
-  void _showQuoteSentDialog() {
-    final quoteController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Quote Sent'),
-        content: TextField(
-          controller: quoteController,
-          decoration: const InputDecoration(
-            labelText: 'Quote Number (optional)',
-            hintText: 'e.g., Q-2024-001',
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              final quoteNum = quoteController.text.isNotEmpty ? quoteController.text : 'new quote';
-              _addQuickNote('📧 Quote sent - $quoteNum delivered to customer');
-              Navigator.pop(context);
-            },
-            child: const Text('Log'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSiteVisitDialog() {
-    final notesController = TextEditingController();
-    bool isScheduled = true;
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Site Visit'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Radio<bool>(
-                    value: true,
-                    groupValue: isScheduled,
-                    onChanged: (value) => setDialogState(() => isScheduled = value!),
-                  ),
-                  const Text('Scheduled'),
-                  Radio<bool>(
-                    value: false,
-                    groupValue: isScheduled,
-                    onChanged: (value) => setDialogState(() => isScheduled = value!),
-                  ),
-                  const Text('Completed'),
-                ],
-              ),
-              TextField(
-                controller: notesController,
-                decoration: InputDecoration(
-                  labelText: isScheduled ? 'Schedule Details' : 'Visit Notes',
-                  hintText: isScheduled ? 'Date and time...' : 'What was observed...',
-                ),
-                maxLines: 2,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                final prefix = isScheduled ? '📅 Site visit scheduled' : '🏠 Site visit completed';
-                final notes = notesController.text.isNotEmpty ? ' - ${notesController.text}' : '';
-                _addQuickNote('$prefix$notes');
-                Navigator.pop(context);
-              },
-              child: const Text('Log'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-  void _showFollowUpDialog() {
-    final notesController = TextEditingController();
-    DateTime selectedDate = DateTime.now().add(const Duration(days: 7));
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Follow-up Reminder'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Follow-up Note',
-                  hintText: 'What needs to be followed up?',
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                title: Text('Date: ${DateFormat('MMM dd, yyyy').format(selectedDate)}'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: selectedDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (date != null) setDialogState(() => selectedDate = date);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                final notes = notesController.text.isNotEmpty ? notesController.text : 'General follow-up';
-                final dateStr = DateFormat('MMM dd').format(selectedDate);
-                _addQuickNote('📅 FOLLOW-UP ($dateStr): $notes');
-                Navigator.pop(context);
-              },
-              child: const Text('Set Reminder'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
   // REAL COMMUNICATION METHODS MOVED TO MIXIN
 
 
