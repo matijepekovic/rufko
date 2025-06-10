@@ -5,10 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:open_filex/open_filex.dart';
-import 'package:path/path.dart' as path;
-import '../utils/common_utils.dart';
 import '../models/customer.dart';
 import '../models/project_media.dart';
 import '../models/simplified_quote.dart';
@@ -21,6 +17,7 @@ import '../mixins/file_sharing_mixin.dart';
 import '../mixins/communication_actions_mixin.dart';
 import 'customer_detail/enhanced_communication_dialog.dart';
 import 'customer_detail/media_details_dialog.dart';
+import 'customer_detail/media_tab_controller.dart';
 import 'customer_detail/full_screen_image_viewer.dart';
 
 import 'customer_detail/customer_edit_dialog.dart';
@@ -52,10 +49,23 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   // Multi-select state for media
   bool _isSelectionMode = false;
   Set<String> _selectedMediaIds = <String>{};
+  late MediaTabController _mediaController;
 
   @override
   void initState() {
     super.initState();
+    _mediaController = MediaTabController(
+      context: context,
+      customer: widget.customer,
+      imagePicker: _imagePicker,
+      setProcessingState: (processing) {
+        setState(() => _isProcessingMedia = processing);
+      },
+      shareFile: ({required File file, required String fileName, String? description, Customer? customer, String? fileType}) {
+        return shareFile(file: file, fileName: fileName, description: description, customer: customer, fileType: fileType);
+      },
+      showErrorSnackBar: showErrorSnackBar,
+    );
     _tabController = TabController(length: 4, vsync: this);
 
     // Listen for tab changes to exit selection mode
@@ -230,12 +240,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     onSelectAll: _selectAllMedia,
                     onToggleSelection: _toggleMediaSelection,
                     onDeleteSelected: _deleteSelectedMedia,
-                    onPickImageFromCamera: _pickImageFromCamera,
-                    onPickImageFromGallery: _pickImageFromGallery,
-                    onPickDocument: _pickDocument,
-                    onViewMedia: _viewMedia,
-                    onShowContextMenu: _showMediaContextMenu,
-                    onShowMediaOptions: _showMediaOptions,
+                    onPickImageFromCamera: _mediaController.pickImageFromCamera,
+                    onPickImageFromGallery: _mediaController.pickImageFromGallery,
+                    onPickDocument: _mediaController.pickDocument,
+                    onViewMedia: _mediaController.viewMedia,
+                    onShowContextMenu: _mediaController.showMediaContextMenu,
+                    onShowMediaOptions: _mediaController.showMediaOptions,
                   ),
                 ],
               ),
@@ -307,7 +317,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           case 3: // Media tab (was case 4)
             return FloatingActionButton.extended(
               heroTag: "media_fab",
-              onPressed: _showMediaOptions,
+              onPressed: _mediaController.showMediaOptions,
               icon: const Icon(Icons.add_a_photo),
               label: const Text('Add Media'),
               backgroundColor: Colors.teal,
@@ -3045,605 +3055,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   }
 
   // MEDIA FUNCTIONALITY METHODS
-  void _showMediaOptions() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Add Media',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.camera_alt, color: Colors.blue.shade700),
-              ),
-              title: const Text('Take Multiple Photos'),
-              subtitle: const Text('Take several photos in sequence'),
-              onTap: () {
-                Navigator.pop(context);
-                _takeMultiplePhotos();
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.photo_library, color: Colors.green.shade700),
-              ),
-              title: const Text('Select Multiple Photos'),
-              subtitle: const Text('Choose multiple photos from gallery'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickMultipleImages();
-              },
-            ),
-            ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(Icons.file_upload, color: Colors.orange.shade700),
-              ),
-              title: const Text('Upload Documents'),
-              subtitle: const Text('Select PDF, Word, Excel files'),
-              onTap: () {
-                Navigator.pop(context);
-                _pickMultipleDocuments();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _takeMultiplePhotos() async {
-    List<File> photos = [];
-
-    while (true) {
-      try {
-        final XFile? image = await _imagePicker.pickImage(
-          source: ImageSource.camera,
-          maxWidth: 1920,
-          maxHeight: 1080,
-          imageQuality: 85,
-        );
-
-        if (!mounted) return;
-
-        if (image != null) {
-          photos.add(File(image.path));
-
-          // Ask if they want to take another
-          bool takeAnother = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Text('Photo ${photos.length} taken'),
-              content: const Text('Take another photo?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Done'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Take Another'),
-                ),
-              ],
-            ),
-          ) ?? false;
-
-          if (!takeAnother) break;
-        } else {
-          break;
-        }
-      } catch (e) {
-        showErrorSnackBar('Error taking photo: $e');
-        break;
-      }
-    }
-
-    if (photos.isNotEmpty) {
-      await _processBulkMedia(photos, 'image');
-    }
-  }
-
-  Future<void> _pickMultipleImages() async {
-    try {
-      final List<XFile> images = await _imagePicker.pickMultiImage(
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
-      );
-
-      if (images.isNotEmpty) {
-        final List<File> files = images.map((xfile) => File(xfile.path)).toList();
-        await _processBulkMedia(files, 'image');
-      }
-    } catch (e) {
-      showErrorSnackBar('Error selecting images: $e');
-    }
-  }
-
-  Future<void> _pickMultipleDocuments() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'xlsx', 'xls'],
-        allowMultiple: true,
-      );
-
-      if (result != null && result.files.isNotEmpty) {
-        final List<File> files = result.files
-            .where((file) => file.path != null)
-            .map((file) => File(file.path!))
-            .toList();
-
-        if (files.isNotEmpty) {
-          await _processBulkMedia(files, 'document');
-        }
-      }
-    } catch (e) {
-      showErrorSnackBar('Error selecting documents: $e');
-    }
-  }
-
-  Future<void> _processBulkMedia(List<File> files, String defaultType) async {
-    if (files.isEmpty) return;
-
-    // Show category selection dialog for bulk upload
-    final String? selectedCategory = await _showBulkCategoryDialog(files.length, defaultType);
-
-    if (selectedCategory == null) return; // User cancelled
-
-    if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _isProcessingMedia = true);
-
-    try {
-      int successCount = 0;
-
-      for (final file in files) {
-        try {
-          final fileSize = await file.length();
-          final fileName = path.basename(file.path);
-          final fileExtension = path.extension(fileName).toLowerCase();
-
-          String fileType = defaultType;
-          if (fileExtension == '.pdf') {
-            fileType = 'pdf';
-          } else if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].contains(fileExtension)) {
-            fileType = 'image';
-          }
-
-          final mediaItem = ProjectMedia(
-            customerId: widget.customer.id,
-            filePath: file.path,
-            fileName: fileName,
-            fileType: fileType,
-            category: selectedCategory,
-            fileSizeBytes: fileSize,
-          );
-
-          if (!mounted) return;
-          await context.read<AppStateProvider>().addProjectMedia(mediaItem);
-          successCount++;
-        } catch (e) {
-          debugPrint('Error processing file ${file.path}: $e');
-        }
-      }
-
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Added $successCount of ${files.length} files'),
-            backgroundColor: successCount == files.length ? Colors.green : Colors.orange,
-          ),
-        );
-      }
-    } catch (e) {
-      showErrorSnackBar('Error processing files: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessingMedia = false);
-      }
-    }
-  }
-
-  Future<String?> _showBulkCategoryDialog(int fileCount, String defaultType) async {
-    String selectedCategory = defaultType == 'image' ? 'before_photos' : 'general';
-
-    final categories = [
-      'before_photos',
-      'after_photos',
-      'inspection_photos',
-      'progress_photos',
-      'damage_report',
-      'other_photos',
-      'roofscope_reports',
-      'contracts',
-      'invoices',
-      'permits',
-      'insurance_docs',
-      'general',
-    ];
-
-    return await showDialog<String>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text('Category for $fileCount files'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Select category for all $fileCount files:'),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: selectedCategory,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Category',
-                ),
-                items: categories.map((category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Text(_getFormattedCategoryName(category)),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedCategory = value ?? 'general';
-                  });
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, selectedCategory),
-              child: const Text('Add Files'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  String _getFormattedCategoryName(String category) {
-    switch (category) {
-      case 'before_photos':
-        return '📷 Before Photos';
-      case 'after_photos':
-        return '📸 After Photos';
-      case 'inspection_photos':
-        return '🔍 Inspection Photos';
-      case 'progress_photos':
-        return '📊 Progress Photos';
-      case 'damage_report':
-        return '⚠️ Damage Photos';
-      case 'other_photos':
-        return '📱 Other Photos';
-      case 'contracts':
-        return '📋 Contracts';
-      case 'invoices':
-        return '💰 Invoices';
-      case 'permits':
-        return '🏛️ Permits';
-      case 'insurance_docs':
-        return '🛡️ Insurance Documents';
-      case 'general':
-        return '📁 General';
-      default:
-        return category.split('_').map((word) => word[0].toUpperCase() + word.substring(1)).join(' ');
-    }
-  }
-  Future<void> _pickImageFromCamera() async {
-    try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.camera,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        await _processSelectedMedia(File(image.path), 'image');
-      }
-    } catch (e) {
-      showErrorSnackBar('Error taking photo: $e');
-    }
-  }
-
-  Future<void> _pickImageFromGallery() async {
-    try {
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
-      );
-
-      if (image != null) {
-        await _processSelectedMedia(File(image.path), 'image');
-      }
-    } catch (e) {
-      showErrorSnackBar('Error selecting image: $e');
-    }
-  }
-
-  Future<void> _pickDocument() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'txt', 'xlsx', 'xls'],
-      );
-
-      if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
-        await _processSelectedMedia(file, 'document');
-      }
-    } catch (e) {
-      showErrorSnackBar('Error selecting document: $e');
-    }
-  }
-
-  Future<void> _processSelectedMedia(File file, String fileType) async {
-    setState(() => _isProcessingMedia = true);
-
-    try {
-      // Calculate file size
-      final fileSize = await file.length();
-
-      if (!mounted) return;
-
-      // Get file info
-      final fileName = path.basename(file.path);
-      final fileExtension = path.extension(fileName).toLowerCase();
-
-      // Determine file type
-      String detectedType = fileType;
-      if (fileExtension == '.pdf') {
-        detectedType = 'pdf';
-      } else if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].contains(fileExtension)) {
-        detectedType = 'image';
-      }
-
-      // Show media details dialog
-      final messenger = ScaffoldMessenger.of(context);
-      final ProjectMedia? mediaItem = await showDialog<ProjectMedia>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => MediaDetailsDialog(
-          file: file,
-          fileName: fileName,
-          fileType: detectedType,
-          fileSize: fileSize,
-          customerId: widget.customer.id,
-        ),
-      );
-
-      if (!mounted) return;
-
-      if (mediaItem != null) {
-        // Add to app state
-        await context.read<AppStateProvider>().addProjectMedia(mediaItem);
-
-        if (mounted) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('Added ${mediaItem.fileName}'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      showErrorSnackBar('Error processing media: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessingMedia = false);
-      }
-    }
-  }
-
-  Future<void> _viewMedia(ProjectMedia mediaItem) async {
-    try {
-      if (mediaItem.isImage) {
-        // Show full-screen image viewer
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FullScreenImageViewer(mediaItem: mediaItem),
-          ),
-        );
-      } else if (mediaItem.isPdf) {
-        // Use enhanced PDF preview screen
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PdfPreviewScreen(
-              pdfPath: mediaItem.filePath,
-              suggestedFileName: mediaItem.fileName,
-              customer: widget.customer,
-              quote: mediaItem.quoteId != null
-                  ? context.read<AppStateProvider>().getSimplifiedQuotesForCustomer(widget.customer.id)
-                  .firstWhere((q) => q.id == mediaItem.quoteId, orElse: () => null as dynamic)
-                  : null,
-              title: mediaItem.description ?? mediaItem.fileName,
-              isPreview: true,
-            ),
-          ),
-        );
-      } else {
-        // Open other files with system default app
-        final result = await OpenFilex.open(mediaItem.filePath);
-        if (result.type != ResultType.done) {
-          showErrorSnackBar('Cannot open file: ${result.message}');
-        }
-      }
-    } catch (e) {
-      showErrorSnackBar('Error opening media: $e');
-    }
-  }
-
-  void _showMediaContextMenu(ProjectMedia mediaItem) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.visibility),
-              title: const Text('View'),
-              onTap: () {
-                Navigator.pop(context);
-                if (mediaItem.isPdf) {
-                  // Use enhanced PDF preview instead of system viewer
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => PdfPreviewScreen(
-                        pdfPath: mediaItem.filePath,
-                        suggestedFileName: mediaItem.fileName,
-                        customer: widget.customer,
-                        quote: mediaItem.quoteId != null
-                            ? context.read<AppStateProvider>().getSimplifiedQuotesForCustomer(widget.customer.id)
-                            .firstWhere((q) => q.id == mediaItem.quoteId, orElse: () => null as dynamic)
-                            : null,
-                        title: mediaItem.description ?? mediaItem.fileName,
-                        isPreview: true,
-                      ),
-                    ),
-                  );
-                } else {
-                  _viewMedia(mediaItem);
-                }
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit),
-              title: const Text('Edit Details'),
-              onTap: () {
-                Navigator.pop(context);
-                _editMediaDetails(mediaItem);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.share),
-              title: const Text('Share'),
-              onTap: () {
-                Navigator.pop(context);
-                shareFile(
-                  file: File(mediaItem.filePath),
-                  fileName: mediaItem.fileName,
-                  description: mediaItem.description,
-                  customer: widget.customer,
-                  fileType: mediaItem.fileType,
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('Delete', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _deleteMedia(mediaItem);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _editMediaDetails(ProjectMedia mediaItem) {
-    showDialog(
-      context: context,
-      builder: (context) => MediaDetailsDialog.edit(
-        mediaItem: mediaItem,
-        onSave: (updatedMedia) async {
-          final messenger = ScaffoldMessenger.of(context);
-          await context.read<AppStateProvider>().updateProjectMedia(updatedMedia);
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Media details updated'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _deleteMedia(ProjectMedia mediaItem) {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Media'),
-        content: Text('Are you sure you want to delete "${mediaItem.fileName}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => navigator.pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                // Delete file from device
-                final file = File(mediaItem.filePath);
-                if (await file.exists()) {
-                  await file.delete();
-                }
-
-                // Remove from app state
-                if (!context.mounted) return;
-                await context.read<AppStateProvider>().deleteProjectMedia(mediaItem.id);
-                if (!context.mounted) return;
-
-                navigator.pop();
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text('Deleted ${mediaItem.fileName}'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              } catch (e) {
-                navigator.pop();
-                showErrorSnackBar('Error deleting media: $e');
-              }
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
 
 
 
@@ -3796,7 +3207,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
               title: const Text('Add Media'),
               onTap: () {
                 Navigator.pop(context);
-                _showMediaOptions();
+                _mediaController.showMediaOptions();
               },
             ),
             ListTile(
