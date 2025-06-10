@@ -13,6 +13,7 @@ import 'simplified_quote_detail_screen.dart';
 import '../models/quote_extras.dart'; // NEW: For PermitItem and CustomLineItem
 import 'package:rufko/screens/inspection_viewer_screen.dart';
 import '../theme/rufko_theme.dart';
+import '../widgets/quote_type_selector.dart';
 
 class SimplifiedQuoteScreen extends StatefulWidget {
   final Customer customer;
@@ -292,134 +293,9 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   Widget _buildMainProductSelection() {
     return Column(
       children: [
-        // NEW: Quote Type Selection Card
-        Card(
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.purple.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.dashboard_customize,
-                        color: Colors.purple,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Quote Type',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Quote type selection
-                Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _switchQuoteType('multi-level'),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: _quoteType == 'multi-level' ? Theme.of(context).primaryColor : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _quoteType == 'multi-level' ? Theme.of(context).primaryColor : Colors.grey[300]!,
-                              width: 2,
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.layers,
-                                color: _quoteType == 'multi-level' ? Colors.white : Colors.grey[600],
-                                size: 32,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Multi-Level Quote',
-                                style: TextStyle(
-                                  color: _quoteType == 'multi-level' ? Colors.white : Colors.grey[700],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Builder/Homeowner/Platinum',
-                                style: TextStyle(
-                                  color: _quoteType == 'multi-level' ? Colors.white70 : Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => _switchQuoteType('single-tier'),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: _quoteType == 'single-tier' ? Theme.of(context).primaryColor : Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: _quoteType == 'single-tier' ? Theme.of(context).primaryColor : Colors.grey[300]!,
-                              width: 2,
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.description,
-                                color: _quoteType == 'single-tier' ? Colors.white : Colors.grey[600],
-                                size: 32,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Single-Tier Quote',
-                                style: TextStyle(
-                                  color: _quoteType == 'single-tier' ? Colors.white : Colors.grey[700],
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'One price level only',
-                                style: TextStyle(
-                                  color: _quoteType == 'single-tier' ? Colors.white70 : Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+        QuoteTypeSelector(
+          quoteType: _quoteType,
+          onQuoteTypeChanged: _switchQuoteType,
         ),
 
         const SizedBox(height: 16),
