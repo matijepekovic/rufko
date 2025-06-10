@@ -9,8 +9,6 @@ import 'customer_detail_screen.dart';
 import '../mixins/search_mixin.dart';
 import '../mixins/sort_menu_mixin.dart';
 import '../mixins/empty_state_mixin.dart';
-import '../models/kanban_board.dart';
-import '../models/kanban_stage.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -190,21 +188,9 @@ class _CustomersScreenState extends State<CustomersScreen>
         itemBuilder: (context, index) {
           final customer = customers[index];
           final quoteCount = appState.getSimplifiedQuotesForCustomer(customer.id).length;
-          final board = appState.appSettings?.kanbanBoards.firstWhere(
-                (b) => b.id == customer.boardId,
-                orElse: () => appState.appSettings?.kanbanBoards.first ?? KanbanBoard(name: 'Default'),
-              );
-          final stage = board?.stages.firstWhere(
-                (s) => s.id == customer.stage,
-                orElse: () => board?.stages.first ?? KanbanStage(id: '', name: '', color: Colors.grey.value),
-              );
-          final color = _getUrgencyColor(appState, customer);
           return CustomerCard(
             customer: customer,
             quoteCount: quoteCount,
-            stageLabel: stage?.name ?? '',
-            stageColor: Color(stage?.color ?? Colors.grey.value),
-            urgencyColor: color,
             onTap: () => _navigateToCustomerDetail(customer),
             onEdit: () => _showEditCustomerDialog(context, customer),
             onDelete: () => _showDeleteConfirmation(context, customer),
@@ -277,16 +263,6 @@ class _CustomersScreenState extends State<CustomersScreen>
       return _sortAscending ? comparison : -comparison;
     });
     return customers;
-  }
-
-  Color _getUrgencyColor(AppStateProvider appState, Customer customer) {
-    final settings = appState.appSettings;
-    if (settings == null) return Colors.white;
-    final daysIdle = DateTime.now().difference(customer.updatedAt).inDays;
-    if (daysIdle >= settings.redThresholdDays) return Colors.red.shade100;
-    if (daysIdle >= settings.orangeThresholdDays) return Colors.orange.shade100;
-    if (daysIdle >= settings.yellowThresholdDays) return Colors.yellow.shade100;
-    return Colors.white;
   }
 
 
