@@ -31,6 +31,16 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       discountTypes: (fields[12] as List?)?.cast<String>(),
       allowProductDiscountToggle: fields[13] as bool,
       defaultDiscountLimit: fields[14] as double,
+      useKanbanCustomerView: fields[15] as bool,
+      kanbanStages: (fields[16] as List).cast<KanbanStage>(),
+      kanbanBoards: (fields[17] as List?)?.cast<KanbanBoard>(),
+      yellowThresholdDays: fields[18] as int? ?? 3,
+      orangeThresholdDays: fields[19] as int? ?? 7,
+      redThresholdDays: fields[20] as int? ?? 14,
+      requiredMediaCategories:
+          (fields[21] as List?)?.cast<String>() ??
+              ['roofscope_reports', 'contracts', 'permits', 'insurance_docs'],
+      lastBackupDate: fields[22] as DateTime?,
       updatedAt: fields[4] as DateTime?,
     );
   }
@@ -38,7 +48,7 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(15)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -68,7 +78,23 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       ..writeByte(13)
       ..write(obj.allowProductDiscountToggle)
       ..writeByte(14)
-      ..write(obj.defaultDiscountLimit);
+      ..write(obj.defaultDiscountLimit)
+      ..writeByte(15)
+      ..write(obj.useKanbanCustomerView)
+      ..writeByte(16)
+      ..write(obj.kanbanStages)
+      ..writeByte(17)
+      ..write(obj.kanbanBoards)
+      ..writeByte(18)
+      ..write(obj.yellowThresholdDays)
+      ..writeByte(19)
+      ..write(obj.orangeThresholdDays)
+      ..writeByte(20)
+      ..write(obj.redThresholdDays)
+      ..writeByte(21)
+      ..write(obj.requiredMediaCategories)
+      ..writeByte(22)
+      ..write(obj.lastBackupDate);
   }
 
   @override
