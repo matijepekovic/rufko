@@ -14,6 +14,7 @@ import '../models/quote_extras.dart'; // NEW: For PermitItem and CustomLineItem
 import 'package:rufko/screens/inspection_viewer_screen.dart';
 import '../theme/rufko_theme.dart';
 import '../widgets/quote_type_selector.dart';
+import '../widgets/main_product_selection.dart';
 
 class SimplifiedQuoteScreen extends StatefulWidget {
   final Customer customer;
@@ -33,7 +34,6 @@ class SimplifiedQuoteScreen extends StatefulWidget {
 
 class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _quantityController = TextEditingController(text: '1.0');
   double _taxRate = 0.0;
   Product? _mainProduct;
   double _mainQuantity = 1.0;
@@ -69,7 +69,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   }
   @override
   void dispose() {
-    _quantityController.dispose();
     super.dispose();
   }
 
@@ -300,158 +299,22 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
         const SizedBox(height: 16),
 
-        // Main Product Selection Card
-        Card(
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.roofing,
-                        color: Theme.of(context).primaryColor,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _quoteType == 'multi-level' ? 'Step 1: Select Main Product' : 'Step 1: Select Product',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            _quoteType == 'multi-level'
-                                ? 'This creates your quote levels (Builder/Homeowner/Platinum)'
-                                : 'Select any product for your single-tier quote',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                Consumer<AppStateProvider>(
-                  builder: (context, appState, child) {
-                    // For multi-level: only show main differentiator products
-                    // For single-tier: show all active products
-                    final availableProducts = _quoteType == 'multi-level'
-                        ? appState.products.where((p) =>
-                    p.isActive && p.pricingType == ProductPricingType.mainDifferentiator
-                    ).toList()
-                        : appState.products.where((p) => p.isActive).toList();
-
-                    if (availableProducts.isEmpty) {
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.orange.shade200),
-                        ),
-                        child: Column(
-                          children: [
-                            Icon(Icons.warning_amber, color: Colors.orange.shade600, size: 48),
-                            const SizedBox(height: 8),
-                            Text(
-                              _quoteType == 'multi-level' ? 'No Main Products Found' : 'No Products Found',
-                              style: TextStyle(
-                                color: Colors.orange.shade800,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _quoteType == 'multi-level'
-                                  ? 'Create a main differentiator product first.'
-                                  : 'Add some products in the Products section first.',
-                              style: TextStyle(color: Colors.orange.shade700),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return Column(
-                      children: [
-                        DropdownButtonFormField<Product>(
-                          decoration: InputDecoration(
-                            labelText: _quoteType == 'multi-level' ? 'Main Product' : 'Product',
-                            border: const OutlineInputBorder(),
-                            prefixIcon: const Icon(Icons.architecture),
-                          ),
-                          value: _mainProduct,
-                          items: availableProducts.map((product) => DropdownMenuItem(
-                            value: product,
-                            child: Text(
-                              _quoteType == 'multi-level'
-                                  ? '${product.name} (${product.availableMainLevels.length} levels)'
-                                  : product.name,
-                              style: const TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                          )).toList(),
-                          onChanged: (product) {
-                            setState(() {
-                              _mainProduct = product;
-                              _createQuoteLevels();
-                            });
-                          },
-                          validator: (value) => value == null ? 'Please select a product' : null,
-                        ),
-
-                        if (_mainProduct != null) ...[
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _quantityController,
-                            decoration: InputDecoration(
-                              labelText: 'Quantity',
-                              border: const OutlineInputBorder(),
-                              suffixText: _mainProduct!.unit,
-                              prefixIcon: const Icon(Icons.calculate_outlined),
-                              helperText: 'Amount of ${_mainProduct!.name} needed',
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            onChanged: (value) {
-                              final quantity = double.tryParse(value);
-                              if (quantity != null && quantity > 0) {
-                                setState(() {
-                                  _mainQuantity = quantity;
-                                  _updateQuoteLevelsQuantity();
-                                });
-                              }
-                            },
-                            validator: (value) {
-                              if (value == null || value.isEmpty) return 'Please enter quantity';
-                              final qty = double.tryParse(value);
-                              if (qty == null || qty <= 0) return 'Enter a valid positive quantity';
-                              return null;
-                            },
-                          ),
-                        ],
-                      ],
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
+        MainProductSelection(
+          mainProduct: _mainProduct,
+          mainQuantity: _mainQuantity,
+          quoteType: _quoteType,
+          onProductChanged: (product) {
+            setState(() {
+              _mainProduct = product;
+              _createQuoteLevels();
+            });
+          },
+          onQuantityChanged: (quantity) {
+            setState(() {
+              _mainQuantity = quantity;
+              _updateQuoteLevelsQuantity();
+            });
+          },
         ),
       ],
     );
@@ -1895,7 +1758,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
       _mainProduct = null;
       _quoteLevels.clear();
       _addedProducts.clear();
-      _quantityController.text = '1.0';
       _mainQuantity = 1.0;
 
       // NEW: Reset permits and custom items too
@@ -2158,7 +2020,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     // Get main quantity from first level
     if (_quoteLevels.isNotEmpty) {
       _mainQuantity = _quoteLevels.first.baseQuantity;
-      _quantityController.text = _mainQuantity.toStringAsFixed(1);
     }
 
     // Load additional products from the first level (they should be the same across all levels)
