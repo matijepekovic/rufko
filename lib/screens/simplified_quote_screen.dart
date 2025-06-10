@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/roof_scope_data.dart';
@@ -19,6 +18,7 @@ import '../widgets/tax_rate_section.dart';
 import '../widgets/quote_totals_section.dart';
 import '../widgets/added_products_list.dart';
 import '../widgets/custom_line_items_section.dart';
+import '../widgets/quote_levels_preview.dart';
 import '../controllers/quote_form_controller.dart';
 
 class SimplifiedQuoteScreen extends StatefulWidget {
@@ -153,7 +153,12 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                           _buildMainProductSelection(),
                           const SizedBox(height: 24),
                           if (_mainProduct != null) ...[
-                            _buildQuoteLevelsPreview(),
+                            QuoteLevelsPreview(
+                              quoteLevels: _quoteLevels,
+                              mainProduct: _mainProduct,
+                              mainQuantity: _mainQuantity,
+                              quoteType: _quoteType,
+                            ),
                             const SizedBox(height: 24),
                             _buildAddedProductsList(),
                             const SizedBox(height: 24),
@@ -229,130 +234,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     );
   }
 
-  Widget _buildQuoteLevelsPreview() {
-    if (_quoteLevels.isEmpty) return const SizedBox.shrink();
-
-    final currencyFormat = NumberFormat.currency(symbol: '\$');
-
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  _quoteType == 'multi-level' ? Icons.layers : Icons.description,
-                  color: Theme.of(context).primaryColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _quoteType == 'multi-level' ? 'Quote Levels Created' : 'Quote Created',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _quoteType == 'multi-level' ? Colors.blue.shade50 : Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: _quoteType == 'multi-level' ? Colors.blue.shade200 : Colors.green.shade200,
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '${_mainProduct!.name} (${_mainQuantity.toStringAsFixed(1)} ${_mainProduct!.unit})',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  const SizedBox(height: 12),
-
-                  if (_quoteType == 'multi-level') ...[
-                    // Multi-level display (existing)
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: _quoteLevels.map((level) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.blue.shade300),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                level.name,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                currencyFormat.format(level.baseProductTotal),
-                                style: TextStyle(
-                                  color: Theme.of(context).primaryColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ] else ...[
-                    // Single-tier display (NEW)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green.shade300),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Unit Price: ${currencyFormat.format(_mainProduct!.unitPrice)}',
-                                style: const TextStyle(fontWeight: FontWeight.w500),
-                              ),
-                              Text(
-                                'Quantity: ${_mainQuantity.toStringAsFixed(1)} ${_mainProduct!.unit}',
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            currencyFormat.format(_quoteLevels.first.baseProductTotal),
-                            style: TextStyle(
-                              color: Colors.green.shade700,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildAddedProductsList() {
