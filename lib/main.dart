@@ -11,6 +11,8 @@ import 'models/quote.dart'; // Contains QuoteItem
 import 'models/roof_scope_data.dart';
 import 'models/project_media.dart';
 import 'models/app_settings.dart';
+import 'models/kanban_board.dart';
+import 'models/kanban_stage.dart';
 import 'models/simplified_quote.dart';
 import 'models/pdf_template.dart'; // Crucial: Import this to get PdfFormFieldTypeAdapter etc.
 import 'models/custom_app_data.dart';
@@ -28,10 +30,12 @@ import 'theme/rufko_theme.dart';
 // Your Screens
 import 'screens/home_screen.dart';
 import 'models/template_category.dart';
+import 'services/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Hive.initFlutter();
+  await NotificationService.init();
 
   Hive.registerAdapter(CustomerAdapter());
   Hive.registerAdapter(ProductAdapter());
@@ -41,6 +45,8 @@ void main() async {
   Hive.registerAdapter(RoofScopeDataAdapter());
   Hive.registerAdapter(ProjectMediaAdapter());
   Hive.registerAdapter(AppSettingsAdapter());
+  Hive.registerAdapter(KanbanBoardAdapter());
+  Hive.registerAdapter(KanbanStageAdapter());
   Hive.registerAdapter(QuoteDiscountAdapter());
   Hive.registerAdapter(QuoteLevelAdapter());
   Hive.registerAdapter(SimplifiedMultiLevelQuoteAdapter());
