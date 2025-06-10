@@ -15,6 +15,7 @@ import '../theme/rufko_theme.dart';
 import '../widgets/quote_type_selector.dart';
 import '../widgets/main_product_selection.dart';
 import '../widgets/permits_section.dart';
+import '../widgets/tax_rate_section.dart';
 import '../controllers/quote_form_controller.dart';
 
 class SimplifiedQuoteScreen extends StatefulWidget {
@@ -615,7 +616,18 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
         // Quote Totals Section
         if (_quoteLevels.isNotEmpty) ...[
           const SizedBox(height: 16),
-          _buildTaxRateSection(),  // ADD TAX RATE HERE
+          TaxRateSection(
+            taxRate: _taxRate,
+            customer: widget.customer,
+            onTaxRateChanged: (rate) {
+              setState(() {
+                _taxRate = rate;
+                _updateQuoteLevelsQuantity();
+              });
+            },
+            onAutoDetectPressed: () =>
+                _autoDetectTaxRate(context.read<AppStateProvider>()),
+          ),
           const SizedBox(height: 16),
           _buildQuoteTotalsSection(),
         ],
@@ -625,123 +637,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
 
 
-  Widget _buildTaxRateSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.percent,
-                    color: Colors.green.shade700,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Tax Rate',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            Row(
-              children: [
-                Expanded(
-                  flex: 2,
-                  child: TextFormField(
-                    initialValue: _taxRate.toStringAsFixed(2),
-                    decoration: InputDecoration(
-                      labelText: 'Tax Rate (%)',
-                      border: const OutlineInputBorder(),
-                      suffixText: '%',
-                      prefixIcon: const Icon(Icons.calculate),
-                      helperText: 'Enter tax rate for this quote',
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    onChanged: (value) {
-                      final rate = double.tryParse(value);
-                      if (rate != null && rate >= 0 && rate <= 100) {
-                        setState(() {
-                          _taxRate = rate;
-                          _updateQuoteLevelsQuantity(); // Recalculate totals
-                        });
-                      }
-                    },
-                    validator: (value) {
-                      if (value == null || value.isEmpty) return 'Please enter tax rate';
-                      final rate = double.tryParse(value);
-                      if (rate == null || rate < 0 || rate > 100) {
-                        return 'Enter valid tax rate (0-100%)';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 3,
-                  child: Consumer<AppStateProvider>(
-                    builder: (context, appState, child) {
-                      return ElevatedButton.icon(
-                        onPressed: () => _autoDetectTaxRate(appState),
-                        icon: const Icon(Icons.location_on, size: 18),
-                        label: const Text('Auto-Detect from Address'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue.shade600,
-                          foregroundColor: Colors.white,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-
-            if (_taxRate > 0) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: Colors.green.shade700, size: 16),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Tax rate: ${_taxRate.toStringAsFixed(2)}% will be applied to all quote levels',
-                      style: TextStyle(
-                        color: Colors.green.shade800,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildQuoteTotalsSection() {
     final currencyFormat = NumberFormat.currency(symbol: '\$');
