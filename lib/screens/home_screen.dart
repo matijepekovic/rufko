@@ -361,11 +361,11 @@ class _HomeScreenState extends State<HomeScreen>
           builder: (context, constraints) {
             final columns = getGridColumns(
               context,
-              xs: 1,
+              xs: 2,
               sm: 2,
               md: 2,
-              lg: 4,
-              xl: 4,
+              lg: 2,
+              xl: 2,
             );
 
             final cardWidth = (constraints.maxWidth - (spacingMD(context) * (columns - 1))) / columns;
@@ -422,23 +422,33 @@ class _HomeScreenState extends State<HomeScreen>
       VoidCallback? onTap,
       double width,
       ) {
+    final orientationScale = isLandscape(context) ? 1.5 : 1.0;
     final iconSize = responsiveValue(
       context,
       mobile: 24.0,
       tablet: 28.0,
       desktop: 32.0,
+    ) * orientationScale;
+    final basePadding = cardPadding(context);
+    final scaledPadding = EdgeInsets.fromLTRB(
+      basePadding.left * orientationScale,
+      basePadding.top * orientationScale,
+      basePadding.right * orientationScale,
+      basePadding.bottom * orientationScale,
     );
 
     Widget cardContent = Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(spacingMD(context)),
+        borderRadius:
+            BorderRadius.circular(spacingMD(context) * orientationScale),
       ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(spacingMD(context)),
+        borderRadius:
+            BorderRadius.circular(spacingMD(context) * orientationScale),
         child: Padding(
-          padding: cardPadding(context),
+          padding: scaledPadding,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -450,10 +460,14 @@ class _HomeScreenState extends State<HomeScreen>
                   children: [
                     Flexible(
                       child: Container(
-                        padding: EdgeInsets.all(spacingSM(context)),
+                        padding: EdgeInsets.all(
+                          spacingSM(context) * orientationScale,
+                        ),
                         decoration: BoxDecoration(
                           color: color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(spacingSM(context) * 1.5),
+                          borderRadius: BorderRadius.circular(
+                            spacingSM(context) * 1.5 * orientationScale,
+                          ),
                         ),
                         child: Icon(icon, color: color, size: iconSize),
                       ),
@@ -467,7 +481,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ],
                 ),
               ),
-              SizedBox(height: spacingSM(context)),
+              SizedBox(height: spacingSM(context) * orientationScale),
               Flexible(
                 flex: responsiveFlex(context, mobile: 2, tablet: 2),
                 child: Column(
@@ -481,12 +495,13 @@ class _HomeScreenState extends State<HomeScreen>
                         child: Text(
                           value,
                           style: headlineSmall(context).copyWith(
+                            fontSize: headlineSmall(context).fontSize! * orientationScale,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(height: spacingXS(context)),
+                    SizedBox(height: spacingXS(context) * orientationScale),
                     Flexible(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
@@ -494,6 +509,7 @@ class _HomeScreenState extends State<HomeScreen>
                         child: Text(
                           title,
                           style: labelMedium(context).copyWith(
+                            fontSize: labelMedium(context).fontSize! * orientationScale,
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w500,
                           ),
