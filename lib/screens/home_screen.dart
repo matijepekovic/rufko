@@ -15,7 +15,6 @@ import '../mixins/responsive_text_mixin.dart';
 import '../mixins/responsive_widget_mixin.dart';
 
 import 'customers_screen.dart';
-import 'customers_kanban_screen.dart';
 import 'quotes_screen.dart';
 import 'products_screen.dart';
 import 'settings_screen.dart';
@@ -88,10 +87,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final useKanban = context.watch<AppStateProvider>().appSettings?.useKanbanCustomerView ?? false;
     final pages = [
       _buildModernDashboard(),
-      useKanban ? const CustomersKanbanScreen() : const CustomersScreen(),
+      const CustomersScreen(),
       const QuotesScreen(),
       const ProductsScreen(),
       const TemplatesScreen(),

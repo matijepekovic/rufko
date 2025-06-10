@@ -30,18 +30,13 @@ class CustomerAdapter extends TypeAdapter<Customer> {
       stateAbbreviation: fields[11] as String?,
       zipCode: fields[12] as String?,
       inspectionData: (fields[13] as Map?)?.cast<String, dynamic>(),
-      stage: fields[14] as String? ?? 'lead',
-      boardId: fields[15] as String? ?? 'sales-pipeline',
-      lastReminderDate: fields[16] as DateTime?,
-      latitude: (fields[17] as num?)?.toDouble(),
-      longitude: (fields[18] as num?)?.toDouble(),
     );
   }
 
   @override
   void write(BinaryWriter writer, Customer obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -67,17 +62,7 @@ class CustomerAdapter extends TypeAdapter<Customer> {
       ..writeByte(12)
       ..write(obj.zipCode)
       ..writeByte(13)
-      ..write(obj.inspectionData)
-      ..writeByte(14)
-      ..write(obj.stage)
-      ..writeByte(15)
-      ..write(obj.boardId)
-      ..writeByte(16)
-      ..write(obj.lastReminderDate)
-      ..writeByte(17)
-      ..write(obj.latitude)
-      ..writeByte(18)
-      ..write(obj.longitude);
+      ..write(obj.inspectionData);
   }
 
   @override
