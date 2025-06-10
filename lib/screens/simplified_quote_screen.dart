@@ -15,6 +15,7 @@ import 'package:rufko/screens/inspection_viewer_screen.dart';
 import '../theme/rufko_theme.dart';
 import '../widgets/quote_type_selector.dart';
 import '../widgets/main_product_selection.dart';
+import '../controllers/quote_form_controller.dart';
 
 class SimplifiedQuoteScreen extends StatefulWidget {
   final Customer customer;
@@ -34,28 +35,42 @@ class SimplifiedQuoteScreen extends StatefulWidget {
 
 class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   final _formKey = GlobalKey<FormState>();
-  double _taxRate = 0.0;
-  Product? _mainProduct;
-  double _mainQuantity = 1.0;
-  final List<QuoteLevel> _quoteLevels = [];
-  final List<QuoteItem> _addedProducts = [];
+  late QuoteFormController _controller;
 
-  bool _isLoading = false;
+  double get _taxRate => _controller.taxRate;
+  set _taxRate(double v) => _controller.taxRate = v;
 
-  // NEW: Quote type selection
-  String _quoteType = 'multi-level'; // 'multi-level' or 'single-tier'
+  Product? get _mainProduct => _controller.mainProduct;
+  set _mainProduct(Product? p) => _controller.mainProduct = p;
 
-  final List<PermitItem> _permits = [];
-  bool _noPermitsRequired = false;
-  final List<CustomLineItem> _customLineItems = [];
+  double get _mainQuantity => _controller.mainQuantity;
+  set _mainQuantity(double q) => _controller.mainQuantity = q;
 
-  // NEW: Edit mode detection
-  bool get _isEditMode => widget.existingQuote != null;
-  SimplifiedMultiLevelQuote? get _editingQuote => widget.existingQuote;
+  List<QuoteLevel> get _quoteLevels => _controller.quoteLevels;
+  List<QuoteItem> get _addedProducts => _controller.addedProducts;
+
+  bool get _isLoading => _controller.isLoading;
+
+  String get _quoteType => _controller.quoteType;
+
+  List<PermitItem> get _permits => _controller.permits;
+  bool get _noPermitsRequired => _controller.noPermitsRequired;
+  set _noPermitsRequired(bool v) => _controller.noPermitsRequired = v;
+  List<CustomLineItem> get _customLineItems => _controller.customLineItems;
+
+  bool get _isEditMode => _controller.isEditMode;
+  SimplifiedMultiLevelQuote? get _editingQuote => _controller.editingQuote;
 
   @override
   void initState() {
     super.initState();
+
+    _controller = QuoteFormController(
+      context: context,
+      customer: widget.customer,
+      roofScopeData: widget.roofScopeData,
+      existingQuote: widget.existingQuote,
+    );
 
     // NEW: Load existing quote data if in edit mode
     if (_isEditMode) {
@@ -74,78 +89,85 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : NestedScrollView(
-        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-          return <Widget>[
-            SliverAppBar(
-              expandedHeight: 100,
-              floating: false,
-              pinned: true,
-              backgroundColor: RufkoTheme.primaryColor,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              flexibleSpace: FlexibleSpaceBar(
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        RufkoTheme.primaryColor,
-                        RufkoTheme.primaryDarkColor,
-                      ],
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return Scaffold(
+          backgroundColor: Colors.grey[50],
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : NestedScrollView(
+                  headerSliverBuilder:
+                      (BuildContext context, bool innerBoxIsScrolled) {
+                    return <Widget>[
+                      SliverAppBar(
+                        expandedHeight: 100,
+                        floating: false,
+                        pinned: true,
+                        backgroundColor: RufkoTheme.primaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        flexibleSpace: FlexibleSpaceBar(
+                          background: Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  RufkoTheme.primaryColor,
+                                  RufkoTheme.primaryDarkColor,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        title: Text(_isEditMode
+                            ? 'Edit Quote: ${_editingQuote!.quoteNumber}'
+                            : 'New Quote: ${widget.customer.name}'),
+                        actions: [
+                          if (_isLoading)
+                            const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ];
+                  },
+                  body: Form(
+                    key: _formKey,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildMainProductSelection(),
+                          const SizedBox(height: 24),
+                          if (_mainProduct != null) ...[
+                            _buildQuoteLevelsPreview(),
+                            const SizedBox(height: 24),
+                            _buildAddedProductsList(),
+                            const SizedBox(height: 24),
+                            _buildPermitsSection(),
+                            const SizedBox(height: 24),
+                            _buildCustomLineItemsSection(),
+                            const SizedBox(height: 24),
+                            _buildGenerateButton(),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              title: Text(_isEditMode
-                  ? 'Edit Quote: ${_editingQuote!.quoteNumber}'
-                  : 'New Quote: ${widget.customer.name}'),
-              actions: [
-                if (_isLoading)
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    ),
-                  ),
-              ],
-            ),
-          ];
-        },
-        body: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildMainProductSelection(),
-                const SizedBox(height: 24),
-                if (_mainProduct != null) ...[
-                  _buildQuoteLevelsPreview(),
-                  const SizedBox(height: 24),
-                  _buildAddedProductsList(),
-                  const SizedBox(height: 24),
-                  _buildPermitsSection(),
-                  const SizedBox(height: 24),
-                  _buildCustomLineItemsSection(),
-                  const SizedBox(height: 24),
-                  _buildGenerateButton(),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-      floatingActionButton: _buildInspectionFloatingButton(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+          floatingActionButton: _buildInspectionFloatingButton(),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        );
+      },
     );
   }
 
@@ -1609,18 +1631,14 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
       context: context,
       builder: (context) => _PermitDialog(
         onPermitAdded: (permit) {
-          setState(() {
-            _permits.add(permit);
-          });
+          _controller.addPermit(permit);
         },
       ),
     );
   }
 
   void _removePermit(PermitItem permit) {
-    setState(() {
-      _permits.remove(permit);
-    });
+    _controller.removePermit(permit);
   }
 
   void _showAddCustomItemDialog() {
@@ -1628,23 +1646,19 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
       context: context,
       builder: (context) => _CustomItemDialog(
         onItemAdded: (item) {
-          setState(() {
-            _customLineItems.add(item);
-          });
+          _controller.addCustomLineItem(item);
         },
       ),
     );
   }
 
   void _removeCustomItem(CustomLineItem item) {
-    setState(() {
-      _customLineItems.remove(item);
-    });
+    _controller.removeCustomLineItem(item);
   }
 
 // NEW: Check if permits requirement is satisfied
   bool get _isPermitsRequirementSatisfied {
-    return _noPermitsRequired || _permits.isNotEmpty;
+    return _controller.isPermitsRequirementSatisfied;
   }
   Widget _buildGenerateButton() {
     if (_quoteLevels.isEmpty) return const SizedBox.shrink();
@@ -1708,347 +1722,25 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   }
 
   // METHODS
-  void _createQuoteLevels() {
-    if (_mainProduct == null) return;
+  void _createQuoteLevels() => _controller.createQuoteLevels();
 
-    _quoteLevels.clear();
+  void _switchQuoteType(String newType) => _controller.switchQuoteType(newType);
 
-    if (_quoteType == 'multi-level') {
-      // Multi-level logic (existing)
-      final mainLevels = _mainProduct!.availableMainLevels;
+  void _updateQuoteLevelsQuantity() => _controller.updateQuoteLevelsQuantity();
 
-      for (var i = 0; i < mainLevels.length; i++) {
-        final mainLevel = mainLevels[i];
-
-        final quoteLevel = QuoteLevel(
-          id: mainLevel.levelId,
-          name: mainLevel.levelName,
-          levelNumber: i + 1,
-          basePrice: mainLevel.price,
-          baseQuantity: _mainQuantity,
-          includedItems: List.from(_addedProducts),
-        );
-
-        quoteLevel.calculateSubtotal();
-        _quoteLevels.add(quoteLevel);
-      }
-    } else {
-      // Single-tier logic (NEW)
-      final quoteLevel = QuoteLevel(
-        id: 'single-tier-${DateTime.now().millisecondsSinceEpoch}',
-        name: 'Quote',
-        levelNumber: 1,
-        basePrice: _mainProduct!.unitPrice,
-        baseQuantity: _mainQuantity,
-        includedItems: List.from(_addedProducts),
-      );
-
-      quoteLevel.calculateSubtotal();
-      _quoteLevels.add(quoteLevel);
-    }
-  }
-
-  void _switchQuoteType(String newType) {
-    if (_quoteType == newType) return; // No change needed
-
-    setState(() {
-      _quoteType = newType;
-
-      // Reset everything when switching types
-      _mainProduct = null;
-      _quoteLevels.clear();
-      _addedProducts.clear();
-      _mainQuantity = 1.0;
-
-      // NEW: Reset permits and custom items too
-      _permits.clear();
-      _noPermitsRequired = false;
-      _customLineItems.clear();
-    });
-
-    debugPrint('🔄 Switched to $_quoteType quote type - form reset');
-  }
-
-  void _updateQuoteLevelsQuantity() {
-    for (final level in _quoteLevels) {
-      level.baseQuantity = _mainQuantity;
-      level.calculateSubtotal();
-    }
-  }
-
-  void _removeProduct(QuoteItem product) {
-    setState(() {
-      _addedProducts.remove(product);
-      // Update all quote levels
-      for (final level in _quoteLevels) {
-        level.includedItems.remove(product);
-        level.calculateSubtotal();
-      }
-    });
-  }
+  void _removeProduct(QuoteItem product) => _controller.removeProduct(product);
 
   // REPLACE the _autoDetectTaxRate() method in simplified_quote_screen.dart
 // Around line 570-620
 
-  void _autoDetectTaxRate(AppStateProvider appState) {
-    final customer = widget.customer;
+  void _autoDetectTaxRate(AppStateProvider appState) =>
+      _controller.autoDetectTaxRate(appState);
 
-    debugPrint('🔍 AUTO-DETECTING TAX RATE FOR:');
-    debugPrint('   Customer: ${customer.name}');
-    debugPrint('   ZIP: ${customer.zipCode}');
-    debugPrint('   State: ${customer.stateAbbreviation}');
-    debugPrint('   City: ${customer.city}');
-
-    // Try to get tax rate from local database
-    final detectedRate = appState.detectTaxRate(
-      city: customer.city,
-      stateAbbreviation: customer.stateAbbreviation,
-      zipCode: customer.zipCode,
-    );
-
-    if (detectedRate != null && detectedRate > 0) {
-      // Found rate in database
-      setState(() {
-        _taxRate = detectedRate;
-        _updateQuoteLevelsQuantity(); // Recalculate with new tax rate
-      });
-
-      String source = '';
-      if (customer.zipCode != null && customer.zipCode!.isNotEmpty) {
-        source = 'ZIP ${customer.zipCode}';
-      } else if (customer.stateAbbreviation != null) {
-        source = 'state ${customer.stateAbbreviation}';
-      }
-
-      debugPrint('✅ TAX RATE DETECTED: ${detectedRate.toStringAsFixed(2)}% from $source');
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Tax rate set to ${detectedRate.toStringAsFixed(2)}% from $source'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } else {
-      // No rate found - try fallback to app default or prompt user
-      final fallbackRate = appState.appSettings?.taxRate ?? 0.0;
-
-      if (fallbackRate > 0) {
-        setState(() {
-          _taxRate = fallbackRate;
-          _updateQuoteLevelsQuantity();
-        });
-
-        debugPrint('📝 USING FALLBACK TAX RATE: ${fallbackRate.toStringAsFixed(2)}%');
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Using default tax rate: ${fallbackRate.toStringAsFixed(2)}%'),
-            backgroundColor: Colors.orange,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      } else {
-        // No rate found anywhere - prompt user to enter manually
-        debugPrint('⚠️ NO TAX RATE FOUND - prompting user');
-        _showManualTaxRateDialog();
-      }
-    }
-  }
-
-  void _showManualTaxRateDialog() {
-    final customer = widget.customer;
-    final locationText = customer.zipCode?.isNotEmpty == true
-        ? 'ZIP ${customer.zipCode}'
-        : customer.stateAbbreviation?.isNotEmpty == true
-        ? 'state ${customer.stateAbbreviation}'
-        : 'this location';
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tax Rate Not Found'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('No tax rate found for $locationText in the local database.'),
-            const SizedBox(height: 16),
-            const Text('You can:'),
-            const SizedBox(height: 8),
-            const Text('• Enter the tax rate manually for this quote'),
-            const Text('• Add this location to your tax database in Settings'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showAddTaxRateDialog();
-            },
-            child: const Text('Add to Database'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Just keep current tax rate (user can manually edit in the field)
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Enter tax rate manually in the field above'),
-                  backgroundColor: Colors.blue,
-                ),
-              );
-            },
-            child: const Text('Enter Manually'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddTaxRateDialog() {
-    final customer = widget.customer;
-    final appState = context.read<AppStateProvider>();
-    final taxRateController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Tax Rate to Database'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Add tax rate for: ${customer.fullDisplayAddress}'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: taxRateController,
-              decoration: const InputDecoration(
-                labelText: 'Tax Rate (%)',
-                suffixText: '%',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              autofocus: true,
-            ),
-          ],
-        ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final navigator = Navigator.of(context);
-
-              final rateText = taxRateController.text.trim();
-              final rate = double.tryParse(rateText);
-
-              if (rate == null || rate < 0 || rate > 100) {
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a valid tax rate (0-100%)'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-
-              // Save to database
-              if (customer.zipCode?.isNotEmpty == true) {
-                await appState.saveZipCodeTaxRate(customer.zipCode!, rate);
-              } else if (customer.stateAbbreviation?.isNotEmpty == true) {
-                await appState.saveStateTaxRate(customer.stateAbbreviation!, rate);
-              }
-
-              // Set for current quote
-              setState(() {
-                _taxRate = rate;
-                _updateQuoteLevelsQuantity();
-              });
-
-              navigator.pop();
-
-              messenger.showSnackBar(
-                SnackBar(
-                  content: Text('Tax rate ${rate.toStringAsFixed(2)}% saved and applied'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text('Save & Apply'),
-          ),
-        ],
-      ),
-    );
-  }
 
 // NEW: Load existing quote data for editing
   // NEW: Load existing quote data for editing
   void _loadExistingQuoteData() {
-    if (_editingQuote == null) return;
-
-    final appState = context.read<AppStateProvider>();
-
-    // Load basic quote data
-    _taxRate = _editingQuote!.taxRate;
-
-    // Determine quote type based on existing quote structure
-    if (_editingQuote!.levels.length == 1 && _editingQuote!.levels.first.name == 'Quote') {
-      _quoteType = 'single-tier';
-    } else {
-      _quoteType = 'multi-level';
-    }
-
-    // Find the main product
-    if (_editingQuote!.baseProductId != null) {
-      _mainProduct = appState.products.firstWhere(
-            (p) => p.id == _editingQuote!.baseProductId,
-        orElse: () => throw Exception('Main product not found'),
-      );
-    }
-
-    // Load quote levels (these contain the main product quantity and additional items)
-    _quoteLevels.clear();
-    _quoteLevels.addAll(_editingQuote!.levels);
-
-    // Get main quantity from first level
-    if (_quoteLevels.isNotEmpty) {
-      _mainQuantity = _quoteLevels.first.baseQuantity;
-    }
-
-    // Load additional products from the first level (they should be the same across all levels)
-    // Load additional products from the first level (they should be the same across all levels)
-    _addedProducts.clear();
-    if (_quoteLevels.isNotEmpty) {
-      _addedProducts.addAll(_quoteLevels.first.includedItems);
-    }
-
-// NEW: Load permits and custom line items
-    _permits.clear();
-    _permits.addAll(_editingQuote!.permits);
-    _noPermitsRequired = _editingQuote!.noPermitsRequired;
-
-    _customLineItems.clear();
-    _customLineItems.addAll(_editingQuote!.customLineItems);
-
-    setState(() {});
-
-    debugPrint('📝 Loaded existing quote data:');
-    debugPrint('   Quote Type: $_quoteType');
-    debugPrint('   Tax Rate: $_taxRate%');
-    debugPrint('   Main Product: ${_mainProduct?.name}');
-    debugPrint('   Main Quantity: $_mainQuantity');
-    debugPrint('   Quote Levels: ${_quoteLevels.length}');
-    debugPrint('   Additional Products: ${_addedProducts.length}');
-    debugPrint('   Permits: ${_permits.length}');
-    debugPrint('   No Permits Required: $_noPermitsRequired');
-    debugPrint('   Custom Line Items: ${_customLineItems.length}');
+    _controller.loadExistingQuoteData(context.read<AppStateProvider>());
   }
 
   void _showAddProductDialog() {
@@ -2056,14 +1748,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
       context: context,
       builder: (context) => _AddProductDialog(
         onProductAdded: (productItem) {
-          setState(() {
-            _addedProducts.add(productItem);
-            // Add this product to ALL quote levels equally
-            for (final level in _quoteLevels) {
-              level.includedItems.add(productItem);
-              level.calculateSubtotal();
-            }
-          });
+          _controller.addProduct(productItem);
         },
       ),
     );
@@ -2073,126 +1758,10 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 // Around line 720-760
 
   void _generateQuote() async {
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_isEditMode ? 'Please fix errors before updating quote' : 'Please fix errors before generating quote'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    if (_mainProduct == null || _quoteLevels.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a main product first'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final appState = context.read<AppStateProvider>();
-
-      if (_isEditMode) {
-        // UPDATE existing quote
-        // UPDATE existing quote
-        final updatedQuote = _editingQuote!;
-        updatedQuote.levels = _quoteLevels.map((level) {
-          level.calculateSubtotal();
-          return level;
-        }).toList();
-        updatedQuote.taxRate = _taxRate;
-        updatedQuote.baseProductId = _mainProduct!.id;
-        updatedQuote.baseProductName = _mainProduct!.name;
-        updatedQuote.baseProductUnit = _mainProduct!.unit;
-        updatedQuote.roofScopeDataId = widget.roofScopeData?.id;
-        updatedQuote.permits = List.from(_permits); // NEW: Update permits
-        updatedQuote.noPermitsRequired = _noPermitsRequired; // NEW: Update permit flag
-        updatedQuote.customLineItems = List.from(_customLineItems); // NEW: Update custom items
-        updatedQuote.updatedAt = DateTime.now();
-
-        await appState.updateSimplifiedQuote(updatedQuote);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${_quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${updatedQuote.quoteNumber} updated with ${_taxRate.toStringAsFixed(2)}% tax!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => SimplifiedQuoteDetailScreen(
-                quote: updatedQuote,
-                customer: widget.customer,
-              ),
-            ),
-          );
-        }
-      } else {
-        // CREATE new quote
-        // CREATE new quote
-        final newQuote = SimplifiedMultiLevelQuote(
-          customerId: widget.customer.id,
-          roofScopeDataId: widget.roofScopeData?.id,
-          levels: _quoteLevels.map((level) {
-            level.calculateSubtotal();
-            return level;
-          }).toList(),
-          addons: [],
-          taxRate: _taxRate,
-          baseProductId: _mainProduct!.id,
-          baseProductName: _mainProduct!.name,
-          baseProductUnit: _mainProduct!.unit,
-          permits: List.from(_permits), // NEW: Add permits
-          noPermitsRequired: _noPermitsRequired, // NEW: Add permit flag
-          customLineItems: List.from(_customLineItems), // NEW: Add custom items
-        );
-
-        await appState.addSimplifiedQuote(newQuote);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${_quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${newQuote.quoteNumber} generated with ${_taxRate.toStringAsFixed(2)}% tax!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => SimplifiedQuoteDetailScreen(
-                quote: newQuote,
-                customer: widget.customer,
-              ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isEditMode
-                ? 'Error updating ${_quoteType == 'single-tier' ? 'single-tier' : 'multi-level'} quote: $e'
-                : 'Error generating ${_quoteType == 'single-tier' ? 'single-tier' : 'multi-level'} quote: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
+    await _controller.generateQuote(
+      context.read<AppStateProvider>(),
+      _formKey,
+    );
   }
 }
 
