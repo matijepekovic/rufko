@@ -16,8 +16,6 @@ import '../services/pdf_service.dart';
 import '../services/template_service.dart';
 import '../services/file_service.dart';
 import '../services/tax_service.dart';
-import '../services/notification_service.dart';
-import '../services/backup_service.dart';
 import '../models/message_template.dart';
 import '../models/email_template.dart';
 import '../models/template_category.dart';
@@ -71,8 +69,6 @@ class AppStateProvider extends ChangeNotifier {
     setLoading(true, 'Initializing app data...');
     await _loadAppSettings();
     await loadAllData();
-    await _scheduleUrgencyReminders();
-    await _performDailyBackup();
     await _ensureInspectionCategoryExists();
     setLoading(false);
   }
@@ -353,7 +349,6 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> addCustomer(Customer customer) async {
     await _db.saveCustomer(customer);
     _customers.add(customer);
-    await _scheduleReminderForCustomer(customer);
     notifyListeners();
   }
 
@@ -361,7 +356,6 @@ class AppStateProvider extends ChangeNotifier {
     await _db.saveCustomer(customer);
     final index = _customers.indexWhere((c) => c.id == customer.id);
     if (index != -1) _customers[index] = customer;
-    await _scheduleReminderForCustomer(customer);
     notifyListeners();
   }
 
@@ -383,70 +377,6 @@ class AppStateProvider extends ChangeNotifier {
     await _db.deleteCustomer(customerId);
     _customers.removeWhere((c) => c.id == customerId);
     notifyListeners();
-  }
-
-  Future<void> _scheduleUrgencyReminders() async {
-    if (_appSettings == null) return;
-    for (final customer in _customers) {
-      await _scheduleReminderForCustomer(customer);
-    }
-  }
-
-  Future<void> _performDailyBackup() async {
-    final settings = _appSettings;
-    if (settings == null) return;
-    final now = DateTime.now();
-    if (settings.lastBackupDate == null || !_isSameDay(settings.lastBackupDate!, now)) {
-      try {
-        final data = await _db.exportAllData();
-        final path = await BackupService.instance.saveEncryptedBackup(data);
-        settings.updateLastBackupDate(now);
-        await _db.saveAppSettings(settings);
-        if (kDebugMode) debugPrint('Daily backup saved to $path');
-      } catch (e) {
-        if (kDebugMode) debugPrint('Daily backup failed: $e');
-      }
-    }
-  }
-
-
-  Future<void> _scheduleReminderForCustomer(Customer customer) async {
-    final settings = _appSettings;
-    if (settings == null) return;
-    final now = DateTime.now();
-    final daysIdle = now.difference(customer.updatedAt).inDays;
-    final today8am = DateTime(now.year, now.month, now.day, 8);
-    final next8am = now.isBefore(today8am) ? today8am : today8am.add(const Duration(days: 1));
-
-    if (daysIdle >= settings.redThresholdDays) {
-      if (customer.lastReminderDate == null || !_isSameDay(customer.lastReminderDate!, now)) {
-        await NotificationService.scheduleNotification(
-          id: customer.id.hashCode,
-          title: 'Customer overdue',
-          body: '${customer.name} has been idle for $daysIdle days',
-          scheduledDate: next8am,
-        );
-        customer.lastReminderDate = next8am;
-        await _db.saveCustomer(customer);
-      }
-    } else if (daysIdle == settings.orangeThresholdDays && customer.lastReminderDate == null) {
-      await NotificationService.scheduleNotification(
-        id: customer.id.hashCode,
-        title: 'Follow up today',
-        body: '${customer.name} has been idle for $daysIdle days',
-        scheduledDate: next8am,
-      );
-      customer.lastReminderDate = next8am;
-      await _db.saveCustomer(customer);
-    } else if (daysIdle < settings.orangeThresholdDays && customer.lastReminderDate != null) {
-      await NotificationService.cancel(customer.id.hashCode);
-      customer.lastReminderDate = null;
-      await _db.saveCustomer(customer);
-    }
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
   Future<void> loadTemplateCategories() async {
     try {
