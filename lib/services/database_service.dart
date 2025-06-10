@@ -1,11 +1,8 @@
 // lib/services/database_service.dart - UPDATED FOR ENHANCED MODELS & CATEGORY FIX
 
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
-import '../models/kanban_board.dart';
-import '../models/kanban_stage.dart';
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/roof_scope_data.dart';
@@ -615,59 +612,6 @@ class DatabaseService {
         discountTypes: ['percentage', 'fixed_amount', 'voucher'],
         allowProductDiscountToggle: true,
         defaultDiscountLimit: 25.0,
-        useKanbanCustomerView: false,
-        yellowThresholdDays: 3,
-        orangeThresholdDays: 7,
-        redThresholdDays: 14,
-        requiredMediaCategories: [
-          'roofscope_reports',
-          'contracts',
-          'permits',
-          'insurance_docs',
-        ],
-        lastBackupDate: null,
-        kanbanStages: [
-          KanbanStage(id: 'lead', name: 'lead', color: Colors.blue.value),
-          KanbanStage(id: 'contacted', name: 'contacted', color: Colors.indigo.value),
-          KanbanStage(id: 'quoted', name: 'quoted', color: Colors.purple.value),
-          KanbanStage(id: 'negotiation', name: 'negotiation', color: Colors.orange.value),
-          KanbanStage(id: 'closed', name: 'closed', color: Colors.green.value),
-          KanbanStage(id: 'lost', name: 'lost', color: Colors.red.value),
-        ],
-        kanbanBoards: [
-          KanbanBoard(
-            id: 'sales-pipeline',
-            name: 'Sales Pipeline',
-            stages: [
-              KanbanStage(id: 'lead', name: 'lead', color: Colors.blue.value),
-              KanbanStage(id: 'contacted', name: 'contacted', color: Colors.indigo.value),
-              KanbanStage(id: 'quoted', name: 'quoted', color: Colors.purple.value),
-              KanbanStage(id: 'negotiation', name: 'negotiation', color: Colors.orange.value),
-              KanbanStage(id: 'closed', name: 'closed', color: Colors.green.value),
-              KanbanStage(id: 'lost', name: 'lost', color: Colors.red.value),
-            ],
-          ),
-          KanbanBoard(
-            id: 'warranty-service',
-            name: 'Warranty/Service',
-            stages: const [
-              KanbanStage(id: 'requested', name: 'requested', color: Colors.blueAccent),
-              KanbanStage(id: 'scheduled', name: 'scheduled', color: Colors.indigo),
-              KanbanStage(id: 'in-progress', name: 'in progress', color: Colors.orange),
-              KanbanStage(id: 'done', name: 'done', color: Colors.green),
-            ],
-          ),
-          KanbanBoard(
-            id: 'post-sale-projects',
-            name: 'Post-Sale Projects',
-            stages: const [
-              KanbanStage(id: 'scheduled', name: 'scheduled', color: Colors.indigo),
-              KanbanStage(id: 'in-progress', name: 'in progress', color: Colors.blue),
-              KanbanStage(id: 'getting-materials', name: 'getting materials', color: Colors.orange),
-              KanbanStage(id: 'work-done', name: 'work done', color: Colors.green),
-            ],
-          ),
-        ],
       );
       await saveAppSettings(defaultSettings);
       return defaultSettings;
