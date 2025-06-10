@@ -1,6 +1,9 @@
 // lib/models/app_settings.dart - ENHANCED VERSION
 
+import 'kanban_board.dart';
+import 'kanban_stage.dart';
 import 'package:hive/hive.dart';
+import 'package:flutter/material.dart';
 
 part 'app_settings.g.dart';
 
@@ -52,6 +55,35 @@ class AppSettings extends HiveObject {
   @HiveField(14)
   double defaultDiscountLimit; // Maximum discount percentage allowed
 
+  // Kanban settings
+  @HiveField(15)
+  bool useKanbanCustomerView;
+
+  @HiveField(16)
+  List<KanbanStage> kanbanStages;
+
+  // Multiple Kanban boards
+  @HiveField(17)
+  List<KanbanBoard> kanbanBoards;
+
+  // Urgency colouring thresholds in days
+  @HiveField(18)
+  int yellowThresholdDays;
+
+  @HiveField(19)
+  int orangeThresholdDays;
+
+  @HiveField(20)
+  int redThresholdDays;
+
+  // Categories required to complete a customer's documentation
+  @HiveField(21)
+  List<String> requiredMediaCategories;
+
+  // Track last successful automatic backup
+  @HiveField(22)
+  DateTime? lastBackupDate;
+
   AppSettings({
     String? id,
     List<String>? productCategories,
@@ -67,12 +99,61 @@ class AppSettings extends HiveObject {
     List<String>? discountTypes,
     this.allowProductDiscountToggle = true,
     this.defaultDiscountLimit = 25.0,
+    this.useKanbanCustomerView = false,
+    List<KanbanStage>? kanbanStages,
+    List<KanbanBoard>? kanbanBoards,
     DateTime? updatedAt,
+    this.yellowThresholdDays = 3,
+    this.orangeThresholdDays = 7,
+    this.redThresholdDays = 14,
+    List<String>? requiredMediaCategories,
+    this.lastBackupDate,
   })  : productCategories = productCategories ?? ['Materials', 'Roofing', 'Gutters', 'Labor', 'Other'],
         productUnits = productUnits ?? ['sq ft', 'lin ft', 'each', 'hour', 'day', 'bundle', 'roll', 'sheet'],
         defaultUnit = defaultUnit ?? 'sq ft',
         defaultQuoteLevelNames = defaultQuoteLevelNames ?? ['Basic', 'Standard', 'Premium'],
         discountTypes = discountTypes ?? ['percentage', 'fixed_amount', 'voucher'],
+        kanbanStages = kanbanStages ?? [
+          KanbanStage(id: 'lead', name: 'lead', color: Colors.blue.value),
+          KanbanStage(id: 'contacted', name: 'contacted', color: Colors.indigo.value),
+          KanbanStage(id: 'quoted', name: 'quoted', color: Colors.purple.value),
+          KanbanStage(id: 'negotiation', name: 'negotiation', color: Colors.orange.value),
+          KanbanStage(id: 'closed', name: 'closed', color: Colors.green.value),
+          KanbanStage(id: 'lost', name: 'lost', color: Colors.red.value),
+        ],
+        kanbanBoards = kanbanBoards ?? [
+          KanbanBoard(
+            id: 'sales-pipeline',
+            name: 'Sales Pipeline',
+            stages: kanbanStages ?? const [],
+          ),
+          KanbanBoard(
+            id: 'warranty-service',
+            name: 'Warranty/Service',
+            stages: [
+              KanbanStage(id: 'requested', name: 'requested', color: Colors.blueAccent.value),
+              KanbanStage(id: 'scheduled', name: 'scheduled', color: Colors.indigo.value),
+              KanbanStage(id: 'in-progress', name: 'in progress', color: Colors.orange.value),
+              KanbanStage(id: 'done', name: 'done', color: Colors.green.value),
+            ],
+          ),
+          KanbanBoard(
+            id: 'post-sale-projects',
+            name: 'Post-Sale Projects',
+            stages: [
+              KanbanStage(id: 'scheduled', name: 'scheduled', color: Colors.indigo.value),
+              KanbanStage(id: 'in-progress', name: 'in progress', color: Colors.blue.value),
+              KanbanStage(id: 'getting-materials', name: 'getting materials', color: Colors.orange.value),
+              KanbanStage(id: 'work-done', name: 'work done', color: Colors.green.value),
+            ],
+          ),
+        ],
+        requiredMediaCategories = requiredMediaCategories ?? [
+          'roofscope_reports',
+          'contracts',
+          'permits',
+          'insurance_docs',
+        ],
         updatedAt = updatedAt ?? DateTime.now() {
     this.id = id ?? 'singleton_app_settings';
   }
@@ -184,6 +265,57 @@ class AppSettings extends HiveObject {
     if (isInBox) save();
   }
 
+  // Update urgency colour thresholds
+  void updateUrgencyThresholds({int? yellowDays, int? orangeDays, int? redDays}) {
+    if (yellowDays != null) yellowThresholdDays = yellowDays;
+    if (orangeDays != null) orangeThresholdDays = orangeDays;
+    if (redDays != null) redThresholdDays = redDays;
+    updatedAt = DateTime.now();
+    if (isInBox) save();
+  }
+
+  // Update backup timestamp
+  void updateLastBackupDate(DateTime date) {
+    lastBackupDate = date;
+    updatedAt = DateTime.now();
+    if (isInBox) save();
+  }
+
+  // Kanban board management
+  void addKanbanBoard(KanbanBoard board) {
+    kanbanBoards.add(board);
+    updatedAt = DateTime.now();
+    if (isInBox) save();
+  }
+
+  void renameKanbanBoard(String id, String newName) {
+    final board = kanbanBoards.firstWhere(
+      (b) => b.id == id,
+      orElse: () => KanbanBoard(name: '', stages: const []),
+    );
+    if (board.name.isNotEmpty) {
+      board.name = newName;
+      updatedAt = DateTime.now();
+      if (isInBox) save();
+    }
+  }
+
+  void deleteKanbanBoard(String id) {
+    kanbanBoards.removeWhere((b) => b.id == id);
+    updatedAt = DateTime.now();
+    if (isInBox) save();
+  }
+
+  void cloneKanbanBoard(String id) {
+    final board = kanbanBoards.firstWhere(
+      (b) => b.id == id,
+      orElse: () => KanbanBoard(name: '', stages: const []),
+    );
+    if (board.name.isNotEmpty) {
+      addKanbanBoard(board.clone());
+    }
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -200,6 +332,14 @@ class AppSettings extends HiveObject {
       'discountTypes': discountTypes,
       'allowProductDiscountToggle': allowProductDiscountToggle,
       'defaultDiscountLimit': defaultDiscountLimit,
+      'useKanbanCustomerView': useKanbanCustomerView,
+      'kanbanStages': kanbanStages.map((s) => s.toMap()).toList(),
+      'kanbanBoards': kanbanBoards.map((b) => b.toMap()).toList(),
+      'yellowThresholdDays': yellowThresholdDays,
+      'orangeThresholdDays': orangeThresholdDays,
+      'redThresholdDays': redThresholdDays,
+      'requiredMediaCategories': requiredMediaCategories,
+      'lastBackupDate': lastBackupDate?.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
@@ -220,7 +360,64 @@ class AppSettings extends HiveObject {
       discountTypes: List<String>.from(map['discountTypes'] ?? ['percentage', 'fixed_amount', 'voucher']),
       allowProductDiscountToggle: map['allowProductDiscountToggle'] ?? true,
       defaultDiscountLimit: map['defaultDiscountLimit']?.toDouble() ?? 25.0,
+      useKanbanCustomerView: map['useKanbanCustomerView'] ?? false,
+      kanbanStages: map['kanbanStages'] != null
+          ? (map['kanbanStages'] as List)
+              .map((e) => KanbanStage.fromMap(Map<String, dynamic>.from(e)))
+              .toList()
+          : [
+              KanbanStage(id: 'lead', name: 'lead', color: Colors.blue.value),
+              KanbanStage(id: 'contacted', name: 'contacted', color: Colors.indigo.value),
+              KanbanStage(id: 'quoted', name: 'quoted', color: Colors.purple.value),
+              KanbanStage(id: 'negotiation', name: 'negotiation', color: Colors.orange.value),
+              KanbanStage(id: 'closed', name: 'closed', color: Colors.green.value),
+              KanbanStage(id: 'lost', name: 'lost', color: Colors.red.value),
+            ],
+      kanbanBoards: map['kanbanBoards'] != null
+          ? (map['kanbanBoards'] as List)
+              .map((e) => KanbanBoard.fromMap(Map<String, dynamic>.from(e)))
+              .toList()
+          : [
+              KanbanBoard(
+                id: 'sales-pipeline',
+                name: 'Sales Pipeline',
+                stages: kanbanStages,
+              ),
+              KanbanBoard(
+                id: 'warranty-service',
+                name: 'Warranty/Service',
+                stages: [
+                  KanbanStage(id: 'requested', name: 'requested', color: Colors.blueAccent.value),
+                  KanbanStage(id: 'scheduled', name: 'scheduled', color: Colors.indigo.value),
+                  KanbanStage(id: 'in-progress', name: 'in progress', color: Colors.orange.value),
+                  KanbanStage(id: 'done', name: 'done', color: Colors.green.value),
+                ],
+              ),
+              KanbanBoard(
+                id: 'post-sale-projects',
+                name: 'Post-Sale Projects',
+                stages: [
+                  KanbanStage(id: 'scheduled', name: 'scheduled', color: Colors.indigo.value),
+                  KanbanStage(id: 'in-progress', name: 'in progress', color: Colors.blue.value),
+                  KanbanStage(id: 'getting-materials', name: 'getting materials', color: Colors.orange.value),
+                  KanbanStage(id: 'work-done', name: 'work done', color: Colors.green.value),
+                ],
+              ),
+          ],
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
+      yellowThresholdDays: map['yellowThresholdDays'] ?? 3,
+      orangeThresholdDays: map['orangeThresholdDays'] ?? 7,
+      redThresholdDays: map['redThresholdDays'] ?? 14,
+      requiredMediaCategories:
+          List<String>.from(map['requiredMediaCategories'] ?? [
+        'roofscope_reports',
+        'contracts',
+        'permits',
+        'insurance_docs',
+      ]),
+      lastBackupDate: map['lastBackupDate'] != null
+          ? DateTime.parse(map['lastBackupDate'])
+          : null,
     );
   }
 
