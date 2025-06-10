@@ -234,7 +234,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     );
   }
 
-  }
 
   Widget _buildAddedProductsList() {
     return Column(
