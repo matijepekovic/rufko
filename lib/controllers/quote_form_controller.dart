@@ -209,11 +209,6 @@ class QuoteFormController extends ChangeNotifier {
   }
 
   void _showManualTaxRateDialog(AppStateProvider appState) {
-    final locationText = customer.zipCode?.isNotEmpty == true
-        ? 'ZIP ${customer.zipCode}'
-        : customer.stateAbbreviation?.isNotEmpty == true
-            ? 'state ${customer.stateAbbreviation}'
-            : 'this location';
 
     showDialog(
       context: context,

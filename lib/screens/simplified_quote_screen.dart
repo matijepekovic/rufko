@@ -9,7 +9,6 @@ import '../models/roof_scope_data.dart';
 import '../models/simplified_quote.dart';
 import '../models/quote.dart';
 import '../providers/app_state_provider.dart';
-import 'simplified_quote_detail_screen.dart';
 import '../models/quote_extras.dart'; // NEW: For PermitItem and CustomLineItem
 import 'package:rufko/screens/inspection_viewer_screen.dart';
 import '../theme/rufko_theme.dart';
