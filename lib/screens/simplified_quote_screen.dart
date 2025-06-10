@@ -10,7 +10,7 @@ import '../models/simplified_quote.dart';
 import '../models/quote.dart';
 import '../providers/app_state_provider.dart';
 import '../models/quote_extras.dart'; // NEW: For PermitItem and CustomLineItem
-import 'package:rufko/screens/inspection_viewer_screen.dart';
+import '../widgets/inspection_floating_button.dart';
 import '../theme/rufko_theme.dart';
 import '../widgets/quote_type_selector.dart';
 import '../widgets/main_product_selection.dart';
@@ -182,152 +182,16 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
                     ),
                   ),
                 ),
-          floatingActionButton: _buildInspectionFloatingButton(),
+          floatingActionButton: InspectionFloatingButton(
+            customer: widget.customer,
+            appState: context.read<AppStateProvider>(),
+          ),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         );
       },
     );
   }
 
-  Widget _buildInspectionFloatingButton() {
-    // Check if there are any inspection documents for this customer
-    final appState = context.read<AppStateProvider>();
-    final inspectionDocs = appState.getInspectionDocumentsForCustomer(widget.customer.id);
-
-    if (inspectionDocs.isEmpty) {
-      return const SizedBox.shrink(); // Don't show button if no inspection docs
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 60), // Offset to avoid overlapping
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Badge showing document count
-          Positioned(
-            right: 0,
-            top: 0,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              constraints: const BoxConstraints(
-                minWidth: 20,
-                minHeight: 20,
-              ),
-              child: Text(
-                '${inspectionDocs.length}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-
-          // Main button
-          FloatingActionButton.extended(
-            onPressed: _showInspectionModal,
-            icon: const Icon(Icons.assignment),
-            label: const Text('Inspection'),
-            backgroundColor: Colors.green,
-            foregroundColor: Colors.white,
-            elevation: 4,
-            tooltip: 'View ${inspectionDocs.length} inspection document${inspectionDocs.length == 1 ? '' : 's'}',
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showInspectionModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: Column(
-            children: [
-              // Drag handle
-              Container(
-                margin: const EdgeInsets.only(top: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-
-              // Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: Colors.grey[200]!),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.assignment, color: Colors.green, size: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Inspection Documents',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'Reference while building quote',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                      tooltip: 'Close inspection viewer',
-                    ),
-                  ],
-                ),
-              ),
-
-              // Inspection viewer content - THIS IS THE FIX
-              Expanded(
-                child: InspectionViewerScreen(
-                  customer: widget.customer,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildMainProductSelection() {
     return Column(
