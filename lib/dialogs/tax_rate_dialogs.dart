@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import '../controllers/quote_form_controller.dart';
+
 import '../models/customer.dart';
 import '../providers/app_state_provider.dart';
 
 class TaxRateDialogs {
-  static Future<void> showManualTaxRateDialog(
+  static void showManualTaxRateDialog(
     BuildContext context,
     Customer customer,
-    QuoteFormController controller,
-  ) async {
+    AppStateProvider appState,
+    Function(double) onTaxRateSet,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -33,7 +34,7 @@ class TaxRateDialogs {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              showAddTaxRateDialog(context, customer, controller);
+              showAddTaxRateDialog(context, customer, appState, onTaxRateSet);
             },
             child: const Text('Add to Database'),
           ),
@@ -54,11 +55,12 @@ class TaxRateDialogs {
     );
   }
 
-  static Future<void> showAddTaxRateDialog(
+  static void showAddTaxRateDialog(
     BuildContext context,
     Customer customer,
-    QuoteFormController controller,
-  ) async {
+    AppStateProvider appState,
+    Function(double) onTaxRateSet,
+  ) {
     final taxRateController = TextEditingController();
     showDialog(
       context: context,
@@ -88,7 +90,6 @@ class TaxRateDialogs {
           ),
           ElevatedButton(
             onPressed: () async {
-              final appState = context.read<AppStateProvider>();
               final messenger = ScaffoldMessenger.of(context);
               final navigator = Navigator.of(context);
 
@@ -112,8 +113,7 @@ class TaxRateDialogs {
               }
 
               navigator.pop();
-              controller.taxRate = rate;
-              controller.updateQuoteLevelsQuantity();
+              onTaxRateSet(rate);
 
               messenger.showSnackBar(
                 SnackBar(

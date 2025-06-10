@@ -206,7 +206,12 @@ class QuoteFormController extends ChangeNotifier {
         TaxRateDialogs.showManualTaxRateDialog(
           context,
           customer,
-          this,
+          appState,
+          (rate) {
+            _taxRate = rate;
+            updateQuoteLevelsQuantity();
+            notifyListeners();
+          },
         );
       }
     }
