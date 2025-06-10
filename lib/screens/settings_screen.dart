@@ -7,10 +7,13 @@ import 'package:open_filex/open_filex.dart';
 import '../providers/app_state_provider.dart';
 import '../models/app_settings.dart';
 
+import '../models/kanban_board.dart';
+import '../models/kanban_stage.dart';
 import 'settings/category_manager_dialog.dart';
 import 'settings/units_manager_dialog.dart';
 import 'settings/quote_levels_manager_dialog.dart';
 import 'settings/discount_settings_dialog.dart';
+import 'settings/urgency_settings_dialog.dart';
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -47,6 +50,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _buildSectionHeader('Product Configuration'),
           _buildProductConfigurationSection(),
+          const SizedBox(height: 24),
+
+          _buildSectionHeader('Customer View'),
+          _buildKanbanSettingsSection(),
           const SizedBox(height: 24),
 
           _buildSectionHeader('Company & Business'),
@@ -673,6 +680,262 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildKanbanSettingsSection() {
+    return Consumer<AppStateProvider>(
+      builder: (context, appState, child) {
+        final settings = appState.appSettings ?? AppSettings();
+
+        return Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child:
+                          Icon(Icons.view_kanban, color: Colors.blue.shade600, size: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Use Kanban View',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            'Replace customer list with Kanban board',
+                            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: settings.useKanbanCustomerView,
+                      onChanged: (value) {
+                        settings.useKanbanCustomerView = value;
+                        appState.updateAppSettings(settings);
+                      },
+                  activeColor: Theme.of(context).primaryColor,
+                ),
+              ],
+            ),
+          ),
+          _buildSettingsTile(
+            icon: Icons.warning_amber_outlined,
+            iconColor: Colors.red.shade600,
+            title: 'Urgency Thresholds',
+            subtitle:
+                '${settings.yellowThresholdDays}d / ${settings.orangeThresholdDays}d / ${settings.redThresholdDays}d',
+            onTap: _showUrgencySettingsDialog,
+          ),
+          _buildDivider(),
+          if (settings.kanbanBoards.isNotEmpty) _buildDivider(),
+              ...settings.kanbanBoards.map((board) {
+                return ListTile(
+                  title: Text(board.name),
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (val) {
+                      if (val == 'rename') {
+                        _renameBoard(context, board, appState);
+                      } else if (val == 'stages') {
+                        _editStages(context, board, appState);
+                      } else if (val == 'clone') {
+                        settings.cloneKanbanBoard(board.id);
+                        appState.updateAppSettings(settings);
+                      } else if (val == 'delete') {
+                        settings.deleteKanbanBoard(board.id);
+                        appState.updateAppSettings(settings);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(value: 'rename', child: Text('Rename')),
+                      const PopupMenuItem(value: 'stages', child: Text('Edit Stages')),
+                      const PopupMenuItem(value: 'clone', child: Text('Clone')),
+                      const PopupMenuItem(value: 'delete', child: Text('Delete')),
+                    ],
+                  ),
+                );
+              }).toList(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => _addBoard(context, appState),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add Board'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _addBoard(BuildContext context, AppStateProvider appState) {
+    final settings = appState.appSettings ?? AppSettings();
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('New Board'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Board name'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              final board = KanbanBoard(
+                name: controller.text,
+                stages: [
+                  KanbanStage(id: 'todo', name: 'todo', color: 0xFF2196F3),
+                ],
+              );
+              settings.addKanbanBoard(board);
+              appState.updateAppSettings(settings);
+              Navigator.pop(context);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _renameBoard(BuildContext context, KanbanBoard board, AppStateProvider appState) {
+    final settings = appState.appSettings ?? AppSettings();
+    final controller = TextEditingController(text: board.name);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rename Board'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'Board name'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              settings.renameKanbanBoard(board.id, controller.text);
+              appState.updateAppSettings(settings);
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _editStages(BuildContext context, KanbanBoard board, AppStateProvider appState) {
+    final settings = appState.appSettings ?? AppSettings();
+    final stages = board.stages.map((s) => KanbanStage(id: s.id, name: s.name, color: s.color)).toList();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Edit Stages for ${board.name}'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: stages.length,
+                  itemBuilder: (context, index) {
+                    final stage = stages[index];
+                    return Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () async {
+                            final colors = [Colors.blue, Colors.indigo, Colors.purple, Colors.orange, Colors.green, Colors.red, Colors.teal];
+                            final color = await showDialog<Color>(
+                              context: context,
+                              builder: (context) => SimpleDialog(
+                                title: const Text('Select Color'),
+                                children: colors
+                                    .map((c) => InkWell(
+                                          onTap: () => Navigator.pop(context, c),
+                                          child: Container(height: 30, color: c, margin: const EdgeInsets.all(4)),
+                                        ))
+                                    .toList(),
+                              ),
+                            );
+                            if (color != null) {
+                              setState(() => stage.color = color.value);
+                            }
+                          },
+                          child: Container(width: 24, height: 24, color: Color(stage.color)),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            controller: TextEditingController(text: stage.name),
+                            onChanged: (val) => stage.name = val,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.arrow_upward, size: 16),
+                          onPressed: index == 0
+                              ? null
+                              : () => setState(() {
+                                    final temp = stages.removeAt(index);
+                                    stages.insert(index - 1, temp);
+                                  }),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.arrow_downward, size: 16),
+                          onPressed: index == stages.length - 1
+                              ? null
+                              : () => setState(() {
+                                    final temp = stages.removeAt(index);
+                                    stages.insert(index + 1, temp);
+                                  }),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                TextButton(
+                  onPressed: () {
+                    board.stages
+                      ..clear()
+                      ..addAll(stages);
+                    appState.updateAppSettings(settings);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -1460,6 +1723,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showUrgencySettingsDialog() {
+    final appState = context.read<AppStateProvider>();
+    final settings = appState.appSettings ?? AppSettings();
+    showDialog(
+      context: context,
+      builder: (context) => UrgencySettingsDialog(
+        yellowDays: settings.yellowThresholdDays,
+        orangeDays: settings.orangeThresholdDays,
+        redDays: settings.redThresholdDays,
+        onSave: (y, o, r) {
+          settings.updateUrgencyThresholds(
+            yellowDays: y,
+            orangeDays: o,
+            redDays: r,
+          );
+          appState.updateAppSettings(settings);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Urgency thresholds updated!'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
           );
         },
