@@ -7,6 +7,7 @@ import '../../utils/common_utils.dart';
 
 import '../../models/customer.dart';
 import '../../models/project_media.dart';
+import '../../models/app_settings.dart';
 import '../../providers/app_state_provider.dart';
 
 class MediaTab extends StatelessWidget {
@@ -185,6 +186,9 @@ class MediaTab extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              if (appState.appSettings?.requiredMediaCategories.isNotEmpty ?? false)
+                _buildRequiredDocsChecklist(context, mediaItems, appState.appSettings!),
               if (isSelectionMode) ...[
                 const SizedBox(height: 8),
                 Card(
@@ -403,4 +407,46 @@ class MediaTab extends StatelessWidget {
   }
 
   // formatPhotoCategoryName moved to common_utils.dart
+
+  Widget _buildRequiredDocsChecklist(
+      BuildContext context, List<ProjectMedia> mediaItems, AppSettings settings) {
+    final Map<String, bool> status = {
+      for (final cat in settings.requiredMediaCategories)
+        cat: mediaItems.any((m) => m.category == cat),
+    };
+    if (status.isEmpty) return const SizedBox.shrink();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Required Documents',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            ...status.entries.map(
+              (e) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Icon(
+                      e.value ? Icons.check_circle : Icons.radio_button_unchecked,
+                      color: e.value ? Colors.green : Colors.grey,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(formatCategoryName(e.key)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

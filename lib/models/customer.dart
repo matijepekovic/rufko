@@ -49,6 +49,23 @@ class Customer extends HiveObject {
 
   @HiveField(13) // Next available field number
   Map<String, dynamic> inspectionData;
+
+  // Kanban stage/status field (stores stage id)
+  @HiveField(14)
+  String stage;
+
+  @HiveField(15)
+  String boardId;
+
+  // Track last reminder notification to avoid duplicates
+  @HiveField(16)
+  DateTime? lastReminderDate;
+
+  @HiveField(17)
+  double? latitude;
+
+  @HiveField(18)
+  double? longitude;
   // --- END NEW STRUCTURED ADDRESS FIELDS ---
 
   Customer({
@@ -67,6 +84,11 @@ class Customer extends HiveObject {
     this.stateAbbreviation,
     this.zipCode,
     Map<String, dynamic>? inspectionData,
+    this.stage = 'lead',
+    this.boardId = 'sales-pipeline',
+    this.lastReminderDate,
+    this.latitude,
+    this.longitude,
   })  : communicationHistory = communicationHistory ?? [],
         inspectionData = inspectionData ?? {},
         createdAt = createdAt ?? DateTime.now(),
@@ -269,6 +291,11 @@ class Customer extends HiveObject {
       'stateAbbreviation': stateAbbreviation,
       'zipCode': zipCode,
       'inspectionData': inspectionData,
+      'stage': stage,
+      'boardId': boardId,
+      'lastReminderDate': lastReminderDate?.toIso8601String(),
+      'latitude': latitude,
+      'longitude': longitude,
     };
 
   }
@@ -288,6 +315,13 @@ class Customer extends HiveObject {
       stateAbbreviation: map['stateAbbreviation'],
       zipCode: map['zipCode'],
       inspectionData: Map<String, dynamic>.from(map['inspectionData'] ?? {}),
+      stage: map['stage'] ?? 'lead',
+      boardId: map['boardId'] ?? 'sales-pipeline',
+      lastReminderDate: map['lastReminderDate'] != null
+          ? DateTime.parse(map['lastReminderDate'])
+          : null,
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
     );
   }
 

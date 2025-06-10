@@ -10,6 +10,9 @@ class CustomerCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final String? stageLabel;
+  final Color? stageColor;
+  final Color? urgencyColor;
 
   const CustomerCard({
     super.key,
@@ -18,6 +21,9 @@ class CustomerCard extends StatelessWidget {
     this.onTap,
     this.onEdit,
     this.onDelete,
+    this.stageLabel,
+    this.stageColor,
+    this.urgencyColor,
   });
 
   @override
@@ -36,6 +42,7 @@ class CustomerCard extends StatelessWidget {
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: urgencyColor ?? Colors.white,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -60,11 +67,30 @@ class CustomerCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          customer.name,
-                          style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                customer.name,
+                                style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            if (stageLabel != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: (stageColor ?? primaryColor).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  stageLabel!,
+                                  style: textTheme.labelSmall?.copyWith(color: stageColor ?? primaryColor),
+                                ),
+                              ),
+                          ],
                         ),
                         if (customer.phone != null || customer.email != null)
                           Text(
