@@ -2,26 +2,19 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../utils/common_utils.dart';
 import '../models/customer.dart';
-import '../models/project_media.dart';
 import '../models/simplified_quote.dart';
 import '../providers/app_state_provider.dart';
 import '../theme/rufko_theme.dart';
-import 'pdf_preview_screen.dart';
 import 'simplified_quote_screen.dart';
 import 'simplified_quote_detail_screen.dart';
 import '../mixins/file_sharing_mixin.dart';
 import '../mixins/communication_actions_mixin.dart';
 import '../mixins/customer_communication_mixin.dart';
-import 'customer_detail/enhanced_communication_dialog.dart';
-import 'customer_detail/media_details_dialog.dart';
 import 'customer_detail/media_tab_controller.dart';
-import 'customer_detail/full_screen_image_viewer.dart';
-
 import 'customer_detail/customer_edit_dialog.dart';
 import 'customer_detail/quotes_tab.dart';
 import 'customer_detail/media_tab.dart';
