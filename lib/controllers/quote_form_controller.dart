@@ -7,6 +7,7 @@ import '../models/quote.dart';
 import '../models/quote_extras.dart';
 import '../providers/app_state_provider.dart';
 import '../screens/simplified_quote_detail_screen.dart';
+import '../dialogs/tax_rate_dialogs.dart';
 
 class QuoteFormController extends ChangeNotifier {
   QuoteFormController({
@@ -202,130 +203,21 @@ class QuoteFormController extends ChangeNotifier {
           ),
         );
       } else {
-        _showManualTaxRateDialog(appState);
+        TaxRateDialogs.showManualTaxRateDialog(
+          context,
+          customer,
+          appState,
+          (rate) {
+            _taxRate = rate;
+            updateQuoteLevelsQuantity();
+            notifyListeners();
+          },
+        );
       }
     }
     notifyListeners();
   }
 
-  void _showManualTaxRateDialog(AppStateProvider appState) {
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tax Rate Not Found'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text('No tax rate found in the local database.'),
-            SizedBox(height: 16),
-            Text('You can:'),
-            SizedBox(height: 8),
-            Text('• Enter the tax rate manually for this quote'),
-            Text('• Add this location to your tax database in Settings'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showAddTaxRateDialog(appState);
-            },
-            child: const Text('Add to Database'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Enter tax rate manually in the field above'),
-                  backgroundColor: Colors.blue,
-                ),
-              );
-            },
-            child: const Text('Enter Manually'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddTaxRateDialog(AppStateProvider appState) {
-    final taxRateController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Tax Rate to Database'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Add tax rate for: ${customer.fullDisplayAddress}'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: taxRateController,
-              decoration: const InputDecoration(
-                labelText: 'Tax Rate (%)',
-                suffixText: '%',
-                border: OutlineInputBorder(),
-              ),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final navigator = Navigator.of(context);
-
-              final rateText = taxRateController.text.trim();
-              final rate = double.tryParse(rateText);
-
-              if (rate == null || rate < 0 || rate > 100) {
-                messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Please enter a valid tax rate (0-100%)'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-                return;
-              }
-
-              if (customer.zipCode?.isNotEmpty == true) {
-                await appState.saveZipCodeTaxRate(customer.zipCode!, rate);
-              } else if (customer.stateAbbreviation?.isNotEmpty == true) {
-                await appState.saveStateTaxRate(customer.stateAbbreviation!, rate);
-              }
-
-              _taxRate = rate;
-              updateQuoteLevelsQuantity();
-
-              navigator.pop();
-
-              messenger.showSnackBar(
-                SnackBar(
-                  content: Text('Tax rate ${rate.toStringAsFixed(2)}% saved and applied'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-              notifyListeners();
-            },
-            child: const Text('Save & Apply'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void loadExistingQuoteData(AppStateProvider appState) {
     if (editingQuote == null) return;
