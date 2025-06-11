@@ -11,6 +11,7 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as sf_pdf;
 import '../controllers/pdf_document_controller.dart';
 import '../controllers/pdf_editing_controller.dart';
+import '../controllers/pdf_file_operations_controller.dart';
 import '../models/pdf_form_field.dart';
 import '../models/edit_action.dart';
 import '../providers/app_state_provider.dart';
@@ -64,6 +65,8 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   final bool _showFieldOverlays = false;
   bool _isLoadingFields = false;
 
+  late PdfFileOperationsController _fileOpsController;
+
   // Undo/Redo system managed by controller
 
   // Visual editing
@@ -77,6 +80,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   void initState() {
     super.initState();
     _currentPdfPath = widget.pdfPath;
+    _fileOpsController = PdfFileOperationsController(context);
     _loadEditableFields();
     _loadFormFields();
     _editingController.addListener(() {
@@ -622,102 +626,18 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   Future<void> _savePdf() async {
     if (_isSaving) return;
     setState(() => _isSaving = true);
-
     try {
-      debugPrint(
-          '💾 Starting PDF save with ${_editingController.editedValues.length} edits');
-      final docController = PdfDocumentController(_currentPdfPath);
-      File pdfToSave;
-      if (_editingController.editedValues.isNotEmpty &&
-          _formFields.isNotEmpty) {
-        debugPrint(
-            '🔧 Applying edits using template-style field mapping approach...');
-        pdfToSave = await docController
-            .applyEditsUsingTemplateApproach(_editingController.editedValues);
-      } else {
-        debugPrint('📄 Using original file (no edits to apply)');
-        pdfToSave = File(_currentPdfPath);
-      }
-      // Ensure the file exists before proceeding
-      if (!await pdfToSave.exists()) {
-        throw Exception('PDF file not found: ${pdfToSave.path}');
-      }
-
-      // Save to final location
-      // Save to final location AND add to customer media
-      // Save to final location AND add to customer media
-      Directory? saveDir = await getApplicationDocumentsDirectory();
-
-      String finalFileName = widget.suggestedFileName;
-      if (_editingController.editedValues.isNotEmpty) {
-        final baseName = finalFileName.replaceAll('.pdf', '');
-        finalFileName = '${baseName}_edited.pdf';
-      }
-
-      int counter = 1;
-      File targetFile = File('${saveDir.path}/$finalFileName');
-      while (await targetFile.exists()) {
-        final baseName = finalFileName.replaceAll('.pdf', '');
-        finalFileName = '${baseName}_$counter.pdf';
-        targetFile = File('${saveDir.path}/$finalFileName');
-        counter++;
-      }
-
-      await pdfToSave.copy(targetFile.path);
-
-      // 🚀 NEW: Add PDF to customer media using ProjectMedia
-      if (widget.customer != null && mounted) {
-        try {
-          final appState = context.read<AppStateProvider>();
-
-          // Get file size
-          final fileSize = await targetFile.length();
-
-          // Create ProjectMedia object
-          final projectMedia = ProjectMedia(
-            customerId: widget.customer!.id,
-            quoteId: widget.quote?.id, // Link to quote if available
-            filePath: targetFile.path,
-            fileName: finalFileName,
-            fileType: 'pdf',
-            description: widget.quote != null
-                ? 'Quote PDF: ${widget.quote!.quoteNumber}${_editingController.editedValues.isNotEmpty ? ' (edited)' : ''}'
-                : 'Generated PDF${_editingController.editedValues.isNotEmpty ? ' (edited)' : ''}',
-            tags: [
-              'quote',
-              'pdf',
-              if (_editingController.editedValues.isNotEmpty) 'edited',
-              if (widget.templateId != null) 'template',
-            ],
-            category: 'document',
-            fileSizeBytes: fileSize,
-          );
-
-          await appState.addProjectMedia(projectMedia);
-          debugPrint('✅ PDF added to customer media: ${widget.customer!.name}');
-        } catch (e) {
-          debugPrint('⚠️ Failed to add PDF to customer media: $e');
-          // Don't fail the save operation if media addition fails
-        }
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-                '✅ PDF saved${widget.customer != null ? ' and added to customer media' : ''}!'),
-            backgroundColor: Colors.green,
-            action: SnackBarAction(
-              label: 'Open',
-              textColor: Colors.white,
-              onPressed: () => OpenFilex.open(targetFile.path),
-            ),
-          ),
-        );
-        Navigator.pop(context, true);
-      }
+      await _fileOpsController.savePdf(
+        currentPdfPath: _currentPdfPath,
+        editedValues: _editingController.editedValues,
+        formFields: _formFields,
+        suggestedFileName: widget.suggestedFileName,
+        customer: widget.customer,
+        quote: widget.quote,
+        templateId: widget.templateId,
+      );
     } catch (e) {
-      debugPrint('❌ Error: $e');
+      if (kDebugMode) debugPrint('❌ Error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('❌ Error: $e'), backgroundColor: Colors.red),
@@ -742,33 +662,19 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
 
   // Discard PDF
   Future<void> _sharePdf() async {
-    try {
-      File fileToShare;
-      final docController = PdfDocumentController(_currentPdfPath);
-      if (_editingController.editedValues.isNotEmpty &&
-          _formFields.isNotEmpty) {
-        fileToShare = await docController
-            .applyFormFieldEdits(_editingController.editedValues);
-      } else {
-        fileToShare = File(_currentPdfPath);
-      }
-      if (!await fileToShare.exists()) {
-        throw Exception('PDF file not found');
-      }
-      shareFile(
-          file: fileToShare,
-          fileName: widget.suggestedFileName,
-          customer: widget.customer);
-    } catch (e) {
-      if (kDebugMode) debugPrint('❌ Error preparing PDF for sharing: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Failed to prepare PDF: ${e.toString()}'),
-              backgroundColor: Colors.red),
-        );
-      }
-    }
+    await _fileOpsController.sharePdf(
+      currentPdfPath: _currentPdfPath,
+      editedValues: _editingController.editedValues,
+      formFields: _formFields,
+      suggestedFileName: widget.suggestedFileName,
+      customer: widget.customer,
+      shareFile: (
+          {required File file,
+          required String fileName,
+          Customer? customer}) async {
+        await shareFile(file: file, fileName: fileName, customer: customer);
+      },
+    );
   }
 
   void _discardPdf() {
