@@ -8,6 +8,7 @@ import '../models/quote_extras.dart';
 import '../providers/app_state_provider.dart';
 import '../screens/simplified_quote_detail_screen.dart';
 import '../dialogs/tax_rate_dialogs.dart';
+import '../constants/quote_form_constants.dart';
 
 class QuoteFormController extends ChangeNotifier {
   QuoteFormController({
@@ -25,9 +26,9 @@ class QuoteFormController extends ChangeNotifier {
   bool get isEditMode => existingQuote != null;
   SimplifiedMultiLevelQuote? get editingQuote => existingQuote;
 
-  double _taxRate = 0.0;
+  double _taxRate = QuoteFormConstants.defaultTaxRate;
   Product? _mainProduct;
-  double _mainQuantity = 1.0;
+  double _mainQuantity = QuoteFormConstants.defaultMainQuantity;
   final List<QuoteLevel> _quoteLevels = [];
   final List<QuoteItem> _addedProducts = [];
   final List<PermitItem> _permits = [];
@@ -112,7 +113,7 @@ class QuoteFormController extends ChangeNotifier {
     _mainProduct = null;
     _quoteLevels.clear();
     _addedProducts.clear();
-    _mainQuantity = 1.0;
+    _mainQuantity = QuoteFormConstants.defaultMainQuantity;
     _permits.clear();
     _noPermitsRequired = false;
     _customLineItems.clear();
@@ -191,7 +192,8 @@ class QuoteFormController extends ChangeNotifier {
         ),
       );
     } else {
-      final fallbackRate = appState.appSettings?.taxRate ?? 0.0;
+      final fallbackRate =
+          appState.appSettings?.taxRate ?? QuoteFormConstants.defaultTaxRate;
       if (fallbackRate > 0) {
         _taxRate = fallbackRate;
         updateQuoteLevelsQuantity();

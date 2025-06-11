@@ -1,5 +1,3 @@
-// lib/screens/simplified_quote_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/customer.dart';
@@ -8,38 +6,48 @@ import '../models/roof_scope_data.dart';
 import '../models/simplified_quote.dart';
 import '../models/quote.dart';
 import '../providers/app_state_provider.dart';
-import '../models/quote_extras.dart'; // NEW: For PermitItem and CustomLineItem
+import '../models/quote_extras.dart';
 import '../widgets/inspection_floating_button.dart';
 import '../theme/rufko_theme.dart';
-import '../widgets/quote_type_selector.dart';
-import '../widgets/main_product_selection.dart';
+import '../widgets/quote_form/main_product_section.dart';
+import '../widgets/quote_form/quote_products_section.dart';
+import '../widgets/quote_form/quote_generation_section.dart';
+import '../constants/quote_form_constants.dart';
 import '../widgets/permits_section.dart';
-import '../widgets/tax_rate_section.dart';
-import '../widgets/quote_totals_section.dart';
-import '../widgets/added_products_list.dart';
 import '../widgets/custom_line_items_section.dart';
 import '../widgets/quote_levels_preview.dart';
 import '../controllers/quote_form_controller.dart';
 import '../dialogs/add_product_dialog.dart';
 import '../dialogs/custom_item_dialog.dart';
+import '../mixins/responsive_breakpoints_mixin.dart';
+import '../mixins/responsive_dimensions_mixin.dart';
+import '../mixins/responsive_spacing_mixin.dart';
+import '../mixins/responsive_text_mixin.dart';
+import '../mixins/responsive_widget_mixin.dart';
 
 class SimplifiedQuoteScreen extends StatefulWidget {
   final Customer customer;
   final RoofScopeData? roofScopeData;
-  final SimplifiedMultiLevelQuote? existingQuote; // NEW: For editing mode
+  final SimplifiedMultiLevelQuote? existingQuote;
 
   const SimplifiedQuoteScreen({
     super.key,
     required this.customer,
     this.roofScopeData,
-    this.existingQuote, // NEW: Pass existing quote for editing
+    this.existingQuote,
   });
 
   @override
   State<SimplifiedQuoteScreen> createState() => _SimplifiedQuoteScreenState();
 }
 
-class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
+class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
+    with
+        ResponsiveBreakpointsMixin,
+        ResponsiveDimensionsMixin,
+        ResponsiveSpacingMixin,
+        ResponsiveTextMixin,
+        ResponsiveWidgetMixin {
   final _formKey = GlobalKey<FormState>();
   late QuoteFormController _controller;
 
@@ -78,7 +86,6 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
       existingQuote: widget.existingQuote,
     );
 
-    // NEW: Load existing quote data if in edit mode
     if (_isEditMode) {
       _loadExistingQuoteData();
     } else {
@@ -100,180 +107,152 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
       builder: (context, _) {
         return Scaffold(
           backgroundColor: Colors.grey[50],
-          body: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : NestedScrollView(
-                  headerSliverBuilder:
-                      (BuildContext context, bool innerBoxIsScrolled) {
-                    return <Widget>[
-                      SliverAppBar(
-                        expandedHeight: 100,
-                        floating: false,
-                        pinned: true,
-                        backgroundColor: RufkoTheme.primaryColor,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        flexibleSpace: FlexibleSpaceBar(
-                          background: Container(
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  RufkoTheme.primaryColor,
-                                  RufkoTheme.primaryDarkColor,
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        title: Text(_isEditMode
-                            ? 'Edit Quote: ${_editingQuote!.quoteNumber}'
-                            : 'New Quote: ${widget.customer.name}'),
-                        actions: [
-                          if (_isLoading)
-                            const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ];
-                  },
-                  body: Form(
-                    key: _formKey,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildMainProductSelection(),
-                          const SizedBox(height: 24),
-                          if (_mainProduct != null) ...[
-                            QuoteLevelsPreview(
-                              quoteLevels: _quoteLevels,
-                              mainProduct: _mainProduct,
-                              mainQuantity: _mainQuantity,
-                              quoteType: _quoteType,
-                            ),
-                            const SizedBox(height: 24),
-                            _buildAddedProductsList(),
-                            const SizedBox(height: 24),
-                            PermitsSection(
-                              permits: _permits,
-                              noPermitsRequired: _noPermitsRequired,
-                              onPermitAdded: (permit) {
-                                _controller.addPermit(permit);
-                              },
-                              onPermitRemoved: (permit) {
-                                _controller.removePermit(permit);
-                              },
-                              onNoPermitsRequiredChanged: (value) {
-                                _noPermitsRequired = value;
-                                if (value) {
-                                  _permits.clear();
-                                }
-                              },
-                            ),
-                            const SizedBox(height: 24),
-                            CustomLineItemsSection(
-                              customLineItems: _customLineItems,
-                              onAddItemPressed: _showAddCustomItemDialog,
-                              onRemoveItem: _removeCustomItem,
-                            ),
-                            const SizedBox(height: 24),
-                            _buildGenerateButton(),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-          floatingActionButton: InspectionFloatingButton(
-            customer: widget.customer,
-            appState: context.read<AppStateProvider>(),
-          ),
+          body: _isLoading ? _buildLoadingState() : _buildMainContent(),
+          floatingActionButton: _buildFloatingActionButton(),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
         );
       },
     );
   }
 
+  Widget _buildLoadingState() {
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  Widget _buildMainContent() {
+    return NestedScrollView(
+      headerSliverBuilder: (context, innerBoxIsScrolled) {
+        return [
+          SliverAppBar(
+            expandedHeight: QuoteFormConstants.appBarHeight,
+            floating: false,
+            pinned: true,
+            backgroundColor: RufkoTheme.primaryColor,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      RufkoTheme.primaryColor,
+                      RufkoTheme.primaryDarkColor,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            title: Text(
+              _isEditMode
+                  ? 'Edit Quote: ${_editingQuote?.quoteNumber ?? ''}'
+                  : 'New Quote: ${widget.customer.name}',
+            ),
+            actions: [
+              if (_isLoading)
+                Padding(
+                  padding: EdgeInsets.all(spacingSM(context) * 4),
+                  child: const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ];
+      },
+      body: _buildFormContent(),
+    );
+  }
+
+  Widget _buildFormContent() {
+    return Form(
+      key: _formKey,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(spacingSM(context) * 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildMainProductSelection(),
+            SizedBox(height: spacingXXL(context)),
+            if (_mainProduct != null) ...[
+              QuoteLevelsPreview(
+                quoteLevels: _quoteLevels,
+                mainProduct: _mainProduct,
+                mainQuantity: _mainQuantity,
+                quoteType: _quoteType,
+              ),
+              SizedBox(height: spacingXXL(context)),
+              _buildAddedProductsList(),
+              SizedBox(height: spacingXXL(context)),
+              PermitsSection(
+                permits: _permits,
+                noPermitsRequired: _noPermitsRequired,
+                onPermitAdded: (permit) => _controller.addPermit(permit),
+                onPermitRemoved: (permit) => _controller.removePermit(permit),
+                onNoPermitsRequiredChanged: (value) {
+                  _noPermitsRequired = value;
+                  if (value) {
+                    _permits.clear();
+                  }
+                },
+              ),
+              SizedBox(height: spacingXXL(context)),
+              CustomLineItemsSection(
+                customLineItems: _customLineItems,
+                onAddItemPressed: _showAddCustomItemDialog,
+                onRemoveItem: _removeCustomItem,
+              ),
+              SizedBox(height: spacingXXL(context)),
+              _buildGenerateButton(),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingActionButton() {
+    return InspectionFloatingButton(
+      customer: widget.customer,
+      appState: context.read<AppStateProvider>(),
+    );
+  }
+
 
   Widget _buildMainProductSelection() {
-    return Column(
-      children: [
-        QuoteTypeSelector(
-          quoteType: _quoteType,
-          onQuoteTypeChanged: _switchQuoteType,
-        ),
-
-        const SizedBox(height: 16),
-
-        MainProductSelection(
-          mainProduct: _mainProduct,
-          mainQuantity: _mainQuantity,
-          quoteType: _quoteType,
-          onProductChanged: (product) {
-            setState(() {
-              _mainProduct = product;
-              _createQuoteLevels();
-            });
-          },
-          onQuantityChanged: (quantity) {
-            setState(() {
-              _mainQuantity = quantity;
-              _updateQuoteLevelsQuantity();
-            });
-          },
-        ),
-      ],
+    return MainProductSection(
+      quoteType: _quoteType,
+      mainProduct: _mainProduct,
+      mainQuantity: _mainQuantity,
+      onQuoteTypeChanged: _switchQuoteType,
+      onProductChanged: _handleProductChanged,
+      onQuantityChanged: _handleQuantityChanged,
     );
   }
 
 
   Widget _buildAddedProductsList() {
-    return Column(
-      children: [
-        AddedProductsList(
-          addedProducts: _addedProducts,
-          quoteType: _quoteType,
-          onAddProductPressed: _showAddProductDialog,
-          onRemoveProduct: _removeProduct,
-        ),
-
-        // Quote Totals Section
-        if (_quoteLevels.isNotEmpty) ...[
-          const SizedBox(height: 16),
-          TaxRateSection(
-            taxRate: _taxRate,
-            customer: widget.customer,
-            onTaxRateChanged: (rate) {
-              setState(() {
-                _taxRate = rate;
-                _updateQuoteLevelsQuantity();
-              });
-            },
-            onAutoDetectPressed: () =>
-                _autoDetectTaxRate(context.read<AppStateProvider>()),
-          ),
-          const SizedBox(height: 16),
-          QuoteTotalsSection(
-            quoteLevels: _quoteLevels,
-            mainProduct: _mainProduct,
-            mainQuantity: _mainQuantity,
-            taxRate: _taxRate,
-            permits: _permits,
-            customLineItems: _customLineItems,
-            quoteType: _quoteType,
-          ),
-        ],
-      ],
+    return QuoteProductsSection(
+      addedProducts: _addedProducts,
+      quoteType: _quoteType,
+      onAddProductPressed: _showAddProductDialog,
+      onRemoveProduct: _removeProduct,
+      quoteLevels: _quoteLevels,
+      mainProduct: _mainProduct,
+      mainQuantity: _mainQuantity,
+      taxRate: _taxRate,
+      permits: _permits,
+      customLineItems: _customLineItems,
+      onTaxRateChanged: _handleTaxRateChanged,
+      onAutoDetectPressed: () =>
+          _autoDetectTaxRate(context.read<AppStateProvider>()),
+      customer: widget.customer,
     );
   }
 
@@ -285,11 +264,15 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   void _showAddCustomItemDialog() {
     showDialog(
       context: context,
-      builder: (context) => CustomItemDialog(
-        onItemAdded: (item) {
-          _controller.addCustomLineItem(item);
-        },
-      ),
+      builder: _buildCustomItemDialog,
+    );
+  }
+
+  Widget _buildCustomItemDialog(BuildContext context) {
+    return CustomItemDialog(
+      onItemAdded: (item) {
+        _controller.addCustomLineItem(item);
+      },
     );
   }
 
@@ -297,68 +280,16 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
     _controller.removeCustomLineItem(item);
   }
 
-// NEW: Check if permits requirement is satisfied
   bool get _isPermitsRequirementSatisfied {
     return _controller.isPermitsRequirementSatisfied;
   }
   Widget _buildGenerateButton() {
-    if (_quoteLevels.isEmpty) return const SizedBox.shrink();
-
-    String buttonText;
-    if (_isEditMode) {
-      buttonText = _quoteType == 'single-tier' ? 'Update Single-Tier Quote' : 'Update Multi-Level Quote';
-    } else {
-      buttonText = _quoteType == 'single-tier' ? 'Generate Single-Tier Quote' : 'Generate Multi-Level Quote';
-    }
-
-    // Check if permits requirement is satisfied
-    final permitsSatisfied = _isPermitsRequirementSatisfied;
-
-    return Column(
-      children: [
-        // Show validation warning if permits not satisfied
-        if (!permitsSatisfied) ...[
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.red.shade200),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.warning, color: Colors.red.shade600),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Permits required: Please add permits or check "No permits required"',
-                    style: TextStyle(
-                      color: Colors.red.shade800,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-
-        // Generate button
-        ElevatedButton.icon(
-          onPressed: permitsSatisfied ? _generateQuote : null, // Disable if permits not satisfied
-          icon: Icon(_isEditMode ? Icons.save : Icons.rocket_launch),
-          label: Text(buttonText),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: permitsSatisfied
-                ? (_quoteType == 'single-tier' ? Colors.green.shade600 : Theme.of(context).primaryColor)
-                : Colors.grey,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
-      ],
+    return QuoteGenerationSection(
+      isEditMode: _isEditMode,
+      quoteType: _quoteType,
+      quoteLevels: _quoteLevels,
+      permitsSatisfied: _isPermitsRequirementSatisfied,
+      onGenerate: _generateQuote,
     );
   }
 
@@ -371,15 +302,31 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
 
   void _removeProduct(QuoteItem product) => _controller.removeProduct(product);
 
-  // REPLACE the _autoDetectTaxRate() method in simplified_quote_screen.dart
-// Around line 570-620
+  void _handleProductChanged(Product? product) {
+    setState(() {
+      _mainProduct = product;
+      _createQuoteLevels();
+    });
+  }
+
+  void _handleQuantityChanged(double quantity) {
+    setState(() {
+      _mainQuantity = quantity;
+      _updateQuoteLevelsQuantity();
+    });
+  }
+
+  void _handleTaxRateChanged(double rate) {
+    setState(() {
+      _taxRate = rate;
+      _updateQuoteLevelsQuantity();
+    });
+  }
 
   void _autoDetectTaxRate(AppStateProvider appState) =>
       _controller.autoDetectTaxRate(appState);
 
 
-// NEW: Load existing quote data for editing
-  // NEW: Load existing quote data for editing
   void _loadExistingQuoteData() {
     _controller.loadExistingQuoteData(context.read<AppStateProvider>());
   }
@@ -387,16 +334,17 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen> {
   void _showAddProductDialog() {
     showDialog(
       context: context,
-      builder: (context) => AddProductDialog(
-        onProductAdded: (productItem) {
-          _controller.addProduct(productItem);
-        },
-      ),
+      builder: _buildAddProductDialog,
     );
   }
 
-  // REPLACE the _generateQuote() method in simplified_quote_screen.dart
-// Around line 720-760
+  Widget _buildAddProductDialog(BuildContext context) {
+    return AddProductDialog(
+      onProductAdded: (productItem) {
+        _controller.addProduct(productItem);
+      },
+    );
+  }
 
   void _generateQuote() async {
     await _controller.generateQuote(
