@@ -103,3 +103,56 @@ By following these detailed guidelines, you can build Flutter apps that provide 
 
 ## Codex Setup
 Run `setup.sh` before running Flutter commands in Codex.
+
+## 🔨 Refactoring Progress
+
+This project is currently undergoing systematic refactoring to improve maintainability.
+
+### Current Status
+- **Large files identified:** 28
+- **Files refactored:** 0
+- **Current focus:** lib/providers/app_state_provider.dart
+- **Progress:** 0% complete
+
+### Priority List Backup
+| File | Lines | Priority | Status |
+|------|-------|----------|---------|
+| lib/providers/app_state_provider.dart | 1924 | HIGH | IN_PROGRESS |
+| lib/screens/customer_detail_screen.dart | 1596 | HIGH | PENDING |
+| lib/screens/customer_detail/info_tab.dart | 1585 | HIGH | PENDING |
+| lib/screens/settings_screen.dart | 1469 | HIGH | PENDING |
+| lib/screens/products/product_form_dialog.dart | 1337 | HIGH | PENDING |
+| lib/screens/pdf_preview_screen.dart | 1312 | HIGH | PENDING |
+| lib/widgets/templates/dialgos/email_template_editor.dart | 1222 | HIGH | PENDING |
+| lib/widgets/templates/dialgos/message_template_editor.dart | 1187 | HIGH | PENDING |
+| lib/services/database_service.dart | 1176 | HIGH | PENDING |
+| lib/screens/home_screen.dart | 1089 | HIGH | PENDING |
+| lib/services/pdf_service.dart | 1045 | HIGH | PENDING |
+| lib/screens/template_editor_screen.dart | 974 | MEDIUM | PENDING |
+| lib/screens/customer_detail/inspection_tab.dart | 944 | MEDIUM | PENDING |
+| lib/services/template_service.dart | 776 | MEDIUM | PENDING |
+| lib/screens/customer_detail/media_tab_controller.dart | 651 | LOW | PENDING |
+| lib/screens/category_management_screen.dart | 649 | LOW | PENDING |
+| lib/widgets/templates/dialgos/add_field_dialog.dart | 645 | LOW | PENDING |
+| lib/widgets/templates/pdf_templates_tab.dart | 604 | LOW | PENDING |
+| lib/widgets/templates/dialgos/edit_field_dialog.dart | 601 | LOW | PENDING |
+| lib/screens/templates_screen.dart | 594 | LOW | PENDING |
+| lib/widgets/quote_totals_section.dart | 559 | LOW | PENDING |
+| lib/screens/simplified_quote_detail_screen.dart | 555 | LOW | PENDING |
+| lib/widgets/templates/fields_tab.dart | 546 | LOW | PENDING |
+| lib/mixins/customer_communication_mixin.dart | 518 | LOW | PENDING |
+| lib/screens/customers_screen.dart | 514 | LOW | PENDING |
+| lib/mixins/template_tab_mixin.dart | 512 | LOW | PENDING |
+| lib/mixins/file_sharing_mixin.dart | 504 | LOW | PENDING |
+| lib/widgets/templates/email_templates_tab.dart | 503 | LOW | PENDING |
+
+### Refactoring Goals
+- Break down files >500 lines into focused, single-responsibility components
+- Improve code maintainability and readability
+- Preserve all existing functionality
+- Follow Flutter/Dart best practices
+
+### Recent Changes
+- ⏳ 2025-06-11 Starting systematic refactoring process
+
+See `AGENTS.MD` for detailed refactoring progress and methodology.
