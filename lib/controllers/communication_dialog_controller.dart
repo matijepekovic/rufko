@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../controllers/communication_controller.dart';
+import 'communication_controller.dart';
 
 class CommunicationDialogController extends ChangeNotifier {
   CommunicationDialogController({
@@ -50,7 +50,8 @@ class CommunicationDialogController extends ChangeNotifier {
   int get emailCharCount => emailContent.length;
 
   bool get isSmsValid => smsMessage.trim().isNotEmpty;
-  bool get isEmailValid => emailSubject.trim().isNotEmpty && emailContent.trim().isNotEmpty;
+  bool get isEmailValid =>
+      emailSubject.trim().isNotEmpty && emailContent.trim().isNotEmpty;
 
   void sendSms() {
     if (!isSmsValid) return;

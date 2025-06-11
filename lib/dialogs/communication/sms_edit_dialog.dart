@@ -96,9 +96,11 @@ class _SmsEditDialogState extends State<SmsEditDialog> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.person, size: 16, color: Colors.grey),
+                          const Icon(Icons.person,
+                              size: 16, color: Colors.grey),
                           const SizedBox(width: 8),
-                          Text('To: ${customer.name} (${customer.phone ?? 'No phone'})'),
+                          Text(
+                              'To: ${customer.name} (${customer.phone ?? 'No phone'})'),
                         ],
                       ),
                     ),
@@ -247,12 +249,13 @@ class _SmsEditDialogState extends State<SmsEditDialog> {
                   const SizedBox(width: 12),
                   OutlinedButton.icon(
                     onPressed: () {
-                      widget.controller.updateSmsMessage(
-                          messageController.text.trim());
+                      widget.controller
+                          .updateSmsMessage(messageController.text.trim());
                       Navigator.pop(context);
                       showDialog(
                         context: context,
-                        builder: (context) => SmsPreviewDialog(controller: widget.controller),
+                        builder: (context) =>
+                            SmsPreviewDialog(controller: widget.controller),
                       );
                     },
                     icon: const Icon(Icons.preview),

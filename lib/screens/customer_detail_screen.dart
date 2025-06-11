@@ -52,7 +52,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   late MediaSelectionController _selectionController;
   late NavigationController _navigationController;
   late CustomerActionsController _actionsController;
-  final TextEditingController _communicationController = TextEditingController();
+  final TextEditingController _communicationController =
+      TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
   late MediaTabController _mediaController;
   late CommunicationController _commController;
@@ -69,14 +70,25 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   @override
   void initState() {
     super.initState();
-    _uiController = UIStateController(vsync: this, onUpdate: () => setState(() {}));
+    _uiController =
+        UIStateController(vsync: this, onUpdate: () => setState(() {}));
     _mediaController = MediaTabController(
       context: context,
       customer: widget.customer,
       imagePicker: _imagePicker,
       setProcessingState: _uiController.setProcessingState,
-      shareFile: ({required File file, required String fileName, String? description, Customer? customer, String? fileType}) {
-        return shareFile(file: file, fileName: fileName, description: description, customer: customer, fileType: fileType);
+      shareFile: (
+          {required File file,
+          required String fileName,
+          String? description,
+          Customer? customer,
+          String? fileType}) {
+        return shareFile(
+            file: file,
+            fileName: fileName,
+            description: description,
+            customer: customer,
+            fileType: fileType);
       },
       showErrorSnackBar: showErrorSnackBar,
     );
@@ -87,7 +99,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         if (mounted) setState(() {});
       },
     );
-    _navigationController = NavigationController(context: context, customer: widget.customer);
+    _navigationController =
+        NavigationController(context: context, customer: widget.customer);
     _selectionController = MediaSelectionController(
       context: context,
       customer: widget.customer,
@@ -97,24 +110,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     _actionsController = CustomerActionsController(
       context: context,
       customer: widget.customer,
-      navigateToCreateQuoteScreen: _navigationController.navigateToCreateQuoteScreen,
+      navigateToCreateQuoteScreen:
+          _navigationController.navigateToCreateQuoteScreen,
       mediaController: _mediaController,
       showQuickCommunicationOptions: showQuickCommunicationOptions,
       onUpdated: () => setState(() {}),
     );
 
     _uiController.tabController.addListener(() {
-      if (_selectionController.isSelectionMode && _uiController.tabController.index != 3) {
+      if (_selectionController.isSelectionMode &&
+          _uiController.tabController.index != 3) {
         _selectionController.exitSelectionMode();
       }
-
     });
-
   }
-
-
-
-
 
   @override
   void dispose() {
@@ -141,7 +150,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
           return Scaffold(
             backgroundColor: Colors.grey[50],
             body: NestedScrollView(
-              headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+              headerSliverBuilder:
+                  (BuildContext context, bool innerBoxIsScrolled) {
                 return <Widget>[
                   _buildModernSliverAppBar(appState),
                 ];
@@ -159,8 +169,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   ),
                   QuotesTab(
                     customer: widget.customer,
-                    onCreateQuote: _navigationController.navigateToCreateQuoteScreen,
-                    onOpenQuote: _navigationController.navigateToSimplifiedQuoteDetail,
+                    onCreateQuote:
+                        _navigationController.navigateToCreateQuoteScreen,
+                    onOpenQuote:
+                        _navigationController.navigateToSimplifiedQuoteDetail,
                   ),
                   InspectionTab(customer: widget.customer), // NEW
                   MediaTab(
@@ -171,10 +183,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     onEnterSelection: _selectionController.enterSelectionMode,
                     onExitSelection: _selectionController.exitSelectionMode,
                     onSelectAll: _selectionController.selectAllMedia,
-                    onToggleSelection: _selectionController.toggleMediaSelection,
+                    onToggleSelection:
+                        _selectionController.toggleMediaSelection,
                     onDeleteSelected: _selectionController.deleteSelectedMedia,
                     onPickImageFromCamera: _mediaController.pickImageFromCamera,
-                    onPickImageFromGallery: _mediaController.pickImageFromGallery,
+                    onPickImageFromGallery:
+                        _mediaController.pickImageFromGallery,
                     onPickDocument: _mediaController.pickDocument,
                     onViewMedia: _mediaController.viewMedia,
                     onShowContextMenu: _mediaController.showMediaContextMenu,
@@ -206,6 +220,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
       },
     );
   }
+
   Widget _buildModernSliverAppBar(AppStateProvider appState) {
     return _uiController.buildModernSliverAppBar(
       appState,
@@ -228,23 +243,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
     showDialog(
       context: context,
-      builder: (context) => SmsPreviewDialog(controller: dialogController),
+      builder: (context) => SmsPreviewDialog(
+        controller: dialogController,
+        onEdit: () => _editSMSBeforeSending(dialogController),
+      ),
     );
   }
 
-
-
-  void _editSMSBeforeSending(dynamic template, String originalMessage) {
-    final dialogController = CommunicationDialogController(
-      commController: _commController,
-      template: template,
-    )..updateSmsMessage(originalMessage);
-
+  void _editSMSBeforeSending(CommunicationDialogController controller) {
     showDialog(
       context: context,
-      builder: (context) => SmsEditDialog(controller: dialogController),
+      builder: (context) => SmsEditDialog(controller: controller),
     );
   }
+
   void _previewAndSendEmail(dynamic template) {
     final dialogController = CommunicationDialogController(
       commController: _commController,
@@ -253,41 +265,27 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
     showDialog(
       context: context,
-      builder: (context) => EmailPreviewDialog(controller: dialogController),
+      builder: (context) => EmailPreviewDialog(
+        controller: dialogController,
+        onEdit: () => _editEmailBeforeSending(dialogController),
+      ),
     );
   }
 
-  void _editEmailBeforeSending(dynamic template, String originalSubject, String originalContent) {
-    final dialogController = CommunicationDialogController(
-      commController: _commController,
-      template: template,
-    )
-      ..updateEmailSubject(originalSubject)
-      ..updateEmailContent(originalContent);
-
+  void _editEmailBeforeSending(CommunicationDialogController controller) {
     showDialog(
       context: context,
-      builder: (context) => EmailEditDialog(controller: dialogController),
+      builder: (context) => EmailEditDialog(controller: controller),
     );
   }
-
 
   // MEDIA FUNCTIONALITY METHODS
 
-
-
   // HELPER METHODS
 
-
   // showErrorSnackBar provided by CommunicationActionsMixin
-
-
-  
 
   // Customer action methods moved to CustomerActionsController
 
   // REAL COMMUNICATION METHODS MOVED TO MIXIN
-
-
-
 }

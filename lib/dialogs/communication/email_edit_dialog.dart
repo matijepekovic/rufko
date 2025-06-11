@@ -100,9 +100,11 @@ class _EmailEditDialogState extends State<EmailEditDialog> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.person, size: 16, color: Colors.grey),
+                          const Icon(Icons.person,
+                              size: 16, color: Colors.grey),
                           const SizedBox(width: 8),
-                          Text('To: ${customer.name} (${customer.email ?? 'No email'})'),
+                          Text(
+                              'To: ${customer.name} (${customer.email ?? 'No email'})'),
                         ],
                       ),
                     ),
@@ -177,12 +179,15 @@ class _EmailEditDialogState extends State<EmailEditDialog> {
                   const SizedBox(width: 12),
                   OutlinedButton.icon(
                     onPressed: () {
-                      widget.controller.updateEmailSubject(subjectController.text.trim());
-                      widget.controller.updateEmailContent(contentController.text.trim());
+                      widget.controller
+                          .updateEmailSubject(subjectController.text.trim());
+                      widget.controller
+                          .updateEmailContent(contentController.text.trim());
                       Navigator.pop(context);
                       showDialog(
                         context: context,
-                        builder: (context) => EmailPreviewDialog(controller: widget.controller),
+                        builder: (context) =>
+                            EmailPreviewDialog(controller: widget.controller),
                       );
                     },
                     icon: const Icon(Icons.preview),
@@ -196,7 +201,8 @@ class _EmailEditDialogState extends State<EmailEditDialog> {
                       if (subj.isEmpty || cont.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text('Subject and content cannot be empty'),
+                            content:
+                                Text('Subject and content cannot be empty'),
                             backgroundColor: Colors.red,
                           ),
                         );

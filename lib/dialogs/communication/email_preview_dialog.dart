@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/communication_dialog_controller.dart';
-import 'email_edit_dialog.dart';
 
 class EmailPreviewDialog extends StatelessWidget {
   final CommunicationDialogController controller;
-  const EmailPreviewDialog({super.key, required this.controller});
+  final VoidCallback? onEdit;
+  const EmailPreviewDialog({super.key, required this.controller, this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -81,16 +81,19 @@ class EmailPreviewDialog extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.person, size: 16, color: Colors.grey),
+                              const Icon(Icons.person,
+                                  size: 16, color: Colors.grey),
                               const SizedBox(width: 8),
                               Text('To: ${customer.name}',
-                                  style: const TextStyle(fontWeight: FontWeight.w500)),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500)),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(Icons.email, size: 16, color: Colors.grey),
+                              const Icon(Icons.email,
+                                  size: 16, color: Colors.grey),
                               const SizedBox(width: 8),
                               Text(customer.email ?? 'No email address'),
                             ],
@@ -101,10 +104,8 @@ class EmailPreviewDialog extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(
                       'Subject:',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleSmall
-                          ?.copyWith(fontWeight: FontWeight.bold, color: Colors.grey[700]),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold, color: Colors.grey[700]),
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -117,16 +118,15 @@ class EmailPreviewDialog extends StatelessWidget {
                       ),
                       child: Text(
                         subject,
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 16),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Message:',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleSmall
-                          ?.copyWith(fontWeight: FontWeight.bold, color: Colors.grey[700]),
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold, color: Colors.grey[700]),
                     ),
                     const SizedBox(height: 8),
                     Container(
@@ -166,10 +166,7 @@ class EmailPreviewDialog extends StatelessWidget {
                   OutlinedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      showDialog(
-                        context: context,
-                        builder: (context) => EmailEditDialog(controller: controller),
-                      );
+                      onEdit?.call();
                     },
                     icon: const Icon(Icons.edit),
                     label: const Text('Edit'),

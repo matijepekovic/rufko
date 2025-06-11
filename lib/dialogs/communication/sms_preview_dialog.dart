@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/communication_dialog_controller.dart';
-import 'sms_edit_dialog.dart';
 
 class SmsPreviewDialog extends StatelessWidget {
   final CommunicationDialogController controller;
-  const SmsPreviewDialog({super.key, required this.controller});
+  final VoidCallback? onEdit;
+  const SmsPreviewDialog({super.key, required this.controller, this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -83,16 +83,19 @@ class SmsPreviewDialog extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.person, size: 16, color: Colors.grey),
+                              const Icon(Icons.person,
+                                  size: 16, color: Colors.grey),
                               const SizedBox(width: 8),
                               Text('To: ${customer.name}',
-                                  style: const TextStyle(fontWeight: FontWeight.w500)),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500)),
                             ],
                           ),
                           const SizedBox(height: 4),
                           Row(
                             children: [
-                              const Icon(Icons.phone, size: 16, color: Colors.grey),
+                              const Icon(Icons.phone,
+                                  size: 16, color: Colors.grey),
                               const SizedBox(width: 8),
                               Text(customer.phone ?? 'No phone number'),
                             ],
@@ -136,13 +139,15 @@ class SmsPreviewDialog extends StatelessWidget {
                             alignment: Alignment.centerRight,
                             child: Container(
                               constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 0.6,
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.6,
                               ),
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 12),
                               decoration: BoxDecoration(
                                 color: Colors.purple,
-                                borderRadius: BorderRadius.circular(18).copyWith(
+                                borderRadius:
+                                    BorderRadius.circular(18).copyWith(
                                   bottomRight: const Radius.circular(4),
                                 ),
                               ),
@@ -159,8 +164,8 @@ class SmsPreviewDialog extends StatelessWidget {
                           const SizedBox(height: 8),
                           Text(
                             '${filledMessage.length} characters',
-                            style:
-                                TextStyle(color: Colors.grey[600], fontSize: 11),
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 11),
                           ),
                         ],
                       ),
@@ -189,10 +194,7 @@ class SmsPreviewDialog extends StatelessWidget {
                   OutlinedButton.icon(
                     onPressed: () {
                       Navigator.pop(context);
-                      showDialog(
-                        context: context,
-                        builder: (context) => SmsEditDialog(controller: controller),
-                      );
+                      onEdit?.call();
                     },
                     icon: const Icon(Icons.edit),
                     label: const Text('Edit'),
@@ -219,4 +221,3 @@ class SmsPreviewDialog extends StatelessWidget {
     );
   }
 }
-
