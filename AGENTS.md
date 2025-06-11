@@ -10,7 +10,7 @@
 ### Large Files Identified (>500 lines):
 | File | Lines | Priority | Status |
 |------|-------|----------|---------|
-| lib/providers/app_state_provider.dart | 1141 | HIGH | IN_PROGRESS |
+| lib/providers/app_state_provider.dart | 1139 | HIGH | IN_PROGRESS |
 | lib/screens/customer_detail_screen.dart | 1596 | HIGH | PENDING |
 | lib/screens/customer_detail/info_tab.dart | 1585 | HIGH | PENDING |
 | lib/screens/settings_screen.dart | 1469 | HIGH | PENDING |
@@ -30,6 +30,7 @@
 | lib/widgets/templates/pdf_templates_tab.dart | 604 | LOW | PENDING |
 | lib/widgets/templates/dialgos/edit_field_dialog.dart | 601 | LOW | PENDING |
 | lib/screens/templates_screen.dart | 594 | LOW | PENDING |
+| lib/providers/helpers/roof_scope_helper.dart | 583 | LOW | PENDING |
 | lib/widgets/quote_totals_section.dart | 559 | LOW | PENDING |
 | lib/screens/simplified_quote_detail_screen.dart | 555 | LOW | PENDING |
 | lib/widgets/templates/fields_tab.dart | 546 | LOW | PENDING |
@@ -74,9 +75,10 @@
 - ✅ 2025-06-11T04:50Z Extracted email template helper → `lib/providers/helpers/email_template_helper.dart` (reduced by ~30 lines)
 - ✅ 2025-06-11T05:10Z Removed leftover review comment in `app_state_provider.dart`
 - ✅ 2025-06-11T05:20Z Extracted customer helper → `lib/providers/helpers/customer_helper.dart` (reduced by ~20 lines)
+- ✅ 2025-06-11T05:17Z Fixed analyzer errors and cleaned imports; simplified `loadTemplateCategories`
 
 #### Validation Results:
-- **New file size:** 1141 lines (was 1972 lines)
+- **New file size:** 1139 lines (was 1972 lines)
 - **Functionality preserved:** YES
 - **All imports working:** YES
 - **Status:** NEEDS_MORE_WORK

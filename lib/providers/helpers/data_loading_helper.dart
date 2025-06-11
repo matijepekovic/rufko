@@ -131,41 +131,19 @@ class DataLoadingHelper {
 
   static Future<List<TemplateCategory>> loadTemplateCategories(
       DatabaseService db) async {
-    final categories = <TemplateCategory>[];
     try {
-      final rawData = db.getRawCategoriesBoxValues();
-      for (var item in rawData) {
-        if (item is TemplateCategory) {
-          categories.add(item);
-        } else if (item is Map) {
-          try {
-            categories.add(
-              TemplateCategory.fromMap(Map<String, dynamic>.from(item)),
-            );
-          } catch (e) {
-            if (kDebugMode) {
-              debugPrint(
-                'Error converting map to TemplateCategory: $e. Map: $item',
-              );
-            }
-          }
-        } else {
-          if (kDebugMode) {
-            debugPrint(
-              'Skipping unexpected data type while loading template categories: '
-              '${item.runtimeType}',
-            );
-          }
-        }
-      }
+      final categories = db.getRawCategoriesBoxValues();
       if (kDebugMode) {
-        debugPrint('📚 Loaded ${categories.length} template categories');
+        debugPrint("📚 Loaded ${categories.length} template categories");
       }
+      return categories;
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Error loading template categories: $e');
+        debugPrint("Error loading template categories: $e");
       }
+      return [];
     }
-    return categories;
   }
+
+  
 }

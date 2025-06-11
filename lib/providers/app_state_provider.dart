@@ -1,8 +1,6 @@
 // lib/providers/app_state_provider.dart
 
 import 'package:flutter/foundation.dart';
-import 'dart:io';
-import 'package:syncfusion_flutter_pdf/pdf.dart' as syncfusion;
 import '../models/customer.dart';
 import '../models/product.dart';
 import '../models/simplified_quote.dart';
@@ -42,7 +40,7 @@ class AppStateProvider extends ChangeNotifier {
   List<MessageTemplate> _messageTemplates = [];
   List<EmailTemplate> _emailTemplates = [];
   List<CustomAppDataField> _customAppDataFields = [];
-  final List<TemplateCategory> _templateCategories = [];
+  List<TemplateCategory> _templateCategories = [];
   List<InspectionDocument> _inspectionDocuments = [];
 
   bool _isLoading = false;

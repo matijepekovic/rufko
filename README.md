@@ -109,7 +109,7 @@ Run `setup.sh` before running Flutter commands in Codex.
 This project is currently undergoing systematic refactoring to improve maintainability.
 
 ### Current Status
-- **Large files identified:** 28
+- **Large files identified:** 29
 - **Files refactored:** 1
 - **Current focus:** lib/providers/app_state_provider.dart
 - **Progress:** 8% complete
@@ -117,7 +117,7 @@ This project is currently undergoing systematic refactoring to improve maintaina
 ### Priority List Backup
 | File | Lines | Priority | Status |
 |------|-------|----------|---------|
-| lib/providers/app_state_provider.dart | 1141 | HIGH | IN_PROGRESS |
+| lib/providers/app_state_provider.dart | 1139 | HIGH | IN_PROGRESS |
 | lib/screens/customer_detail_screen.dart | 1596 | HIGH | PENDING |
 | lib/screens/customer_detail/info_tab.dart | 1585 | HIGH | PENDING |
 | lib/screens/settings_screen.dart | 1469 | HIGH | PENDING |
@@ -137,6 +137,7 @@ This project is currently undergoing systematic refactoring to improve maintaina
 | lib/widgets/templates/pdf_templates_tab.dart | 604 | LOW | PENDING |
 | lib/widgets/templates/dialgos/edit_field_dialog.dart | 601 | LOW | PENDING |
 | lib/screens/templates_screen.dart | 594 | LOW | PENDING |
+| lib/providers/helpers/roof_scope_helper.dart | 583 | LOW | PENDING |
 | lib/widgets/quote_totals_section.dart | 559 | LOW | PENDING |
 | lib/screens/simplified_quote_detail_screen.dart | 555 | LOW | PENDING |
 | lib/widgets/templates/fields_tab.dart | 546 | LOW | PENDING |
@@ -164,4 +165,5 @@ This project is currently undergoing systematic refactoring to improve maintaina
 - ✅ 2025-06-11 Extracted email template helper
 - ✅ 2025-06-11 Removed inline review comment in `app_state_provider.dart`
 - ✅ 2025-06-11 Extracted customer helper
+- ✅ 2025-06-11 Fixed analyzer errors and cleaned imports
 See `AGENTS.MD` for detailed refactoring progress and methodology.

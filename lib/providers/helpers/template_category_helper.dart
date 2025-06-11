@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 
 import '../../models/template_category.dart';
 import '../../services/database_service.dart';
