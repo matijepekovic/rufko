@@ -44,15 +44,12 @@ class PdfViewerUIBuilder {
             const SizedBox(width: 8),
             const Text('Loading form fields...', style: TextStyle(fontSize: 12)),
           ] else ...[
-            Icon(
-              hasEdits
-                  ? Icons.edit
-                  : (true ? Icons.touch_app : Icons.visibility),
-              size: 16,
-              color: hasEdits
-                  ? Colors.orange.shade700
-                  : (true ? Colors.green.shade700 : Colors.blue.shade700),
-            ),
+              Icon(
+                hasEdits ? Icons.edit : Icons.touch_app,
+                size: 16,
+                color:
+                    hasEdits ? Colors.orange.shade700 : Colors.green.shade700,
+              ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -149,7 +146,7 @@ class PdfViewerUIBuilder {
             left: 0,
             right: 0,
             child: Container(
-              color: Colors.orange.shade600.withOpacity(0.9),
+              color: Colors.orange.shade600.withAlpha((0.9 * 255).round()),
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
@@ -184,7 +181,8 @@ class PdfViewerUIBuilder {
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color:
+                        Colors.black.withAlpha((0.1 * 255).round()),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),

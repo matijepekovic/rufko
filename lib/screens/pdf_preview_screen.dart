@@ -4,22 +4,17 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
-import 'package:syncfusion_flutter_pdf/pdf.dart' as sf_pdf;
 import '../controllers/pdf_document_controller.dart';
 import '../controllers/pdf_editing_controller.dart';
 import '../controllers/pdf_file_operations_controller.dart';
 import '../controllers/pdf_viewer_ui_builder.dart';
 import '../controllers/template_field_dialog_manager.dart';
 import '../models/pdf_form_field.dart';
-import '../models/edit_action.dart';
 import '../providers/app_state_provider.dart';
 import '../models/simplified_quote.dart';
 import '../models/customer.dart';
-import '../models/project_media.dart';
 import '../theme/rufko_theme.dart';
 import '../mixins/file_sharing_mixin.dart';
 import '../services/pdf_field_mapping_service.dart';
@@ -64,7 +59,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   // Enhanced editing features
   final PdfEditingController _editingController = PdfEditingController();
   List<PDFFormField> _formFields = [];
-  final bool _showFieldOverlays = false;
   bool _isLoadingFields = false;
 
   late PdfFileOperationsController _fileOpsController;
@@ -125,10 +119,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
     }
   }
 
-  // Add edit action to history
-  void _addEditAction(String fieldName, String oldValue, String newValue) {
-    _editingController.addEdit(fieldName, oldValue, newValue);
-  }
 
   // Undo last edit
   void _undoEdit() {
@@ -151,11 +141,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
     }
   }
 
-  // Get display name for field using service
-  String _getFieldDisplayName(String fieldName) {
-    return PdfFieldMappingService.instance.getFieldDisplayName(fieldName);
-  }
-
   // Get current field value from quote/customer data using service
   String _getCurrentFieldValue(String fieldName) {
     return PdfFieldMappingService.instance.getCurrentFieldValue(
@@ -165,12 +150,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
     );
   }
 
-  // Show edit dialog for template fields
-  void _showTemplateFieldEditDialog(String fieldName, String currentValue) {
-    _dialogManager.showEditDialog(fieldName, currentValue);
-  }
 
-  @override
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -283,11 +263,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   }
 
   // Build form field overlays - FIXED VISUAL SYSTEM
-
-  // Build quick edit button for template fields
-  Widget _buildQuickEditButton(String fieldName, String displayName) {
-    return _uiBuilder.buildQuickEditButton(fieldName, displayName);
-  }
 
   // Build action buttons
 
