@@ -15,7 +15,10 @@ import '../mixins/file_sharing_mixin.dart';
 import '../mixins/communication_actions_mixin.dart';
 import '../mixins/customer_communication_mixin.dart';
 import 'customer_detail/media_tab_controller.dart';
-import 'customer_detail/customer_edit_dialog.dart';
+import '../controllers/media_selection_controller.dart';
+import '../controllers/navigation_controller.dart';
+import '../controllers/customer_actions_controller.dart';
+import '../controllers/ui_state_controller.dart';
 import 'customer_detail/quotes_tab.dart';
 import 'customer_detail/media_tab.dart';
 import 'customer_detail/info_tab.dart';
@@ -40,15 +43,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         FileSharingMixin,
         CommunicationActionsMixin,
         CustomerCommunicationMixin {
-  late TabController _tabController;
+  late UIStateController _uiController;
+  late MediaSelectionController _selectionController;
+  late NavigationController _navigationController;
+  late CustomerActionsController _actionsController;
   final TextEditingController _communicationController = TextEditingController();
   final ImagePicker _imagePicker = ImagePicker();
-  bool _isProcessingMedia = false;
-
-
-  // Multi-select state for media
-  bool _isSelectionMode = false;
-  Set<String> _selectedMediaIds = <String>{};
   late MediaTabController _mediaController;
   late CommunicationController _commController;
 
@@ -64,13 +64,12 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   @override
   void initState() {
     super.initState();
+    _uiController = UIStateController(vsync: this, onUpdate: () => setState(() {}));
     _mediaController = MediaTabController(
       context: context,
       customer: widget.customer,
       imagePicker: _imagePicker,
-      setProcessingState: (processing) {
-        setState(() => _isProcessingMedia = processing);
-      },
+      setProcessingState: _uiController.setProcessingState,
       shareFile: ({required File file, required String fileName, String? description, Customer? customer, String? fileType}) {
         return shareFile(file: file, fileName: fileName, description: description, customer: customer, fileType: fileType);
       },
@@ -83,15 +82,29 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         if (mounted) setState(() {});
       },
     );
-    _tabController = TabController(length: 4, vsync: this);
+    _navigationController = NavigationController(context: context, customer: widget.customer);
+    _selectionController = MediaSelectionController(
+      context: context,
+      customer: widget.customer,
+      showErrorSnackBar: showErrorSnackBar,
+      onStateChanged: () => setState(() {}),
+    );
+    _actionsController = CustomerActionsController(
+      context: context,
+      customer: widget.customer,
+      navigateToCreateQuoteScreen: _navigationController.navigateToCreateQuoteScreen,
+      mediaController: _mediaController,
+      showQuickCommunicationOptions: showQuickCommunicationOptions,
+      onUpdated: () => setState(() {}),
+    );
 
-    // Listen for tab changes to exit selection mode
-    _tabController.addListener(() {
-      if (_isSelectionMode && _tabController.index != 3) {
-        _exitSelectionMode();
+    _uiController.tabController.addListener(() {
+      if (_selectionController.isSelectionMode && _uiController.tabController.index != 3) {
+        _selectionController.exitSelectionMode();
       }
 
     });
+
   }
 
 
@@ -100,120 +113,21 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _uiController.dispose();
     _communicationController.dispose();
     super.dispose();
   }
 
-  // SELECTION MODE METHODS
-  void _enterSelectionMode() {
-    setState(() {
-      _isSelectionMode = true;
-      _selectedMediaIds.clear();
-    });
-  }
-
-  void _exitSelectionMode() {
-    setState(() {
-      _isSelectionMode = false;
-      _selectedMediaIds.clear();
-    });
-  }
-
-  void _toggleMediaSelection(String mediaId) {
-    setState(() {
-      if (_selectedMediaIds.contains(mediaId)) {
-        _selectedMediaIds.remove(mediaId);
-      } else {
-        _selectedMediaIds.add(mediaId);
-      }
-    });
-  }
-
-  void _selectAllMedia() {
-    final appState = context.read<AppStateProvider>();
-    final mediaItems = appState.getProjectMediaForCustomer(widget.customer.id);
-
-    setState(() {
-      if (_selectedMediaIds.length == mediaItems.length) {
-        // Deselect all if all are selected
-        _selectedMediaIds.clear();
-      } else {
-        // Select all
-        _selectedMediaIds = mediaItems.map((m) => m.id).toSet();
-      }
-    });
-  }
-
-  void _deleteSelectedMedia() {
-    if (_selectedMediaIds.isEmpty) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete ${_selectedMediaIds.length} file${_selectedMediaIds.length == 1 ? '' : 's'}'),
-        content: Text(
-            _selectedMediaIds.length == 1
-                ? 'Are you sure you want to delete this file?'
-                : 'Are you sure you want to delete these ${_selectedMediaIds.length} files?'
-        ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              final navigator = Navigator.of(context);
-
-              try {
-                final appState = context.read<AppStateProvider>();
-                final mediaItems = appState.getProjectMediaForCustomer(widget.customer.id);
-                final itemsToDelete = mediaItems.where((m) => _selectedMediaIds.contains(m.id)).toList();
-
-                // Delete files from device and app state
-                for (final mediaItem in itemsToDelete) {
-                  // Delete file from device
-                  final file = File(mediaItem.filePath);
-                  if (await file.exists()) {
-                    await file.delete();
-                  }
-
-                  // Remove from app state
-                  await appState.deleteProjectMedia(mediaItem.id);
-                }
-
-                // Exit selection mode
-                _exitSelectionMode();
-
-                navigator.pop();
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text('Deleted ${itemsToDelete.length} file${itemsToDelete.length == 1 ? '' : 's'}'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              } catch (e) {
-                navigator.pop();
-                showErrorSnackBar('Error deleting files: $e');
-              }
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
+  // SELECTION MODE METHODS ARE HANDLED BY MediaSelectionController
 
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !_isSelectionMode,
+      canPop: !_selectionController.isSelectionMode,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          if (_isSelectionMode) {
-            _exitSelectionMode();
+          if (_selectionController.isSelectionMode) {
+            _selectionController.exitSelectionMode();
           }
         }
       },
@@ -228,7 +142,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                 ];
               },
               body: TabBarView(
-                controller: _tabController,
+                controller: _uiController.tabController,
                 children: [
                   InfoTab(
                     customer: widget.customer,
@@ -240,20 +154,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   ),
                   QuotesTab(
                     customer: widget.customer,
-                    onCreateQuote: _navigateToCreateQuoteScreen,
-                    onOpenQuote: _navigateToSimplifiedQuoteDetail,
+                    onCreateQuote: _navigationController.navigateToCreateQuoteScreen,
+                    onOpenQuote: _navigationController.navigateToSimplifiedQuoteDetail,
                   ),
                   InspectionTab(customer: widget.customer), // NEW
                   MediaTab(
                     customer: widget.customer,
-                    isProcessing: _isProcessingMedia,
-                    isSelectionMode: _isSelectionMode,
-                    selectedMediaIds: _selectedMediaIds,
-                    onEnterSelection: _enterSelectionMode,
-                    onExitSelection: _exitSelectionMode,
-                    onSelectAll: _selectAllMedia,
-                    onToggleSelection: _toggleMediaSelection,
-                    onDeleteSelected: _deleteSelectedMedia,
+                    isProcessing: _uiController.isProcessingMedia,
+                    isSelectionMode: _selectionController.isSelectionMode,
+                    selectedMediaIds: _selectionController.selectedMediaIds,
+                    onEnterSelection: _selectionController.enterSelectionMode,
+                    onExitSelection: _selectionController.exitSelectionMode,
+                    onSelectAll: _selectionController.selectAllMedia,
+                    onToggleSelection: _selectionController.toggleMediaSelection,
+                    onDeleteSelected: _selectionController.deleteSelectedMedia,
                     onPickImageFromCamera: _mediaController.pickImageFromCamera,
                     onPickImageFromGallery: _mediaController.pickImageFromGallery,
                     onPickDocument: _mediaController.pickDocument,
@@ -273,199 +187,31 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
   Widget _buildFloatingActionButton() {
     return AnimatedBuilder(
-      animation: _tabController,
+      animation: _uiController.tabController,
       builder: (context, child) {
-        final currentTab = _tabController.index;
-
-        // Media tab with selection mode
-        if (currentTab == 4 && _isSelectionMode) {
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (_selectedMediaIds.isNotEmpty)
-                FloatingActionButton(
-                  heroTag: "delete_selected_media_fab",
-                  onPressed: _deleteSelectedMedia,
-                  backgroundColor: Colors.red,
-                  child: const Icon(Icons.delete),
-                ),
-              const SizedBox(width: 16),
-              FloatingActionButton(
-                heroTag: "cancel_media_selection_fab",
-                onPressed: _exitSelectionMode,
-                backgroundColor: Colors.grey,
-                child: const Icon(Icons.close),
-              ),
-            ],
-          );
-        }
-
-
-
-        // Regular FABs for each tab
-        switch (currentTab) {
-          case 0: // Info tab
-            return FloatingActionButton.extended(
-              heroTag: "info_fab",
-              onPressed: _navigateToCreateQuoteScreen,
-              icon: const Icon(Icons.add),
-              label: const Text('New Quote'),
-              backgroundColor: Theme.of(context).primaryColor,
-            );
-          case 1: // Quotes tab
-            return FloatingActionButton.extended(
-              heroTag: "quotes_fab",
-              onPressed: _navigateToCreateQuoteScreen,
-              icon: const Icon(Icons.add),
-              label: const Text('New Quote'),
-              backgroundColor: Theme.of(context).primaryColor,
-            );
-          case 2: // Inspection tab (was case 3)
-            return FloatingActionButton.extended(
-              heroTag: "inspection_fab",
-              onPressed: _navigateToCreateQuoteScreen,
-              icon: const Icon(Icons.add_task),
-              label: const Text('New Quote'),
-              backgroundColor: Colors.green,
-            );
-          case 3: // Media tab (was case 4)
-            return FloatingActionButton.extended(
-              heroTag: "media_fab",
-              onPressed: _mediaController.showMediaOptions,
-              icon: const Icon(Icons.add_a_photo),
-              label: const Text('Add Media'),
-              backgroundColor: Colors.teal,
-            );
-          default:
-            return FloatingActionButton.extended(
-              heroTag: "default_fab",
-              onPressed: _navigateToCreateQuoteScreen,
-              icon: const Icon(Icons.add),
-              label: const Text('New Quote'),
-              backgroundColor: Theme.of(context).primaryColor,
-            );
-        }
+        return _uiController.buildFloatingActionButton(
+          isSelectionMode: _selectionController.isSelectionMode,
+          selectedMediaIds: _selectionController.selectedMediaIds,
+          deleteSelectedMedia: _selectionController.deleteSelectedMedia,
+          exitSelectionMode: _selectionController.exitSelectionMode,
+          navigateToCreateQuoteScreen:
+              _navigationController.navigateToCreateQuoteScreen,
+          showMediaOptions: _mediaController.showMediaOptions,
+        );
       },
     );
   }
   Widget _buildModernSliverAppBar(AppStateProvider appState) {
-    return SliverAppBar(
-      expandedHeight: 100,
-      floating: false,
-      pinned: true,
-      backgroundColor: RufkoTheme.primaryColor,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                RufkoTheme.primaryColor,
-                RufkoTheme.primaryDarkColor,
-              ],
-            ),
-          ),
-        ),
-      ),
-      actions: [
-        if (_tabController.index == 3 && !_isSelectionMode)
-          IconButton(
-            icon: const Icon(Icons.select_all),
-            onPressed: _enterSelectionMode,
-            tooltip: 'Select files',
-            color: Colors.white,
-          ),
-        if (!_isSelectionMode)
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _editCustomer,
-            color: Colors.white,
-          ),
-        if (!_isSelectionMode)
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onSelected: (value) {
-              switch (value) {
-                case 'new_quote':
-                  _navigateToCreateQuoteScreen();
-                  break;
-                case 'edit_customer':
-                  _editCustomer();
-                  break;
-                case 'delete_customer':
-                  _showDeleteCustomerConfirmation();
-                  break;
-                case 'quick_actions':
-                  _showQuickActions();
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'new_quote',
-                child: Row(
-                  children: [
-                    Icon(Icons.add_box, size: 18),
-                    SizedBox(width: 8),
-                    Text('New Quote'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'edit_customer',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, size: 18),
-                    SizedBox(width: 8),
-                    Text('Edit Customer'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete_customer',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, size: 18, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Delete Customer', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'quick_actions',
-                child: Row(
-                  children: [
-                    Icon(Icons.more_horiz, size: 18),
-                    SizedBox(width: 8),
-                    Text('Quick Actions'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-      ],
-      bottom: TabBar(
-        controller: _tabController,
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.white70,
-        indicatorColor: Colors.white,
-        tabs: [
-          Tab(
-            icon: Icon(_isSelectionMode && _tabController.index == 3
-                ? Icons.checklist
-                : Icons.info_outline),
-            text: _isSelectionMode && _tabController.index == 3
-                ? '${_selectedMediaIds.length} selected'
-                : 'Info',
-          ),
-          const Tab(icon: Icon(Icons.description), text: 'Quotes'),
-          const Tab(icon: Icon(Icons.assignment), text: 'Inspection'),
-          const Tab(icon: Icon(Icons.photo_library), text: 'Media'),
-        ],
-      ),
+    return _uiController.buildModernSliverAppBar(
+      appState,
+      isSelectionMode: _selectionController.isSelectionMode,
+      enterSelectionMode: _selectionController.enterSelectionMode,
+      navigateToCreateQuoteScreen:
+          _navigationController.navigateToCreateQuoteScreen,
+      editCustomer: _actionsController.editCustomer,
+      deleteCustomer: _actionsController.showDeleteCustomerConfirmation,
+      showQuickActions: _actionsController.showQuickActions,
+      selectedMediaIds: _selectionController.selectedMediaIds,
     );
   }
 
@@ -1375,152 +1121,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
   
 
-  void _editCustomer() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => CustomerEditDialog(
-        customer: widget.customer,
-        onCustomerUpdated: () {
-          setState(() {});
-        },
-      ),
-    );
-  }
-
-  void _showDeleteCustomerConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Customer'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Are you sure you want to delete ${widget.customer.name}?'),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.shade200),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.warning, color: Colors.red, size: 20),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'This will also delete all quotes, RoofScope data, and media associated with this customer.',
-                      style: TextStyle(fontSize: 12, color: Colors.red),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<AppStateProvider>().deleteCustomer(widget.customer.id);
-              Navigator.pop(context);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${widget.customer.name} deleted successfully'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  void _navigateToCreateQuoteScreen() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SimplifiedQuoteScreen(
-          customer: widget.customer,
-        ),
-      ),
-    );
-  }
-
-  void _navigateToSimplifiedQuoteDetail(SimplifiedMultiLevelQuote quote) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SimplifiedQuoteDetailScreen(
-          quote: quote,
-          customer: widget.customer,
-        ),
-      ),
-    );
-  }
-
-  void _showQuickActions() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Quick Actions',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ListTile(
-              leading: const Icon(Icons.add_box, color: Colors.green),
-              title: const Text('Create New Quote'),
-              onTap: () {
-                Navigator.pop(context);
-                _navigateToCreateQuoteScreen();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.edit, color: Colors.blue),
-              title: const Text('Edit Customer'),
-              onTap: () {
-                Navigator.pop(context);
-                _editCustomer();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt, color: Colors.blue),
-              title: const Text('Add Media'),
-              onTap: () {
-                Navigator.pop(context);
-                _mediaController.showMediaOptions();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.flash_on, color: Colors.purple),
-              title: const Text('Quick Communication'),
-              onTap: () {
-                Navigator.pop(context);
-                showQuickCommunicationOptions();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  } // <-- Proper closing brace for _showQuickActions
+  // Customer action methods moved to CustomerActionsController
 
   // REAL COMMUNICATION METHODS MOVED TO MIXIN
 
