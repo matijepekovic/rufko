@@ -1,16 +1,10 @@
 // lib/screens/template_editor_screen.dart
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
-
-import '../widgets/common/loading_overlay.dart';
-import '../widgets/template_editor/mapping_mode_banner.dart';
-import '../widgets/template_editor/pdf_viewer_widget.dart';
-import '../widgets/template_editor/template_upload_widget.dart';
 
 
 import '../models/pdf_template.dart';
@@ -154,16 +148,54 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         ],
       ),
       body: _isLoading
-          ? LoadingOverlay(message: _loadingMessage)
+          ? Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            if (_loadingMessage.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Text(_loadingMessage)
+            ]
+          ],
+        ),
+      )
           : _currentTemplate == null
-              ? TemplateUploadWidget(onUpload: _uploadAndCreateTemplate)
-              : _buildMobilePdfViewer(),
+          ? _buildTemplateSelector()
+          : _buildMobilePdfViewer(),
     );
 
   }
 
   Widget _buildTemplateSelector() {
-    return TemplateUploadWidget(onUpload: _uploadAndCreateTemplate);
+    return Center(
+      child: Card(
+        margin: const EdgeInsets.all(32),
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.picture_as_pdf_outlined, size: 64, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text('Upload PDF to Start', style: Theme.of(context).textTheme.headlineSmall),
+              const SizedBox(height: 8),
+              Text(
+                'Upload a PDF form. The system will detect its fillable fields.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _uploadAndCreateTemplate,
+                icon: const Icon(Icons.upload_file),
+                label: const Text('Choose PDF File'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildMobilePdfViewer() {
@@ -173,21 +205,131 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
     return Column(
       children: [
-        const MappingModeBanner(),
-        Expanded(
-          child: PdfViewerWidget(
-            pdfFile: File(_currentTemplate!.pdfFilePath),
-            controller: _pdfViewerController,
-            onTap: _handlePdfTap,
-            onPageChanged: (page) {
-              if (!mounted) return;
-              setState(() {
-                _currentPageZeroBased = page;
-                _totalPagesInPdf = _pdfViewerController.pageCount;
-              });
-            },
+        // Compact mapping mode banner
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.orange.shade100, Colors.orange.shade50],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            border: Border.all(color: Colors.orange.shade300),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'MAPPING MODE: ',
+                        style: TextStyle(
+                          color: Colors.orange.shade800,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'Tap fields to map • Form changes not saved',
+                        style: TextStyle(
+                          color: Colors.orange.shade700,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+
+        // Full-screen PDF viewer
+        Expanded(
+          child: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.blueGrey.shade300),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha((0.1 * 255).round()),
+                  blurRadius: 5,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: SfPdfViewer.file(
+              File(_currentTemplate!.pdfFilePath),
+              controller: _pdfViewerController,
+              initialZoomLevel: 0,
+              enableDocumentLinkAnnotation: false,  // Try this
+              enableTextSelection: false,
+              onPageChanged: (details) {
+                if (!mounted) return;
+                setState(() {
+                  _currentPageZeroBased = details.newPageNumber - 1;
+                });
+              },
+              onTap: _handlePdfTap,
+            ),
+          ),
+        ),
+
+        // Page navigation for multi-page PDFs
+        if (_totalPagesInPdf > 1)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            color: Colors.blueGrey[50],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.first_page),
+                  tooltip: "First Page",
+                  iconSize: 20,
+                  onPressed: _currentPageZeroBased > 0
+                      ? () => _pdfViewerController.jumpToPage(1)
+                      : null,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  tooltip: "Previous Page",
+                  iconSize: 20,
+                  onPressed: _currentPageZeroBased > 0
+                      ? () => _pdfViewerController.previousPage()
+                      : null,
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Text(
+                    'Page ${_currentPageZeroBased + 1} of $_totalPagesInPdf',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  tooltip: "Next Page",
+                  iconSize: 20,
+                  onPressed: _currentPageZeroBased < _totalPagesInPdf - 1
+                      ? () => _pdfViewerController.nextPage()
+                      : null,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.last_page),
+                  tooltip: "Last Page",
+                  iconSize: 20,
+                  onPressed: _currentPageZeroBased < _totalPagesInPdf - 1
+                      ? () => _pdfViewerController.jumpToPage(_totalPagesInPdf)
+                      : null,
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
