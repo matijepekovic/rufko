@@ -3,6 +3,7 @@
 import 'package:intl/intl.dart';
 import '../models/customer.dart';
 import '../models/simplified_quote.dart';
+import "../models/pdf_template.dart";
 import '../providers/app_state_provider.dart';
 
 /// Handles mapping of PDF template fields to display names and values.
@@ -101,5 +102,49 @@ class PdfFieldMappingService {
         .where((m) => m.pdfFormFieldName.isNotEmpty)
         .map((m) => m.appDataType)
         .toList();
+  }
+
+  /// Link [appDataType] to a PDF field described by [pdfFieldInfo] on [template].
+  void performMapping(
+    PDFTemplate template,
+    String appDataType,
+    Map<String, dynamic> pdfFieldInfo,
+  ) {
+    final pdfFieldName = pdfFieldInfo['name'] as String;
+
+    template.fieldMappings.removeWhere((m) => m.appDataType == appDataType);
+    template.fieldMappings.removeWhere((m) => m.pdfFormFieldName == pdfFieldName);
+
+    final mapping = FieldMapping(
+      appDataType: appDataType,
+      pdfFormFieldName: pdfFieldName,
+      detectedPdfFieldType: PdfFormFieldType.values.firstWhere(
+        (e) => e.toString() == pdfFieldInfo['type'],
+        orElse: () => PdfFormFieldType.unknown,
+      ),
+      pageNumber: pdfFieldInfo['page'] as int,
+    );
+
+    final relRect = pdfFieldInfo['relativeRect'] as List<dynamic>?;
+    if (relRect != null && relRect.length == 4) {
+      mapping.visualX = relRect[0] as double?;
+      mapping.visualY = relRect[1] as double?;
+      mapping.visualWidth = relRect[2] as double?;
+      mapping.visualHeight = relRect[3] as double?;
+    }
+
+    template.addField(mapping);
+  }
+
+  /// Remove the mapping information for [mapping] on [template].
+  void unlinkField(PDFTemplate template, FieldMapping mapping) {
+    mapping
+      ..pdfFormFieldName = ''
+      ..detectedPdfFieldType = PdfFormFieldType.unknown
+      ..visualX = null
+      ..visualY = null
+      ..visualWidth = null
+      ..visualHeight = null;
+    template.updateField(mapping);
   }
 }

@@ -13,6 +13,9 @@ import '../models/field_definition.dart';
 import '../providers/app_state_provider.dart';
 import 'pdf_preview_screen.dart';
 import '../theme/rufko_theme.dart';
+import "../services/template_management_service.dart";
+import "../services/pdf_field_mapping_service.dart";
+import "../services/pdf_interaction_service.dart";
 
 class TemplateEditorScreen extends StatefulWidget {
   const TemplateEditorScreen({
@@ -337,30 +340,11 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       return;
     }
 
-    final int tappedPageIndexZeroBased = details.pageNumber - 1;
-    final Offset tapInPdfPageCoords = details.pagePosition;
-
-    Map<String, dynamic>? tappedFieldInfo;
-
-    // Find which PDF field was tapped
-    for (final fieldInfo in _detectedPdfFieldsList) {
-      if ((fieldInfo['page'] as int? ?? -1) != tappedPageIndexZeroBased) continue;
-
-      final List<dynamic>? pdfRectValues = fieldInfo['rect'] as List<dynamic>?;
-      if (pdfRectValues == null || pdfRectValues.length != 4) continue;
-
-      final Rect fieldPdfBounds = Rect.fromLTWH(
-        (pdfRectValues[0] as num).toDouble(),
-        (pdfRectValues[1] as num).toDouble(),
-        (pdfRectValues[2] as num).toDouble(),
-        (pdfRectValues[3] as num).toDouble(),
-      );
-
-      if (fieldPdfBounds.contains(tapInPdfPageCoords)) {
-        tappedFieldInfo = fieldInfo;
-        break;
-      }
-    }
+    final tappedFieldInfo = PdfInteractionService.instance.getTappedField(
+      _detectedPdfFieldsList,
+      details.pageNumber - 1,
+      details.pagePosition,
+    );
 
     if (tappedFieldInfo != null) {
       _showFieldMappingDialog(tappedFieldInfo);
@@ -717,46 +701,21 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   }
 
   void _performMapping(String appDataType, Map<String, dynamic> pdfFieldInfo) {
-    final String pdfFieldName = pdfFieldInfo['name'] as String;
+    if (_currentTemplate == null) return;
 
-    if (kDebugMode) debugPrint("Creating mapping: $appDataType → $pdfFieldName");
+    PdfFieldMappingService.instance
+        .performMapping(_currentTemplate!, appDataType, pdfFieldInfo);
 
-    // Remove any existing mapping for this app data type
-    _currentTemplate!.fieldMappings.removeWhere((m) => m.appDataType == appDataType);
-
-    // Remove any existing mapping for this PDF field (including unmapped placeholders)
-    _currentTemplate!.fieldMappings.removeWhere((m) => m.pdfFormFieldName == pdfFieldName);
-
-    // Create new mapping (without override functionality)
-    final newMapping = FieldMapping(
-      appDataType: appDataType,
-      pdfFormFieldName: pdfFieldName,
-      detectedPdfFieldType: PdfFormFieldType.values.firstWhere(
-            (e) => e.toString() == pdfFieldInfo['type'],
-        orElse: () => PdfFormFieldType.unknown,
-      ),
-      pageNumber: pdfFieldInfo['page'] as int,
-    );
-
-    final relRect = pdfFieldInfo['relativeRect'] as List<dynamic>?;
-    if (relRect != null && relRect.length == 4) {
-      newMapping.visualX = relRect[0] as double?;
-      newMapping.visualY = relRect[1] as double?;
-      newMapping.visualWidth = relRect[2] as double?;
-      newMapping.visualHeight = relRect[3] as double?;
-    }
-
-    _currentTemplate!.addField(newMapping);
     _currentTemplate!.updatedAt = DateTime.now();
-    debugPrint('🔧 Saving template with category: $_selectedCategoryKey');
-    _currentTemplate!.userCategoryKey = _selectedCategoryKey; // Save selected category
-    debugPrint('🔧 Template userCategoryKey after save: ${_currentTemplate!.userCategoryKey}');
+    _currentTemplate!.userCategoryKey = _selectedCategoryKey;
 
     if (mounted) {
-      setState(() {}); // Refresh UI
+      setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Linked "${PDFTemplate.getFieldDisplayName(appDataType)}" to "$pdfFieldName"'),
+          content: Text(
+            'Linked "${PDFTemplate.getFieldDisplayName(appDataType)}" to "${pdfFieldInfo['name']}"',
+          ),
           backgroundColor: Colors.green,
         ),
       );
@@ -764,21 +723,15 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   }
 
   void _unlinkField(FieldMapping mapping) {
-    if (!mounted) return;
+    if (!mounted || _currentTemplate == null) return;
 
-    setState(() {
-      mapping.pdfFormFieldName = '';
-      mapping.detectedPdfFieldType = PdfFormFieldType.unknown;
-      mapping.visualX = null;
-      mapping.visualY = null;
-      mapping.visualWidth = null;
-      mapping.visualHeight = null;
-      _currentTemplate!.updateField(mapping);
-    });
+    PdfFieldMappingService.instance.unlinkField(_currentTemplate!, mapping);
+
+    setState(() {});
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Field mapping removed."),
+        content: Text('Field mapping removed.'),
         backgroundColor: Colors.orange,
       ),
     );
@@ -818,19 +771,19 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         final filePath = result.files.single.path!;
         final originalFileName = result.files.single.name;
 
-        final templateName = await _showTemplateNameDialog(originalFileName.replaceAll('.pdf', ''));
+        final templateName =
+            await _showTemplateNameDialog(originalFileName.replaceAll('.pdf', ''));
         if (templateName == null || templateName.trim().isEmpty) {
           _setLoading(false);
           return;
         }
 
-        final template =
-            await appState.createPDFTemplateFromFile(filePath, templateName.trim());
+        final template = await TemplateManagementService.instance
+            .uploadAndCreateTemplate(filePath, templateName.trim(), appState);
         _setLoading(false);
 
         if (!mounted) return;
         if (template != null) {
-
           setState(() {
             _currentTemplate = template;
             _loadTemplateDetails();
@@ -861,7 +814,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
           backgroundColor: Colors.red,
         ),
       );
-      if (kDebugMode) debugPrint("Error uploading/creating template: $e");
+      if (kDebugMode) debugPrint('Error uploading/creating template: $e');
     }
   }
 
@@ -882,9 +835,9 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     final navigator = Navigator.of(context);
     final appState = context.read<AppStateProvider>();
     try {
-      _currentTemplate!.updatedAt = DateTime.now();
       _currentTemplate!.userCategoryKey = _selectedCategoryKey;
-      await appState.updatePDFTemplate(_currentTemplate!);
+      await TemplateManagementService.instance
+          .saveTemplate(_currentTemplate!, appState);
 
       if (!mounted) return;
       messenger.showSnackBar(
@@ -913,8 +866,8 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     try {
-      final previewPath =
-          await appState.generateTemplatePreview(_currentTemplate!);
+      final previewPath = await TemplateManagementService.instance
+          .generateTemplatePreview(_currentTemplate!, appState);
       _setLoading(false);
 
       if (!mounted) return;
