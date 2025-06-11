@@ -8,42 +8,34 @@ import '../models/roof_scope_data.dart';
 import '../models/project_media.dart';
 import '../models/app_settings.dart';
 import '../models/pdf_template.dart';
-import '../services/database_service.dart';
-import '../services/pdf_service.dart';
-import 'helpers/pdf_generation_helper.dart';
-import 'helpers/roof_scope_helper.dart';
-import 'helpers/data_loading_helper.dart';
-import 'helpers/template_category_helper.dart';
-import 'helpers/message_template_helper.dart';
-import 'helpers/email_template_helper.dart';
-import '../services/template_service.dart';
-import '../services/file_service.dart';
-import '../services/tax_service.dart';
 import '../models/message_template.dart';
 import '../models/email_template.dart';
 import '../models/template_category.dart';
+import '../services/database_service.dart';
+import 'helpers/pdf_generation_helper.dart';
+import 'helpers/roof_scope_helper.dart';
+import 'helpers/data_loading_helper.dart';
+import '../services/file_service.dart';
+import '../services/tax_service.dart';
 import '../models/custom_app_data.dart';
 import '../models/inspection_document.dart';
 import 'custom_fields_provider.dart';
 import 'customer_state_provider.dart';
 import 'product_state_provider.dart';
 import 'quote_state_provider.dart';
+import 'template_state_provider.dart';
 
 class AppStateProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
-  final PdfService _pdfService = PdfService();
 
   late final CustomerStateProvider customerState;
   late final ProductStateProvider productState;
   late final QuoteStateProvider quoteState;
+  late final TemplateStateProvider templateState;
   AppSettings? _appSettings;
   List<RoofScopeData> _roofScopeDataList = [];
   List<ProjectMedia> _projectMedia = [];
-  List<PDFTemplate> _pdfTemplates = [];
-  List<MessageTemplate> _messageTemplates = [];
-  List<EmailTemplate> _emailTemplates = [];
   final CustomFieldsProvider customFields = CustomFieldsProvider();
-  List<TemplateCategory> _templateCategories = [];
 
   bool _isLoading = false;
   String _loadingMessage = '';
@@ -55,19 +47,18 @@ class AppStateProvider extends ChangeNotifier {
   List<SimplifiedMultiLevelQuote> get simplifiedQuotes => quoteState.quotes;
   List<RoofScopeData> get roofScopeDataList => _roofScopeDataList;
   List<ProjectMedia> get projectMedia => _projectMedia;
-  List<PDFTemplate> get pdfTemplates => _pdfTemplates;
-  List<PDFTemplate> get activePDFTemplates =>
-      _pdfTemplates.where((t) => t.isActive).toList();
-  List<MessageTemplate> get messageTemplates => _messageTemplates;
+  List<PDFTemplate> get pdfTemplates => templateState.pdfTemplates;
+  List<PDFTemplate> get activePDFTemplates => templateState.activePDFTemplates;
+  List<MessageTemplate> get messageTemplates => templateState.messageTemplates;
   List<MessageTemplate> get activeMessageTemplates =>
-      _messageTemplates.where((t) => t.isActive).toList();
-  List<EmailTemplate> get emailTemplates => _emailTemplates;
+      templateState.activeMessageTemplates;
+  List<EmailTemplate> get emailTemplates => templateState.emailTemplates;
   List<EmailTemplate> get activeEmailTemplates =>
-      _emailTemplates.where((t) => t.isActive).toList();
+      templateState.activeEmailTemplates;
   List<CustomAppDataField> get customAppDataFields => customFields.fields;
   List<InspectionDocument> get inspectionDocuments =>
       customFields.inspectionDocs;
-  List<TemplateCategory> get templateCategories => _templateCategories;
+  List<TemplateCategory> get templateCategories => templateState.categories;
 
   bool get isLoading => _isLoading;
   String get loadingMessage => _loadingMessage;
@@ -79,13 +70,14 @@ class AppStateProvider extends ChangeNotifier {
       ..addListener(notifyListeners);
     quoteState = QuoteStateProvider(database: _db)
       ..addListener(notifyListeners);
+    templateState = TemplateStateProvider(database: _db)
+      ..addListener(notifyListeners);
   }
 
   Future<void> initializeApp() async {
     setLoading(true, 'Initializing app data...');
     await _loadAppSettings();
     await loadAllData();
-    await _ensureInspectionCategoryExists();
     setLoading(false);
   }
 
@@ -96,41 +88,7 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String> regeneratePDFFromTemplate({
-    required String templateId,
-    required SimplifiedMultiLevelQuote quote,
-    required Customer customer,
-    String? selectedLevelId,
-    Map<String, String>? customDataOverrides,
-  }) async {
-    return PdfGenerationHelper.regeneratePDFFromTemplate(
-      templates: _pdfTemplates,
-      templateId: templateId,
-      quote: quote,
-      customer: customer,
-      selectedLevelId: selectedLevelId,
-      customDataOverrides: customDataOverrides,
-    );
-  }
 
-  /// Generate PDF with enhanced options for preview system
-  Future<Map<String, dynamic>> generatePDFForPreview({
-    String? templateId,
-    required SimplifiedMultiLevelQuote quote,
-    required Customer customer,
-    String? selectedLevelId,
-    Map<String, String>? customData,
-  }) async {
-    return PdfGenerationHelper.generatePDFForPreview(
-      pdfService: _pdfService,
-      templates: _pdfTemplates,
-      templateId: templateId,
-      quote: quote,
-      customer: customer,
-      selectedLevelId: selectedLevelId,
-      customData: customData,
-    );
-  }
 
   /// Validate PDF file exists and is readable
   Future<bool> validatePDFFile(String pdfPath) async {
@@ -165,11 +123,8 @@ class AppStateProvider extends ChangeNotifier {
         quoteState.loadQuotes(),
         loadRoofScopeData(),
         loadProjectMedia(),
-        loadPDFTemplates(),
-        loadMessageTemplates(),
-        loadEmailTemplates(),
+        templateState.loadAll(),
         customFields.loadFields(),
-        loadTemplateCategories(),
         customFields.loadInspectionDocuments(),
       ]);
       // notifyListeners(); // This is handled by setLoading(false)
@@ -194,18 +149,6 @@ class AppStateProvider extends ChangeNotifier {
     _projectMedia = await DataLoadingHelper.loadProjectMedia(_db);
   }
 
-  Future<void> loadPDFTemplates() async {
-    _pdfTemplates = await DataLoadingHelper.loadPDFTemplates(_db);
-  }
-
-  Future<void> loadMessageTemplates() async {
-    _messageTemplates = await DataLoadingHelper.loadMessageTemplates(_db);
-  }
-
-  Future<void> loadEmailTemplates() async {
-    _emailTemplates = await DataLoadingHelper.loadEmailTemplates(_db);
-  }
-
   // --- Customer Operations ---
   Future<void> addCustomer(Customer customer) async {
     await customerState.addCustomer(customer);
@@ -225,10 +168,6 @@ class AppStateProvider extends ChangeNotifier {
       deleteRoofScope: deleteRoofScopeData,
       deleteMedia: deleteProjectMedia,
     );
-  }
-
-  Future<void> loadTemplateCategories() async {
-    _templateCategories = await DataLoadingHelper.loadTemplateCategories(_db);
   }
 
   // --- Product Operations ---
@@ -357,121 +296,21 @@ class AppStateProvider extends ChangeNotifier {
     return _projectMedia.where((m) => m.quoteId == quoteId).toList();
   }
 
-  // --- PDF Template Management Methods ---
+  // --- Template Operations (delegated) ---
   Future<void> addPDFTemplate(PDFTemplate template) async {
-    try {
-      await _db.savePDFTemplate(template);
-      _pdfTemplates.add(template);
-      notifyListeners();
-      if (kDebugMode) {
-        debugPrint('➕ Added PDF template: ${template.templateName}');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Error adding PDF template: $e');
-      }
-      rethrow;
-    }
-  }
-
-  /// Ensures the protected "inspection" category always exists
-  Future<void> _ensureInspectionCategoryExists() async {
-    try {
-      // Check if inspection category already exists
-      final inspectionExists = _templateCategories.any((cat) =>
-          cat.templateType == 'custom_fields' && cat.key == 'inspection');
-
-      if (!inspectionExists) {
-        if (kDebugMode)
-          debugPrint('🔒 Creating protected inspection category...');
-
-        // Create the protected inspection category
-        await addTemplateCategory(
-            'custom_fields', 'inspection', 'Inspection Fields');
-
-        if (kDebugMode) debugPrint('✅ Protected inspection category created');
-      }
-    } catch (e) {
-      if (kDebugMode)
-        debugPrint('Error ensuring inspection category exists: $e');
-    }
+    await templateState.addPDFTemplate(template);
   }
 
   Future<void> updatePDFTemplate(PDFTemplate template) async {
-    try {
-      debugPrint(
-          '🔧 AppState: Updating PDF template: ${template.templateName}');
-      await _db.savePDFTemplate(template);
-
-      final index = _pdfTemplates.indexWhere((t) => t.id == template.id);
-      if (index != -1) {
-        _pdfTemplates[index] = template;
-        debugPrint('✅ AppState: Updated PDF template in memory');
-      } else {
-        debugPrint('⚠️ AppState: PDF template not found in memory, adding it');
-        _pdfTemplates.add(template);
-      }
-
-      notifyListeners();
-      debugPrint('✅ AppState: PDF template updated and notified');
-    } catch (e) {
-      debugPrint('❌ AppState: Error updating PDF template: $e');
-      rethrow;
-    }
+    await templateState.updatePDFTemplate(template);
   }
 
   Future<void> deletePDFTemplate(String templateId) async {
-    try {
-      debugPrint('🗑️ AppState: Deleting PDF template: $templateId');
-      await _db.deletePDFTemplate(templateId);
-
-      final removedCount = _pdfTemplates.length;
-      _pdfTemplates.removeWhere((t) => t.id == templateId);
-      final newCount = _pdfTemplates.length;
-
-      debugPrint(
-          '✅ AppState: Removed PDF template ($removedCount -> $newCount)');
-      notifyListeners();
-      debugPrint('✅ AppState: PDF template deleted and notified');
-    } catch (e) {
-      debugPrint('❌ AppState: Error deleting PDF template: $e');
-      rethrow;
-    }
+    await templateState.deletePDFTemplate(templateId);
   }
 
-  // Replace your current togglePDFTemplateActive method (around line 676) with this:
-
   Future<void> togglePDFTemplateActive(String templateId) async {
-    try {
-      debugPrint('🔄 AppState: Toggling PDF template active: $templateId');
-      final index = _pdfTemplates.indexWhere((t) => t.id == templateId);
-      if (index != -1) {
-        final template = _pdfTemplates[index];
-
-        // Create updated template with new status and timestamp
-        final updatedTemplate = template.clone();
-        updatedTemplate.isActive = !template.isActive;
-        updatedTemplate.updatedAt = DateTime.now();
-
-        // Save to database
-        await _db.savePDFTemplate(updatedTemplate);
-
-        // Update in memory list
-        _pdfTemplates[index] = updatedTemplate;
-
-        // Notify listeners
-        notifyListeners();
-
-        debugPrint(
-            '✅ AppState: PDF template toggled and notified: ${updatedTemplate.templateName} -> ${updatedTemplate.isActive}');
-      } else {
-        debugPrint(
-            '❌ AppState: PDF template not found for toggle: $templateId');
-      }
-    } catch (e) {
-      debugPrint('❌ AppState: Error toggling PDF template: $e');
-      rethrow;
-    }
+    await templateState.togglePDFTemplateActive(templateId);
   }
 
   Future<String> generatePDFFromTemplate({
@@ -481,8 +320,39 @@ class AppStateProvider extends ChangeNotifier {
     String? selectedLevelId,
     Map<String, String>? customData,
   }) async {
-    return PdfGenerationHelper.generatePDFFromTemplate(
-      templates: _pdfTemplates,
+    return templateState.generatePDFFromTemplate(
+      templateId: templateId,
+      quote: quote,
+      customer: customer,
+      selectedLevelId: selectedLevelId,
+      customData: customData,
+    );
+  }
+
+  Future<String> regeneratePDFFromTemplate({
+    required String templateId,
+    required SimplifiedMultiLevelQuote quote,
+    required Customer customer,
+    String? selectedLevelId,
+    Map<String, String>? customDataOverrides,
+  }) async {
+    return templateState.regeneratePDFFromTemplate(
+      templateId: templateId,
+      quote: quote,
+      customer: customer,
+      selectedLevelId: selectedLevelId,
+      customDataOverrides: customDataOverrides,
+    );
+  }
+
+  Future<Map<String, dynamic>> generatePDFForPreview({
+    String? templateId,
+    required SimplifiedMultiLevelQuote quote,
+    required Customer customer,
+    String? selectedLevelId,
+    Map<String, String>? customData,
+  }) async {
+    return templateState.generatePDFForPreview(
       templateId: templateId,
       quote: quote,
       customer: customer,
@@ -492,176 +362,97 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<List<PDFTemplate>> validateAllTemplates() async {
-    final invalidTemplates = <PDFTemplate>[];
-
-    for (final template in _pdfTemplates) {
-      final isValid = await TemplateService.instance.validateTemplate(template);
-      if (!isValid) {
-        invalidTemplates.add(template);
-      }
-    }
-
-    if (invalidTemplates.isNotEmpty && kDebugMode) {
-      debugPrint('⚠️ Found ${invalidTemplates.length} invalid templates');
-    }
-
-    return invalidTemplates;
+    return templateState.validateAllTemplates();
   }
 
   Future<PDFTemplate?> createPDFTemplateFromFile(
       String pdfPath, String templateName) async {
-    try {
-      setLoading(true, 'Processing PDF & Detecting Fields...');
-      final template = await TemplateService.instance
-          .createTemplateFromPDF(pdfPath, templateName);
-      if (template != null) {
-        await addExistingPDFTemplateToList(template);
-      }
-      return template;
-    } finally {
-      setLoading(false);
-    }
+    return templateState.createPDFTemplateFromFile(pdfPath, templateName);
   }
 
   Future<String> generateTemplatePreview(PDFTemplate template) async {
-    try {
-      setLoading(true, 'Generating preview...');
-      return await TemplateService.instance.generateTemplatePreview(template);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  Future<void> addExistingPDFTemplateToList(PDFTemplate template) async {
-    try {
-      final existingIndex =
-          _pdfTemplates.indexWhere((t) => t.id == template.id);
-      if (existingIndex == -1) {
-        _pdfTemplates.add(template);
-        notifyListeners();
-
-        if (kDebugMode) {
-          debugPrint(
-              '✅ Added template to memory list: ${template.templateName}');
-          debugPrint('📊 Total templates: ${_pdfTemplates.length}');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('❌ Error adding template to list: $e');
-      rethrow;
-    }
+    return templateState.generateTemplatePreview(template);
   }
 
   Future<void> addMessageTemplate(MessageTemplate template) async {
-    await MessageTemplateHelper.addMessageTemplate(
-      db: _db,
-      templates: _messageTemplates,
-      template: template,
-    );
-    notifyListeners();
+    await templateState.addMessageTemplate(template);
   }
 
   Future<void> updateMessageTemplate(MessageTemplate template) async {
-    await MessageTemplateHelper.updateMessageTemplate(
-      db: _db,
-      templates: _messageTemplates,
-      template: template,
-    );
-    notifyListeners();
+    await templateState.updateMessageTemplate(template);
   }
 
   Future<void> deleteMessageTemplate(String templateId) async {
-    await MessageTemplateHelper.deleteMessageTemplate(
-      db: _db,
-      templates: _messageTemplates,
-      templateId: templateId,
-    );
-    notifyListeners();
+    await templateState.deleteMessageTemplate(templateId);
   }
 
   Future<void> toggleMessageTemplateActive(String templateId) async {
-    await MessageTemplateHelper.toggleMessageTemplateActive(
-      db: _db,
-      templates: _messageTemplates,
-      templateId: templateId,
-    );
-    notifyListeners();
+    await templateState.toggleMessageTemplateActive(templateId);
   }
 
   List<MessageTemplate> getMessageTemplatesByCategory(String category) {
-    return MessageTemplateHelper.getByCategory(_messageTemplates, category);
+    return templateState.getMessageTemplatesByCategory(category);
   }
 
   List<MessageTemplate> searchMessageTemplates(String query) {
-    return MessageTemplateHelper.search(_messageTemplates, query);
+    return templateState.searchMessageTemplates(query);
   }
 
-// --- Email Template Operations ---
   Future<void> addEmailTemplate(EmailTemplate template) async {
-    try {
-      await EmailTemplateHelper.addEmailTemplate(
-        db: _db,
-        templates: _emailTemplates,
-        template: template,
-      );
-      notifyListeners();
-      debugPrint('✅ AppState: Email template added and notified');
-    } catch (e) {
-      debugPrint('❌ AppState: Error adding email template: $e');
-      rethrow;
-    }
+    await templateState.addEmailTemplate(template);
   }
 
   Future<void> updateEmailTemplate(EmailTemplate template) async {
-    try {
-      await EmailTemplateHelper.updateEmailTemplate(
-        db: _db,
-        templates: _emailTemplates,
-        template: template,
-      );
-      notifyListeners();
-      debugPrint('✅ AppState: Email template updated and notified');
-    } catch (e) {
-      debugPrint('❌ AppState: Error updating email template: $e');
-      rethrow;
-    }
+    await templateState.updateEmailTemplate(template);
   }
 
   Future<void> deleteEmailTemplate(String templateId) async {
-    try {
-      await EmailTemplateHelper.deleteEmailTemplate(
-        db: _db,
-        templates: _emailTemplates,
-        templateId: templateId,
-      );
-      notifyListeners();
-      debugPrint('✅ AppState: Email template deleted and notified');
-    } catch (e) {
-      debugPrint('❌ AppState: Error deleting email template: $e');
-      rethrow;
-    }
+    await templateState.deleteEmailTemplate(templateId);
   }
 
   Future<void> toggleEmailTemplateActive(String templateId) async {
-    try {
-      await EmailTemplateHelper.toggleEmailTemplateActive(
-        db: _db,
-        templates: _emailTemplates,
-        templateId: templateId,
-      );
-      notifyListeners();
-    } catch (e) {
-      debugPrint('❌ AppState: Error toggling email template: $e');
-      rethrow;
-    }
+    await templateState.toggleEmailTemplateActive(templateId);
   }
 
   List<EmailTemplate> getEmailTemplatesByCategory(String category) {
-    return EmailTemplateHelper.getByCategory(_emailTemplates, category);
+    return templateState.getEmailTemplatesByCategory(category);
   }
 
   List<EmailTemplate> searchEmailTemplates(String query) {
-    return EmailTemplateHelper.search(_emailTemplates, query);
+    return templateState.searchEmailTemplates(query);
+  }
+
+  Future<Map<String, List<Map<String, dynamic>>>>
+      getAllTemplateCategories() async {
+    return await templateState.getAllTemplateCategories();
+  }
+
+  Future<void> addTemplateCategory(
+      String templateTypeKey, String categoryUserKey, String categoryDisplayName) async {
+    await templateState.addTemplateCategory(
+      templateTypeKey,
+      categoryUserKey,
+      categoryDisplayName,
+    );
+  }
+
+  Future<void> updateTemplateCategory(
+      String templateTypeKey, String categoryUserKey, String newDisplayName) async {
+    await templateState.updateTemplateCategory(
+      templateTypeKey,
+      categoryUserKey,
+      newDisplayName,
+    );
+  }
+
+  Future<void> deleteTemplateCategory(
+      String templateTypeKey, String categoryUserKey) async {
+    await templateState.deleteTemplateCategory(templateTypeKey, categoryUserKey);
+  }
+
+  Future<int> getCategoryUsageCount(
+      String templateType, String categoryKey) async {
+    return await templateState.getCategoryUsageCount(templateType, categoryKey);
   }
 
   // --- Custom App Data Field Operations ---
@@ -738,81 +529,6 @@ class AppStateProvider extends ChangeNotifier {
     } finally {
       setLoading(false);
     }
-  }
-
-// --- Template Category Management ---
-  Future<Map<String, List<Map<String, dynamic>>>>
-      getAllTemplateCategories() async {
-    return await TemplateCategoryHelper.fetchAll(_db);
-  }
-
-  Future<void> addTemplateCategory(String templateTypeKey,
-      String categoryUserKey, String categoryDisplayName) async {
-    try {
-      await TemplateCategoryHelper.addCategory(
-        db: _db,
-        categories: _templateCategories,
-        templateTypeKey: templateTypeKey,
-        categoryUserKey: categoryUserKey,
-        categoryDisplayName: categoryDisplayName,
-      );
-      notifyListeners();
-      if (kDebugMode)
-        debugPrint(
-            '➕ Added template category in AppState: $categoryDisplayName for $templateTypeKey (key: $categoryUserKey)');
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Error adding template category in AppState: $e');
-      }
-      rethrow;
-    }
-  }
-
-  Future<void> updateTemplateCategory(String templateTypeKey,
-      String categoryUserKey, String newDisplayName) async {
-    final updated = await TemplateCategoryHelper.updateCategory(
-      db: _db,
-      categories: _templateCategories,
-      templateTypeKey: templateTypeKey,
-      categoryUserKey: categoryUserKey,
-      newDisplayName: newDisplayName,
-    );
-    if (updated != null) {
-      notifyListeners();
-      if (kDebugMode)
-        debugPrint(
-            '📝 Updated template category in AppState (Type: $templateTypeKey, Key: $categoryUserKey) to "$newDisplayName"');
-    } else {
-      if (kDebugMode)
-        debugPrint(
-            "Category not found in AppStateProvider for update: Type='$templateTypeKey', Key='$categoryUserKey'. Available: ${_templateCategories.map((c) => '${c.templateType}-${c.key}(id:${c.id})').join(', ')}");
-    }
-  }
-
-  Future<void> deleteTemplateCategory(
-      String templateTypeKey, String categoryUserKey) async {
-    final deleted = await TemplateCategoryHelper.deleteCategory(
-      db: _db,
-      categories: _templateCategories,
-      templateTypeKey: templateTypeKey,
-      categoryUserKey: categoryUserKey,
-    );
-    if (deleted) {
-      notifyListeners();
-      if (kDebugMode)
-        debugPrint(
-            '🗑️ Deleted template category in AppState (Type: $templateTypeKey, Key: $categoryUserKey)');
-    } else {
-      if (kDebugMode)
-        debugPrint(
-            "Category not found in AppStateProvider for deletion: Type='$templateTypeKey', Key='$categoryUserKey'. Available: ${_templateCategories.map((c) => '${c.templateType}-${c.key}(id:${c.id})').join(', ')}");
-    }
-  }
-
-  Future<int> getCategoryUsageCount(
-      String templateType, String categoryKey) async {
-    return await TemplateCategoryHelper.usageCount(
-        _db, templateType, categoryKey);
   }
 
   // --- Data Management ---
