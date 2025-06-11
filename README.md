@@ -4,6 +4,10 @@ roofing thing
 
 This repository previously contained a nested `rufko/` directory with a duplicate Flutter project. The duplicate has been removed to simplify the project structure.
 
+## Refactoring Progress
+- [x] Extracted template operations into `AppStateTemplatesExtension`
+- [ ] Continue refactoring remaining large files
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
