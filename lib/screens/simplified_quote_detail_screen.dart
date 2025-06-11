@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../controllers/pdf_generation_controller.dart';
 import '../controllers/quote_detail_controller.dart';
-import '../dialogs/template_selection_dialog.dart';
+
 import '../models/customer.dart';
 import '../models/simplified_quote.dart';
 import '../providers/app_state_provider.dart';
@@ -17,7 +17,7 @@ import '../widgets/level_details_card.dart';
 import '../widgets/level_selector_card.dart';
 import '../widgets/quote_header_card.dart';
 import '../widgets/quote_total_card.dart';
-import 'pdf_preview_screen.dart';
+
 import 'simplified_quote_screen.dart';
 
 class SimplifiedQuoteDetailScreen extends StatefulWidget {
