@@ -19,8 +19,8 @@ import '../models/simplified_quote.dart';
 import '../models/customer.dart';
 import '../models/project_media.dart';
 import '../theme/rufko_theme.dart';
-import 'package:intl/intl.dart';
 import '../mixins/file_sharing_mixin.dart';
+import '../services/pdf_field_mapping_service.dart';
 
 class PdfPreviewScreen extends StatefulWidget {
   final String pdfPath;
@@ -131,101 +131,25 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   void _loadEditableFields() {
     if (widget.templateId != null) {
       final appState = context.read<AppStateProvider>();
-      final template = appState.pdfTemplates.firstWhere(
-        (t) => t.id == widget.templateId!,
-        orElse: () => throw Exception('Template not found'),
-      );
-
-      _editableFields = template.fieldMappings
-          .where((mapping) => mapping.pdfFormFieldName.isNotEmpty)
-          .map((mapping) => mapping.appDataType)
-          .toList();
+      _editableFields = PdfFieldMappingService.instance
+          .getEditableFields(widget.templateId!, appState);
 
       debugPrint('🔍 Found ${_editableFields.length} editable template fields');
     }
   }
 
-  // Get display name for field
+  // Get display name for field using service
   String _getFieldDisplayName(String fieldName) {
-    final displayNames = {
-      'customerName': 'Customer Name',
-      'customerPhone': 'Phone Number',
-      'customerEmail': 'Email Address',
-      'quoteNumber': 'Quote Number',
-      'quoteDate': 'Quote Date',
-      'notes': 'Notes',
-      'terms': 'Terms & Conditions',
-      'companyName': 'Company Name',
-      'companyPhone': 'Company Phone',
-      'companyEmail': 'Company Email',
-    };
-    return displayNames[fieldName] ??
-        fieldName.replaceAll('_', ' ').toUpperCase();
+    return PdfFieldMappingService.instance.getFieldDisplayName(fieldName);
   }
 
-  // Get current field value from quote/customer data
+  // Get current field value from quote/customer data using service
   String _getCurrentFieldValue(String fieldName) {
-    final quote = widget.quote;
-    final customer = widget.customer;
-
-    // Customer fields
-    if (fieldName.toLowerCase().contains('customer')) {
-      if (fieldName.toLowerCase().contains('name')) return customer?.name ?? '';
-      if (fieldName.toLowerCase().contains('phone'))
-        return customer?.phone ?? '';
-      if (fieldName.toLowerCase().contains('email'))
-        return customer?.email ?? '';
-      if (fieldName.toLowerCase().contains('address'))
-        return customer?.fullDisplayAddress ?? '';
-      if (fieldName.toLowerCase().contains('street'))
-        return customer?.streetAddress ?? '';
-      if (fieldName.toLowerCase().contains('city')) return customer?.city ?? '';
-      if (fieldName.toLowerCase().contains('state'))
-        return customer?.stateAbbreviation ?? '';
-      if (fieldName.toLowerCase().contains('zip'))
-        return customer?.zipCode ?? '';
-    }
-
-    // Quote fields
-    if (fieldName.toLowerCase().contains('quote')) {
-      if (fieldName.toLowerCase().contains('number'))
-        return quote?.quoteNumber ?? '';
-      if (fieldName.toLowerCase().contains('date')) {
-        return quote != null
-            ? DateFormat('MM/dd/yyyy').format(quote.createdAt)
-            : '';
-      }
-      if (fieldName.toLowerCase().contains('status'))
-        return quote?.status ?? '';
-    }
-
-    // Company fields
-    if (fieldName.toLowerCase().contains('company')) {
-      if (fieldName.toLowerCase().contains('name')) return 'Your Company Name';
-      if (fieldName.toLowerCase().contains('phone')) return '(555) 123-4567';
-      if (fieldName.toLowerCase().contains('email'))
-        return 'info@yourcompany.com';
-      if (fieldName.toLowerCase().contains('address'))
-        return '123 Main St, Your City, ST 12345';
-    }
-
-    // Date fields
-    if (fieldName.toLowerCase().contains('date')) {
-      if (fieldName.toLowerCase().contains('today'))
-        return DateFormat('MM/dd/yyyy').format(DateTime.now());
-      if (fieldName.toLowerCase().contains('valid')) {
-        return quote != null
-            ? DateFormat('MM/dd/yyyy').format(quote.validUntil)
-            : '';
-      }
-    }
-
-    // Text fields
-    if (fieldName.toLowerCase().contains('note')) return quote?.notes ?? '';
-    if (fieldName.toLowerCase().contains('term'))
-      return 'Standard terms and conditions apply...';
-
-    return '';
+    return PdfFieldMappingService.instance.getCurrentFieldValue(
+      fieldName,
+      customer: widget.customer,
+      quote: widget.quote,
+    );
   }
 
   // Show edit dialog for template fields
