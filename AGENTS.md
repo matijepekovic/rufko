@@ -19,7 +19,7 @@
 | lib/widgets/templates/dialgos/email_template_editor.dart | 1222 | HIGH | PENDING |
 | lib/widgets/templates/dialgos/message_template_editor.dart | 1187 | HIGH | PENDING |
 | lib/services/database_service.dart | 1176 | HIGH | PENDING |
-| lib/screens/home_screen.dart | 364 | HIGH | IN_PROGRESS |
+| lib/screens/home_screen.dart | 1089 | HIGH | PENDING |
 | lib/services/pdf_service.dart | 1045 | HIGH | PENDING |
 | lib/screens/template_editor_screen.dart | 974 | MEDIUM | PENDING |
 | lib/screens/customer_detail/inspection_tab.dart | 944 | MEDIUM | PENDING |
