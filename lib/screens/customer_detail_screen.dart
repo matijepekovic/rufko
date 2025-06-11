@@ -20,6 +20,7 @@ import 'customer_detail/quotes_tab.dart';
 import 'customer_detail/media_tab.dart';
 import 'customer_detail/info_tab.dart';
 import 'customer_detail/inspection_tab.dart';
+import '../controllers/communication_controller.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final Customer customer;
@@ -49,6 +50,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   bool _isSelectionMode = false;
   Set<String> _selectedMediaIds = <String>{};
   late MediaTabController _mediaController;
+  late CommunicationController _commController;
 
   @override
   Customer get customer => widget.customer;
@@ -73,6 +75,13 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         return shareFile(file: file, fileName: fileName, description: description, customer: customer, fileType: fileType);
       },
       showErrorSnackBar: showErrorSnackBar,
+    );
+    _commController = CommunicationController(
+      context: context,
+      customer: widget.customer,
+      onUpdated: () {
+        if (mounted) setState(() {});
+      },
     );
     _tabController = TabController(length: 4, vsync: this);
 
@@ -461,7 +470,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   }
 
   void _previewAndSendSMS(dynamic template) {
-    final customerData = _buildCustomerDataMap();
+    final customerData = _commController.buildCustomerDataMap();
 
     // Generate the SMS with customer data filled in
     final filledMessage = template.generateMessage(customerData);
@@ -681,69 +690,10 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   }
 
   void _sendTemplateSMS(dynamic template, String message) {
-    // Log the SMS communication with filled content
-    widget.customer.addCommunication(
-      'SMS sent using template "${template.templateName}" - Message: ${message.length > 50 ? '${message.substring(0, 50)}...' : message}',
-      type: 'text',
-    );
-    context.read<AppStateProvider>().updateCustomer(widget.customer);
+    _commController.sendTemplateSMS(template, message);
     setState(() {});
-
-    // Try to open SMS app if customer has phone
-    if (widget.customer.phone != null) {
-      sendSMS(widget.customer.phone!, message: message);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Customer has no phone number. Communication logged only.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    }
   }
 
-  Map<String, String> _buildCustomerDataMap() {
-    // Get app settings for company info
-    final appState = context.read<AppStateProvider>();
-    final settings = appState.appSettings;
-
-    return {
-      // Customer Information
-      'customerName': widget.customer.name,
-      'customerFirstName': widget.customer.name.split(' ').first,
-      'customerLastName': widget.customer.name.contains(' ')
-          ? widget.customer.name.split(' ').skip(1).join(' ')
-          : '',
-      'customerPhone': widget.customer.phone ?? 'Not provided',
-      'customerEmail': widget.customer.email ?? 'Not provided',
-      'customerStreetAddress': widget.customer.streetAddress ?? '',
-      'customerCity': widget.customer.city ?? '',
-      'customerState': widget.customer.stateAbbreviation ?? '',
-      'customerZipCode': widget.customer.zipCode ?? '',
-      'customerFullAddress': widget.customer.fullDisplayAddress,
-
-      // Company Information (from app settings if available)
-      'companyName': settings?.companyName ?? 'Your Company Name',
-      'companyPhone': settings?.companyPhone ?? 'Your Phone',
-      'companyEmail': settings?.companyEmail ?? 'Your Email',
-      'companyAddress': settings?.companyAddress ?? 'Your Address',
-
-      // Date Information
-      'todaysDate': DateTime.now().toString().split(' ')[0], // YYYY-MM-DD format
-      'currentTime': TimeOfDay.now().format(context),
-
-      // Customer Stats
-      'totalQuotes': appState.getSimplifiedQuotesForCustomer(widget.customer.id).length.toString(),
-      'customerSince': widget.customer.createdAt.toString().split(' ')[0],
-
-      // Additional placeholders that might be commonly used
-      'representativeName': 'Your Sales Rep',
-      'appointmentDate': 'TBD',
-      'appointmentTime': 'TBD',
-      'quoteNumber': 'Will be assigned',
-      'projectAddress': widget.customer.fullDisplayAddress,
-    };
-  }
 
   void _editSMSBeforeSending(dynamic template, String originalMessage) {
     final messageController = TextEditingController(text: originalMessage);
@@ -1008,7 +958,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     );
   }
   void _previewAndSendEmail(dynamic template) {
-    final customerData = _buildCustomerDataMap();
+    final customerData = _commController.buildCustomerDataMap();
 
     // Generate the email with customer data filled in
     final generatedEmail = template.generateEmail(customerData);
@@ -1409,25 +1359,8 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   }
 
   void _sendTemplateEmail(dynamic template, String subject, String content) {
-    // Log the email communication with filled content
-    widget.customer.addCommunication(
-      'Email sent using template "${template.templateName}" - Subject: $subject',
-      type: 'email',
-    );
-    context.read<AppStateProvider>().updateCustomer(widget.customer);
+    _commController.sendTemplateEmail(template, subject, content);
     setState(() {});
-
-    // Try to open email app if customer has email
-    if (widget.customer.email != null) {
-      sendEmail(widget.customer.email!, subject: subject, body: content);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Customer has no email address. Communication logged only.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    }
   }
 
   // MEDIA FUNCTIONALITY METHODS
