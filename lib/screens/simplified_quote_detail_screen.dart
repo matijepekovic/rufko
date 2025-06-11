@@ -1,18 +1,24 @@
 // lib/screens/simplified_quote_detail_screen.dart - ENHANCED WITH DISCOUNTS
 
 
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:open_filex/open_filex.dart';
-import '../models/simplified_quote.dart';
+import 'package:provider/provider.dart';
+
+import '../controllers/pdf_generation_controller.dart';
+import '../controllers/quote_detail_controller.dart';
+import '../dialogs/template_selection_dialog.dart';
 import '../models/customer.dart';
+import '../models/simplified_quote.dart';
 import '../providers/app_state_provider.dart';
-import '../models/pdf_template.dart';
+import '../theme/rufko_theme.dart';
+import '../widgets/discounts_section.dart';
+import '../widgets/level_details_card.dart';
+import '../widgets/level_selector_card.dart';
+import '../widgets/quote_header_card.dart';
+import '../widgets/quote_total_card.dart';
 import 'pdf_preview_screen.dart';
 import 'simplified_quote_screen.dart';
-import '../theme/rufko_theme.dart';
 
 class SimplifiedQuoteDetailScreen extends StatefulWidget {
   final SimplifiedMultiLevelQuote quote;
@@ -29,13 +35,27 @@ class SimplifiedQuoteDetailScreen extends StatefulWidget {
 }
 
 class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScreen> {
-  String? _selectedLevelId;
+  late final QuoteDetailController _controller;
+  late PDFGenerationController _pdfController;
   final _currencyFormat = NumberFormat.currency(symbol: '\$');
 
   @override
   void initState() {
     super.initState();
-    _selectedLevelId = widget.quote.levels.isNotEmpty ? widget.quote.levels.first.id : null;
+    _controller = QuoteDetailController(
+      quote: widget.quote,
+      customer: widget.customer,
+    );
+    _pdfController = PDFGenerationController(
+      context: context,
+      quote: widget.quote,
+      customer: widget.customer,
+      selectedLevelId: _controller.selectedLevelId,
+    );
+    _controller.addListener(() {
+      setState(() {});
+      _pdfController.selectedLevelId = _controller.selectedLevelId;
+    });
   }
 
 
@@ -71,7 +91,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
               actions: [
                 IconButton(
                   icon: const Icon(Icons.preview),
-                  onPressed: _previewPdf,
+                  onPressed: _pdfController.previewPdf,
                   color: Colors.white,
                   tooltip: 'Preview PDF',
                 ),
@@ -83,7 +103,8 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
                 ),
                 PopupMenuButton<String>(
                   icon: const Icon(Icons.more_vert, color: Colors.white),
-                  onSelected: _handleMenuAction,
+                  onSelected: (action) =>
+                      _controller.handleMenuAction(context, action, _pdfController),
                   itemBuilder: (context) => [
                     const PopupMenuItem(
                       value: 'generate_pdf',
@@ -130,7 +151,7 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
               const SizedBox(height: 24),
               _buildLevelSelector(),
               const SizedBox(height: 24),
-              if (_selectedLevelId != null) _buildSelectedLevelDetails(),
+              if (_controller.selectedLevelId != null) _buildSelectedLevelDetails(),
               const SizedBox(height: 24),
               _buildAddonsSection(),
               const SizedBox(height: 24),
@@ -147,162 +168,28 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
   }
 
   Widget _buildQuoteHeader() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Customer: ${widget.customer.name}',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                      if (widget.customer.fullDisplayAddress.isNotEmpty && widget.customer.fullDisplayAddress != 'No address provided')
-                        Padding( // Optional: Add some padding for the address
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(widget.customer.fullDisplayAddress, style: Theme.of(context).textTheme.bodyMedium),
-                        ),
-                      Text('Quote ID: ${widget.quote.id}', style: Theme.of(context).textTheme.bodySmall),
-                      Text('Created: ${DateFormat('MMM dd, yyyy').format(widget.quote.createdAt)}'),
-                      Text('Valid Until: ${DateFormat('MMM dd, yyyy').format(widget.quote.validUntil)}'),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(widget.quote.status),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    widget.quote.status.toUpperCase(),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    return QuoteHeaderCard(
+      quote: widget.quote,
+      customer: widget.customer,
     );
   }
 
   Widget _buildLevelSelector() {
-    if (widget.quote.levels.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('No levels configured.'),
-        ),
-      );
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Select Quote Level:', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: widget.quote.levels.map((level) {
-                final isSelected = _selectedLevelId == level.id;
-                final total = widget.quote.getDisplayTotalForLevel(level.id);
-
-                return ChoiceChip(
-                  label: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(level.name, style: TextStyle(fontWeight: FontWeight.w600)),
-                      Text(_currencyFormat.format(total),
-                          style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : null)),
-                    ],
-                  ),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() => _selectedLevelId = level.id);
-                    }
-                  },
-                  selectedColor: Theme.of(context).primaryColor,
-                  labelStyle: TextStyle(color: isSelected ? Colors.white : null),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
+    return LevelSelectorCard(
+      levels: widget.quote.levels,
+      selectedLevelId: _controller.selectedLevelId,
+      onLevelSelected: _controller.selectLevel,
+      currencyFormat: _currencyFormat,
+      getTotalForLevel: widget.quote.getDisplayTotalForLevel,
     );
   }
 
   Widget _buildSelectedLevelDetails() {
-    final level = widget.quote.levels.firstWhere((l) => l.id == _selectedLevelId!);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('${level.name} Details',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-
-            // Base Product
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Base Product: ${widget.quote.baseProductName ?? "N/A"}',
-                          style: const TextStyle(fontWeight: FontWeight.w500)),
-                      Text('Quantity: ${level.baseQuantity.toStringAsFixed(1)} ${widget.quote.baseProductUnit ?? "units"}'),
-                      Text('Unit Price: ${_currencyFormat.format(level.basePrice)}'),
-                    ],
-                  ),
-                  Text(_currencyFormat.format(level.baseProductTotal),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                ],
-              ),
-            ),
-
-            if (level.includedItems.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text('Additional Items:', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              ...level.includedItems.map((item) => ListTile(
-                dense: true,
-                title: Text(item.productName),
-                subtitle: Text('${item.quantity.toStringAsFixed(1)} ${item.unit} @ ${_currencyFormat.format(item.unitPrice)} each'),
-                trailing: Text(_currencyFormat.format(item.totalPrice), style: const TextStyle(fontWeight: FontWeight.bold)),
-              )),
-            ],
-
-            const Divider(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Level Subtotal:', style: TextStyle(fontWeight: FontWeight.bold)),
-                Text(_currencyFormat.format(level.subtotal), style: const TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ],
-        ),
-      ),
+    final level = widget.quote.levels.firstWhere((l) => l.id == _controller.selectedLevelId!);
+    return LevelDetailsCard(
+      level: level,
+      quote: widget.quote,
+      currencyFormat: _currencyFormat,
     );
   }
 
@@ -341,325 +228,32 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
   }
 
   Widget _buildDiscountsSection() {
-    if (widget.quote.discounts.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Icon(Icons.local_offer_outlined, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 8),
-              Text('No discounts applied', style: TextStyle(color: Colors.grey[600])),
-              const SizedBox(height: 8),
-              TextButton.icon(
-                onPressed: _addDiscount,
-                icon: const Icon(Icons.add),
-                label: const Text('Add Discount or Voucher'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Applied Discounts:', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                TextButton.icon(
-                  onPressed: _addDiscount,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...widget.quote.discounts.map((discount) => _buildDiscountItem(discount)),
-            if (_selectedLevelId != null) ...[
-              const Divider(),
-              _buildDiscountSummary(),
-            ],
-          ],
-        ),
-      ),
+    return DiscountsSection(
+      discounts: widget.quote.discounts,
+      selectedLevelId: _controller.selectedLevelId,
+      quote: widget.quote,
+      onAddDiscount: _addDiscount,
+      onRemoveDiscount: _removeDiscount,
+      currencyFormat: _currencyFormat,
     );
   }
 
-  Widget _buildDiscountItem(QuoteDiscount discount) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: discount.isValid ? Colors.green.shade50 : Colors.red.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: discount.isValid ? Colors.green.shade200 : Colors.red.shade200),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            discount.isValid ? Icons.check_circle : Icons.error,
-            color: discount.isValid ? Colors.green : Colors.red,
-            size: 20,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  discount.description ?? '${discount.type.toUpperCase()} Discount',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                Text(
-                  discount.type == 'percentage'
-                      ? '${discount.value.toStringAsFixed(1)}% off'
-                      : _currencyFormat.format(discount.value),
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                ),
-                if (discount.code != null)
-                  Text('Code: ${discount.code}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                if (discount.isExpired)
-                  Text('EXPIRED', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: () => _removeDiscount(discount.id),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDiscountSummary() {
-    final summary = widget.quote.getDiscountSummary(_selectedLevelId!);
-    final totalDiscount = summary['totalDiscount'] as double;
-
-    if (totalDiscount <= 0) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.green.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Level Discount:', style: TextStyle(fontSize: 12)),
-              Text('-${_currencyFormat.format(summary['levelDiscount'])}',
-                  style: const TextStyle(fontSize: 12, color: Colors.green)),
-            ],
-          ),
-          if (summary['addonDiscount'] > 0)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Add-on Discount:', style: TextStyle(fontSize: 12)),
-                Text('-${_currencyFormat.format(summary['addonDiscount'])}',
-                    style: const TextStyle(fontSize: 12, color: Colors.green)),
-              ],
-            ),
-          const Divider(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Total Savings:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('-${_currencyFormat.format(totalDiscount)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  // Discount item and summary UI moved to DiscountsSection widget
 
   Widget _buildTotalSection() {
-    if (_selectedLevelId == null) return const SizedBox.shrink();
-
-    final level = widget.quote.levels.firstWhere((l) => l.id == _selectedLevelId!);
-    final levelSubtotal = level.subtotal;
-    final addonSubtotal = widget.quote.addons.fold(0.0, (sum, addon) => sum + addon.totalPrice);
-    final combinedSubtotal = levelSubtotal + addonSubtotal;
-
-    // Get discount information
-    final discountSummary = widget.quote.getDiscountSummary(_selectedLevelId!);
-    final totalDiscount = discountSummary['totalDiscount'] as double;
-    final subtotalAfterDiscount = combinedSubtotal - totalDiscount;
-
-    // 🔧 FIX: Ensure tax rate is properly retrieved and calculated
-    final taxRate = widget.quote.taxRate;
-    final taxAmount = subtotalAfterDiscount * (taxRate / 100);
-    final finalTotal = subtotalAfterDiscount + taxAmount;
-
-    // 🐛 DEBUG: Print values to console
-    debugPrint('🧮 TAX CALCULATION DEBUG:');
-    debugPrint('   Level Subtotal: \$${levelSubtotal.toStringAsFixed(2)}');
-    debugPrint('   Addon Subtotal: \$${addonSubtotal.toStringAsFixed(2)}');
-    debugPrint('   Combined Subtotal: \$${combinedSubtotal.toStringAsFixed(2)}');
-    debugPrint('   Total Discount: \$${totalDiscount.toStringAsFixed(2)}');
-    debugPrint('   Subtotal After Discount: \$${subtotalAfterDiscount.toStringAsFixed(2)}');
-    debugPrint('   Tax Rate: ${taxRate.toStringAsFixed(2)}%');
-    debugPrint('   Tax Amount: \$${taxAmount.toStringAsFixed(2)}');
-    debugPrint('   Final Total: \$${finalTotal.toStringAsFixed(2)}');
-
-    return Card(
-      color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Subtotal row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('Subtotal:', style: TextStyle(fontSize: 16)),
-                Text(
-                  _currencyFormat.format(combinedSubtotal),
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ],
-            ),
-
-            // Discount row (only show if discount > 0)
-            if (totalDiscount > 0) ...[
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Discount:', style: TextStyle(color: Colors.green, fontSize: 16)),
-                  Text(
-                    '-${_currencyFormat.format(totalDiscount)}',
-                    style: const TextStyle(color: Colors.green, fontSize: 16),
-                  ),
-                ],
-              ),
-            ],
-
-            // Tax row (only show if tax rate > 0)
-            if (taxRate > 0) ...[
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Tax (${taxRate.toStringAsFixed(1)}%):',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  Text(
-                    _currencyFormat.format(taxAmount),
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-            ],
-
-            const SizedBox(height: 12),
-            const Divider(thickness: 1.5),
-            const SizedBox(height: 8),
-
-            // Final Total row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Total:',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  _currencyFormat.format(finalTotal),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+    if (_controller.selectedLevelId == null) return const SizedBox.shrink();
+    return QuoteTotalCard(
+      quote: widget.quote,
+      selectedLevelId: _controller.selectedLevelId!,
+      currencyFormat: _currencyFormat,
     );
-  }
-  void _previewPdf() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    try {
-      final appState = context.read<AppStateProvider>();
-
-      // Find existing PDF for this quote
-      final existingPdf = appState.projectMedia.where((media) =>
-      media.customerId == widget.customer.id &&
-          media.quoteId == widget.quote.id &&
-          media.isPdf &&
-          media.tags.contains('quote')
-      ).toList();
-
-      if (existingPdf.isEmpty) {
-        // No existing PDF found
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('No saved PDF found. Use "Generate PDF" to create one first.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      // Use the most recent PDF
-      final latestPdf = existingPdf.last;
-
-      // Check if file still exists
-      final file = File(latestPdf.filePath);
-      if (!await file.exists()) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('PDF file not found: ${latestPdf.fileName}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      // Open existing PDF in preview screen
-      navigator.push(
-        MaterialPageRoute(
-          builder: (context) => PdfPreviewScreen(
-            pdfPath: latestPdf.filePath,
-            suggestedFileName: latestPdf.fileName,
-            quote: widget.quote,
-            customer: widget.customer,
-            title: 'Saved PDF Preview',
-            isPreview: true,
-          ),
-        ),
-      );
-
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Error opening PDF: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
   Widget _buildActionButtons() {
     return Row(
       children: [
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: _generatePdf,
+            onPressed: _pdfController.generatePdf,
             icon: const Icon(Icons.picture_as_pdf),
             label: const Text('Generate PDF'),
           ),
@@ -667,53 +261,28 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: _updateQuoteStatus,
+            onPressed: () => _controller.updateQuoteStatus(context),
             icon: const Icon(Icons.send),
-            label: Text(_getStatusButtonText()),
+            label: Text(_controller.getStatusButtonText()),
           ),
         ),
       ],
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'draft': return Colors.grey;
-      case 'sent': return Colors.blue;
-      case 'accepted': return Colors.green;
-      case 'declined': return Colors.red;
-      default: return Colors.grey;
-    }
-  }
-
-  String _getStatusButtonText() {
-    switch (widget.quote.status.toLowerCase()) {
-      case 'draft': return 'Send Quote';
-      case 'sent': return 'Mark Accepted';
-      case 'accepted': return 'Mark Complete';
-      default: return 'Update Status';
-    }
-  }
 
   void _addDiscount() {
     showDialog(
       context: context,
       builder: (context) => _DiscountDialog(
-        onDiscountAdded: (discount) {
-          setState(() {
-            widget.quote.addDiscount(discount);
-          });
-          context.read<AppStateProvider>().updateSimplifiedQuote(widget.quote);
-        },
+        onDiscountAdded: (discount) =>
+            _controller.addDiscount(context, discount),
       ),
     );
   }
 
   void _removeDiscount(String discountId) {
-    setState(() {
-      widget.quote.removeDiscount(discountId);
-    });
-    context.read<AppStateProvider>().updateSimplifiedQuote(widget.quote);
+    _controller.removeDiscount(context, discountId);
   }
 
   void _editQuote() {
@@ -733,412 +302,8 @@ class _SimplifiedQuoteDetailScreenState extends State<SimplifiedQuoteDetailScree
     );
   }
 
-  // Add this to your existing lib/screens/simplified_quote_detail_screen.dart
-
-// Update the _generatePdf method to include template selection:
-  // In lib/screens/simplified_quote_detail_screen.dart
-// REPLACE the _generatePdf method with this fixed version:
-
-  void _generatePdf() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    try {
-      final appState = context.read<AppStateProvider>();
-
-      // Show template selection dialog
-      final availableTemplates = appState.activePDFTemplates
-          .where((t) => t.templateType == 'quote')
-          .toList();
-
-      debugPrint('🔍 Found ${availableTemplates.length} available templates');
-
-      final selectedOption = await _showTemplateSelectionDialog(availableTemplates);
-
-      if (!mounted) return;
-
-      if (selectedOption == 'cancelled') {
-        debugPrint('👤 User cancelled PDF generation');
-        return;
-      }
-
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('Generating PDF...'),
-            ],
-          ),
-        ),
-      );
-
-      String pdfPath;
-      String? templateId;
-      Map<String, String>? customData;
-
-      if (selectedOption != null && selectedOption != 'standard') {
-        // Generate using selected template
-        debugPrint('📄 Generating PDF using template: $selectedOption');
-        templateId = selectedOption;
-        customData = {
-          'generated_from': 'template',
-          'template_id': selectedOption,
-          'generation_date': DateTime.now().toIso8601String(),
-        };
-
-        pdfPath = await appState.generatePDFFromTemplate(
-          templateId: selectedOption,
-          quote: widget.quote,
-          customer: widget.customer,
-          selectedLevelId: _selectedLevelId,
-          customData: customData,
-        );
-      } else {
-        // Generate using standard method
-        debugPrint('📄 Generating PDF using standard method');
-        customData = {
-          'generated_from': 'standard',
-          'generation_date': DateTime.now().toIso8601String(),
-        };
-
-        pdfPath = await appState.generateSimplifiedQuotePdf(
-          widget.quote,
-          widget.customer,
-          selectedLevelId: _selectedLevelId,
-        );
-      }
-
-      navigator.pop(); // Close loading dialog
-
-      // 🚀 NEW: Navigate to PDF Preview Screen
-      final result = await navigator.push<bool>(
-        MaterialPageRoute(
-          builder: (context) => PdfPreviewScreen(
-            pdfPath: pdfPath,
-            suggestedFileName: _generateSuggestedFileName(),
-            quote: widget.quote,
-            customer: widget.customer,
-            templateId: templateId,
-            selectedLevelId: _selectedLevelId,
-            originalCustomData: customData,
-          ),
-        ),
-      );
-
-      // Handle result from preview screen
-      if (result == true) {
-        // PDF was saved successfully
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text('PDF saved successfully!'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      } else if (result == false) {
-        // PDF was discarded
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.info, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text('PDF was discarded'),
-              ],
-            ),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-      // If result is null, user just navigated back without action
-
-    } catch (e) {
-      debugPrint('❌ Error generating PDF: $e');
-      navigator.pop(); // Close loading dialog if open
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Error generating PDF: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-        ),
-      );
-    }
-  }
-
-// ADD this helper method to generate suggested filename
-  String _generateSuggestedFileName() {
-    final quoteNumber = widget.quote.quoteNumber.replaceAll(RegExp(r'[^\w\s-]'), '');
-    final customerName = widget.customer.name
-        .replaceAll(RegExp(r'[^\w\s-]'), '')
-        .replaceAll(' ', '_');
-    final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
-    return 'Quote_${quoteNumber}_${customerName}_$dateStr.pdf';
-  }
-
-// REPLACE the _showTemplateSelectionDialog method with this improved version:
-
-  Future<String?> _showTemplateSelectionDialog(List<PDFTemplate> templates) async {
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Choose PDF Generation Method'),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'How would you like to generate the PDF?',
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-
-              // 📋 Standard PDF option (ALWAYS available)
-              Card(
-                color: Colors.blue.shade50,
-                child: ListTile(
-                  leading: const Icon(Icons.description, color: Colors.blue),
-                  title: const Text('Standard PDF'),
-                  subtitle: const Text('Use the built-in PDF format'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () => Navigator.pop(context, 'standard'),
-                ),
-              ),
-
-              if (templates.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 8),
-                Text(
-                  'Custom Templates (${templates.length})',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[700],
-                  ),
-                ),
-                const SizedBox(height: 8),
-
-                // 📄 Template options
-                ...templates.map((template) => Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.picture_as_pdf, color: Colors.red),
-                    title: Text(template.templateName),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (template.description.isNotEmpty)
-                          Text(template.description),
-                        Text(
-                          '${template.fieldMappings.length} mapped fields',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                    isThreeLine: template.description.isNotEmpty,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.preview, size: 20),
-                          onPressed: () => _previewTemplateInDialog(template),
-                          tooltip: 'Preview template',
-                        ),
-                        const Icon(Icons.arrow_forward_ios),
-                      ],
-                    ),
-                    onTap: () => Navigator.pop(context, template.id),
-                  ),
-                )),
-              ] else ...[
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.shade200),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.orange.shade700),
-                      const SizedBox(height: 8),
-                      Text(
-                        'No custom templates available',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.orange.shade800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Create templates in Settings → PDF Templates',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.orange.shade700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, 'cancelled'),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, 'standard'),
-            child: const Text('Use Standard PDF'),
-          ),
-        ],
-      ),
-    );
-  }
-
-// Add this new method to show template selection dialog:
-
-
-  void _previewTemplateInDialog(PDFTemplate template) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    try {
-      // Close the selection dialog first
-      navigator.pop();
-
-      // Show loading
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('Generating preview...'),
-            ],
-          ),
-        ),
-      );
-
-      // Generate preview with current quote data
-      final previewPath = await context.read<AppStateProvider>().generatePDFFromTemplate(
-        templateId: template.id,
-        quote: widget.quote,
-        customer: widget.customer,
-        selectedLevelId: _selectedLevelId,
-        customData: {'preview': 'true', 'watermark': 'PREVIEW'},
-      );
-
-      navigator.pop(); // Close loading
-
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Preview generated: ${previewPath.split('/').last}'),
-          action: SnackBarAction(
-            label: 'Open',
-            onPressed: () => OpenFilex.open(previewPath),
-          ),
-        ),
-      );
-
-      // Reshow the template selection dialog
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        final templates = context.read<AppStateProvider>().activePDFTemplates
-            .where((t) => t.templateType == 'quote')
-            .toList();
-        _showTemplateSelectionDialog(templates);
-      }
-    } catch (e) {
-      navigator.pop(); // Close loading if open
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Error generating preview: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _updateQuoteStatus() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Update Quote Status'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ['draft', 'sent', 'accepted', 'declined'].map((status) =>
-              ListTile(
-                title: Text(status.toUpperCase()),
-                onTap: () {
-                  setState(() {
-                    widget.quote.status = status;
-                    widget.quote.updatedAt = DateTime.now();
-                  });
-                  context.read<AppStateProvider>().updateSimplifiedQuote(widget.quote);
-                  Navigator.pop(context);
-                },
-              ),
-          ).toList(),
-        ),
-      ),
-    );
-  }
-
-  void _handleMenuAction(String action) {
-    switch (action) {
-      case 'generate_pdf':
-        _generatePdf();
-        break;
-      case 'duplicate':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Duplicate functionality coming soon')),
-        );
-        break;
-      case 'delete':
-        _showDeleteConfirmation();
-        break;
-    }
-  }
-
-  void _showDeleteConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Quote'),
-        content: Text('Are you sure you want to delete quote ${widget.quote.quoteNumber}?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              context.read<AppStateProvider>().deleteSimplifiedQuote(widget.quote.id);
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
+  // PDF generation, template selection and status updates are handled
+  // by the dedicated controllers for clarity.
 }
 
 // Discount creation dialog
