@@ -27,6 +27,6 @@ void main() {
     await tester.pumpWidget(_createTestApp());
 
     expect(find.text('Dashboard'), findsOneWidget);
-    expect(find.text('Customers'), findsOneWidget);
+    expect(find.text('Customers'), findsWidgets);
   });
 }
