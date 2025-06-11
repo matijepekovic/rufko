@@ -12,8 +12,6 @@ import 'package:syncfusion_flutter_pdf/pdf.dart' as sf_pdf;
 import '../controllers/pdf_document_controller.dart';
 import '../controllers/pdf_editing_controller.dart';
 import '../controllers/pdf_file_operations_controller.dart';
-import '../controllers/pdf_viewer_ui_builder.dart';
-import '../controllers/template_field_dialog_manager.dart';
 import '../models/pdf_form_field.dart';
 import '../models/edit_action.dart';
 import '../providers/app_state_provider.dart';
@@ -68,8 +66,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   bool _isLoadingFields = false;
 
   late PdfFileOperationsController _fileOpsController;
-  late PdfViewerUIBuilder _uiBuilder;
-  late TemplateFieldDialogManager _dialogManager;
 
   // Undo/Redo system managed by controller
 
@@ -85,15 +81,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
     super.initState();
     _currentPdfPath = widget.pdfPath;
     _fileOpsController = PdfFileOperationsController(context);
-    _dialogManager = TemplateFieldDialogManager(context, _editingController);
-    _uiBuilder = PdfViewerUIBuilder(
-      context,
-      pdfViewerKey: _pdfViewerKey,
-      pdfController: _pdfController,
-      editingController: _editingController,
-      getCurrentFieldValue: _getCurrentFieldValue,
-      showTemplateFieldEditDialog: _dialogManager.showEditDialog,
-    );
     _loadEditableFields();
     _loadFormFields();
     _editingController.addListener(() {
@@ -167,7 +154,44 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
 
   // Show edit dialog for template fields
   void _showTemplateFieldEditDialog(String fieldName, String currentValue) {
-    _dialogManager.showEditDialog(fieldName, currentValue);
+    final controller = TextEditingController(text: currentValue);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Edit ${_getFieldDisplayName(fieldName)}'),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            labelText: _getFieldDisplayName(fieldName),
+            border: const OutlineInputBorder(),
+          ),
+          maxLines: fieldName == 'notes' || fieldName == 'terms' ? 3 : 1,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newValue = controller.text.trim();
+              final oldValue =
+                  _editingController.editedValues[fieldName] ?? currentValue;
+
+              if (newValue != oldValue) {
+                _addEditAction(fieldName, oldValue, newValue);
+                setState(() =>
+                    _editingController.editedValues[fieldName] = newValue);
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -240,11 +264,69 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
       body: Column(
         children: [
           // Status Bar
-          _uiBuilder.buildStatusBar(
-            hasEdits: _hasEdits,
-            isLoadingFields: _isLoadingFields,
-            formFields: _formFields,
-            discardEdits: _discardEdits,
+          Container(
+            color: _hasEdits
+                ? Colors.orange.shade100
+                : (_isLoadingFields
+                    ? Colors.blue.shade100
+                    : Colors.grey.shade100),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                if (_isLoadingFields) ...[
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Loading form fields...',
+                      style: TextStyle(fontSize: 12)),
+                ] else ...[
+                  Icon(
+                    _hasEdits
+                        ? Icons.edit
+                        : (_showFieldOverlays
+                            ? Icons.touch_app
+                            : Icons.visibility),
+                    size: 16,
+                    color: _hasEdits
+                        ? Colors.orange.shade700
+                        : (_showFieldOverlays
+                            ? Colors.green.shade700
+                            : Colors.blue.shade700),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _hasEdits
+                          ? '${_editingController.editedValues.length} fields edited - direct PDF mapping active'
+                          : _formFields.isNotEmpty
+                              ? '${_formFields.length} form fields detected - click directly to edit'
+                              : 'No editable form fields detected',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _hasEdits
+                            ? Colors.orange.shade800
+                            : Colors.blue.shade800,
+                      ),
+                    ),
+                  ),
+                ],
+                if (_hasEdits) ...[
+                  TextButton(
+                    onPressed: _discardEdits,
+                    child: Text(
+                      'Clear All',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
 
           // PDF Viewer - Takes all remaining space
@@ -274,11 +356,159 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
 
   // Build PDF viewer with form field overlays
   Widget _buildPdfViewerWithOverlays() {
-    return _uiBuilder.buildPdfViewerWithOverlays(
-      currentPdfPath: _currentPdfPath,
-      showEditingTools: _showEditingTools,
-      exitTemplateMode: () => setState(() => _showEditingTools = false),
-      quickEditButton: _uiBuilder.buildQuickEditButton,
+    final file = File(_currentPdfPath);
+
+    if (!file.existsSync()) {
+      return Container(
+        color: Colors.white,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+              const SizedBox(height: 16),
+              Text(
+                'PDF file not found',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'The PDF file may have been moved or deleted.',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Stack(
+      children: [
+        // PDF Viewer with Direct Form Field Mapping (No Dialogs)
+        SfPdfViewer.file(
+          file,
+          key: _pdfViewerKey,
+          controller: _pdfController,
+          canShowScrollHead: true,
+          canShowScrollStatus: true,
+          canShowPaginationDialog: true,
+          enableDoubleTapZooming: true,
+          enableTextSelection: true,
+          onFormFieldValueChanged: (PdfFormFieldValueChangedDetails details) {
+            // Direct field mapping like template system
+            final fieldName = details.formField.name;
+            final newValue = details.newValue?.toString() ?? '';
+            final oldValue = details.oldValue?.toString() ?? '';
+
+            debugPrint('📝 Direct field edit: "$fieldName" = "$newValue"');
+
+            setState(() {
+              _editingController.editedValues[fieldName] = newValue;
+              _hasEdits = true;
+            });
+
+            _addEditAction(fieldName, oldValue, newValue);
+          },
+          onDocumentLoaded: (details) {
+            if (kDebugMode) {
+              debugPrint(
+                  '📄 PDF loaded: ${details.document.pages.count} pages');
+            }
+          },
+          onDocumentLoadFailed: (details) {
+            if (kDebugMode) {
+              debugPrint('❌ PDF load failed: ${details.error}');
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to load PDF: ${details.description}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          },
+        ),
+
+        // Template Edit Mode Overlay
+        if (_showEditingTools)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              color: Colors.orange.shade600.withValues(alpha: 0.9),
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  const Icon(Icons.edit, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Template Edit Mode: Use buttons below to edit template fields',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      setState(() => _showEditingTools = false);
+                    },
+                    child: const Text(
+                      'Exit Template Mode',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        // Template Quick Edit Buttons
+        if (_showEditingTools)
+          Positioned(
+            bottom: 16,
+            left: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Quick Edit Template Fields:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildQuickEditButton('customerName', 'Customer Name'),
+                      _buildQuickEditButton('customerPhone', 'Phone'),
+                      _buildQuickEditButton('customerEmail', 'Email'),
+                      _buildQuickEditButton('notes', 'Notes'),
+                      _buildQuickEditButton('terms', 'Terms'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -286,7 +516,32 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
 
   // Build quick edit button for template fields
   Widget _buildQuickEditButton(String fieldName, String displayName) {
-    return _uiBuilder.buildQuickEditButton(fieldName, displayName);
+    final hasEdit = _editingController.editedValues.containsKey(fieldName);
+
+    return OutlinedButton.icon(
+      onPressed: () {
+        String currentValue = _editingController.editedValues[fieldName] ??
+            _getCurrentFieldValue(fieldName);
+        _showTemplateFieldEditDialog(fieldName, currentValue);
+      },
+      icon: Icon(
+        hasEdit ? Icons.edit : Icons.edit_outlined,
+        size: 16,
+        color: hasEdit ? Colors.green : null,
+      ),
+      label: Text(
+        displayName,
+        style: TextStyle(
+          color: hasEdit ? Colors.green : null,
+          fontWeight: hasEdit ? FontWeight.bold : null,
+        ),
+      ),
+      style: OutlinedButton.styleFrom(
+        side: BorderSide(
+          color: hasEdit ? Colors.green : Colors.grey,
+        ),
+      ),
+    );
   }
 
   // Build action buttons
