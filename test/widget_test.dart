@@ -5,14 +5,33 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:provider/provider.dart';
 import 'package:rufko/main.dart';
+import 'package:rufko/providers/app_state_provider.dart';
+import 'package:rufko/providers/customer_provider.dart';
+import 'package:rufko/providers/product_provider.dart';
+import 'package:rufko/providers/quote_provider.dart';
+import 'package:rufko/providers/template_provider.dart';
+
+Widget _createTestApp() {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider(create: (_) => AppStateProvider()),
+      ChangeNotifierProvider(create: (_) => CustomerProvider()),
+      ChangeNotifierProvider(create: (_) => ProductProvider()),
+      ChangeNotifierProvider(create: (_) => QuoteProvider()),
+      ChangeNotifierProvider(create: (_) => TemplateProvider()),
+    ],
+    child: const RufkoApp(),
+  );
+}
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const RufkoApp());
+    await tester.pumpWidget(_createTestApp());
 
     // Verify that the dashboard tab is visible
     expect(find.text('Dashboard'), findsOneWidget);

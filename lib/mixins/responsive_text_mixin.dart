@@ -28,8 +28,12 @@ mixin ResponsiveTextMixin on ResponsiveBreakpointsMixin {
     final textScale =
         respectTextScale ? MediaQuery.of(context).textScaleFactor : 1.0;
     double size = baseSize * scale * textScale;
-    if (min != null || max != null) {
-      size = size.clamp(min ?? size, max ?? size);
+    if (min != null && max != null) {
+      size = size.clamp(min, max);
+    } else if (min != null) {
+      if (size < min) size = min;
+    } else if (max != null) {
+      if (size > max) size = max;
     }
     return size;
   }
@@ -95,32 +99,32 @@ mixin ResponsiveTextMixin on ResponsiveBreakpointsMixin {
       );
 
   TextStyle bodyLarge(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 16),
-  );
+        context,
+        const TextStyle(fontSize: 16),
+      );
 
   TextStyle bodyMedium(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 14),
-  );
+        context,
+        const TextStyle(fontSize: 14),
+      );
 
   TextStyle bodySmall(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 12),
-  );
+        context,
+        const TextStyle(fontSize: 12),
+      );
 
   TextStyle labelLarge(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-  );
+        context,
+        const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+      );
 
   TextStyle labelMedium(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-  );
+        context,
+        const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+      );
 
   TextStyle labelSmall(BuildContext context) => responsiveTextStyle(
-    context,
-    const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-  );
+        context,
+        const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+      );
 }
