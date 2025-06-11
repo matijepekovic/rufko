@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:rufko/providers/product_provider.dart';
+import 'package:rufko/providers/product_state_provider.dart';
 import 'package:rufko/models/product.dart';
 import 'package:rufko/services/database_service.dart';
 
@@ -8,11 +8,11 @@ class MockDatabaseService extends Mock implements DatabaseService {}
 
 void main() {
   late MockDatabaseService db;
-  late ProductProvider provider;
+  late ProductStateProvider provider;
 
   setUp(() {
     db = MockDatabaseService();
-    provider = ProductProvider(database: db);
+    provider = ProductStateProvider(database: db);
   });
 
   test('loadProducts populates list', () async {

@@ -11,8 +11,8 @@ import 'package:provider/provider.dart';
 import 'package:rufko/main.dart';
 import 'package:rufko/providers/app_state_provider.dart';
 import 'package:rufko/providers/customer_provider.dart';
-import 'package:rufko/providers/product_provider.dart';
-import 'package:rufko/providers/quote_provider.dart';
+import 'package:rufko/providers/product_state_provider.dart';
+import 'package:rufko/providers/quote_state_provider.dart';
 import 'package:rufko/providers/template_provider.dart';
 
 Widget _createTestApp() {
@@ -20,8 +20,8 @@ Widget _createTestApp() {
     providers: [
       ChangeNotifierProvider(create: (_) => AppStateProvider()),
       ChangeNotifierProvider(create: (_) => CustomerProvider()),
-      ChangeNotifierProvider(create: (_) => ProductProvider()),
-      ChangeNotifierProvider(create: (_) => QuoteProvider()),
+      ChangeNotifierProvider(create: (_) => ProductStateProvider()),
+      ChangeNotifierProvider(create: (_) => QuoteStateProvider()),
       ChangeNotifierProvider(create: (_) => TemplateProvider()),
     ],
     child: const RufkoApp(),
