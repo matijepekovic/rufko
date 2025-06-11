@@ -83,6 +83,8 @@
 - **All imports working:** YES
 - **Status:** NEEDS_MORE_WORK
 
+- ✅ 2025-06-11T18:00Z Extracted customer screen helpers → lib/controllers/customer_filter_controller.dart, lib/controllers/customer_dialog_manager.dart, lib/controllers/customer_import_controller.dart, lib/dialogs/customer_form_dialog.dart (reduced customers_screen.dart by ~270 lines)
+- ✅ 2025-06-11T18:15Z Formatted helpers and ran `flutter analyze`
 ## Completed Refactorings
 
 ## Next Actions
