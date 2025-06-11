@@ -16,7 +16,6 @@ import 'helpers/pdf_generation_helper.dart';
 import 'helpers/roof_scope_helper.dart';
 import 'helpers/data_loading_helper.dart';
 import '../services/file_service.dart';
-import '../services/tax_service.dart';
 import '../models/custom_app_data.dart';
 import '../models/inspection_document.dart';
 import 'custom_fields_provider.dart';
@@ -24,6 +23,8 @@ import 'customer_state_provider.dart';
 import 'product_state_provider.dart';
 import 'quote_state_provider.dart';
 import 'template_state_provider.dart';
+import 'media_state_provider.dart';
+import 'app_configuration_provider.dart';
 
 class AppStateProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
@@ -32,9 +33,9 @@ class AppStateProvider extends ChangeNotifier {
   late final ProductStateProvider productState;
   late final QuoteStateProvider quoteState;
   late final TemplateStateProvider templateState;
-  AppSettings? _appSettings;
+  late final MediaStateProvider mediaState;
+  late final AppConfigurationProvider configState;
   List<RoofScopeData> _roofScopeDataList = [];
-  List<ProjectMedia> _projectMedia = [];
   final CustomFieldsProvider customFields = CustomFieldsProvider();
 
   bool _isLoading = false;
@@ -43,10 +44,10 @@ class AppStateProvider extends ChangeNotifier {
   // Getters
   List<Customer> get customers => customerState.customers;
   List<Product> get products => productState.products;
-  AppSettings? get appSettings => _appSettings;
+  AppSettings? get appSettings => configState.appSettings;
   List<SimplifiedMultiLevelQuote> get simplifiedQuotes => quoteState.quotes;
   List<RoofScopeData> get roofScopeDataList => _roofScopeDataList;
-  List<ProjectMedia> get projectMedia => _projectMedia;
+  List<ProjectMedia> get projectMedia => mediaState.projectMedia;
   List<PDFTemplate> get pdfTemplates => templateState.pdfTemplates;
   List<PDFTemplate> get activePDFTemplates => templateState.activePDFTemplates;
   List<MessageTemplate> get messageTemplates => templateState.messageTemplates;
@@ -72,11 +73,15 @@ class AppStateProvider extends ChangeNotifier {
       ..addListener(notifyListeners);
     templateState = TemplateStateProvider(database: _db)
       ..addListener(notifyListeners);
+    mediaState = MediaStateProvider(database: _db)
+      ..addListener(notifyListeners);
+    configState = AppConfigurationProvider(database: _db)
+      ..addListener(notifyListeners);
   }
 
   Future<void> initializeApp() async {
     setLoading(true, 'Initializing app data...');
-    await _loadAppSettings();
+    await configState.loadAppSettings();
     await loadAllData();
     setLoading(false);
   }
@@ -88,30 +93,13 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-
-
   /// Validate PDF file exists and is readable
   Future<bool> validatePDFFile(String pdfPath) async {
     return PdfGenerationHelper.validatePDFFile(pdfPath);
   }
 
-  Future<void> _loadAppSettings() async {
-    try {
-      _appSettings = await _db.getAppSettings();
-      notifyListeners();
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error loading app settings: $e');
-    }
-  }
-
   Future<void> updateAppSettings(AppSettings settings) async {
-    try {
-      await _db.saveAppSettings(settings);
-      _appSettings = settings;
-      notifyListeners();
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error updating app settings: $e');
-    }
+    await configState.updateAppSettings(settings);
   }
 
   Future<void> loadAllData() async {
@@ -146,7 +134,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<void> loadProjectMedia() async {
-    _projectMedia = await DataLoadingHelper.loadProjectMedia(_db);
+    await mediaState.loadProjectMedia();
   }
 
   // --- Customer Operations ---
@@ -163,7 +151,7 @@ class AppStateProvider extends ChangeNotifier {
       customerId: customerId,
       quotes: quoteState.quotes,
       roofScopes: _roofScopeDataList,
-      media: _projectMedia,
+      media: mediaState.projectMedia,
       deleteQuote: deleteSimplifiedQuote,
       deleteRoofScope: deleteRoofScopeData,
       deleteMedia: deleteProjectMedia,
@@ -203,7 +191,7 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<void> deleteSimplifiedQuote(String quoteId) async {
     final mediaForQuote =
-        _projectMedia.where((m) => m.quoteId == quoteId).toList();
+        mediaState.projectMedia.where((m) => m.quoteId == quoteId).toList();
     for (var media in mediaForQuote) {
       await deleteProjectMedia(media.id);
     }
@@ -270,30 +258,23 @@ class AppStateProvider extends ChangeNotifier {
 
   // --- ProjectMedia Operations ---
   Future<void> addProjectMedia(ProjectMedia media) async {
-    await _db.saveProjectMedia(media);
-    _projectMedia.add(media);
-    notifyListeners();
+    await mediaState.addProjectMedia(media);
   }
 
   Future<void> updateProjectMedia(ProjectMedia media) async {
-    await _db.saveProjectMedia(media);
-    final index = _projectMedia.indexWhere((m) => m.id == media.id);
-    if (index != -1) _projectMedia[index] = media;
-    notifyListeners();
+    await mediaState.updateProjectMedia(media);
   }
 
   Future<void> deleteProjectMedia(String mediaId) async {
-    await _db.deleteProjectMedia(mediaId);
-    _projectMedia.removeWhere((m) => m.id == mediaId);
-    notifyListeners();
+    await mediaState.deleteProjectMedia(mediaId);
   }
 
   List<ProjectMedia> getProjectMediaForCustomer(String customerId) {
-    return _projectMedia.where((m) => m.customerId == customerId).toList();
+    return mediaState.getProjectMediaForCustomer(customerId);
   }
 
   List<ProjectMedia> getProjectMediaForQuote(String quoteId) {
-    return _projectMedia.where((m) => m.quoteId == quoteId).toList();
+    return mediaState.getProjectMediaForQuote(quoteId);
   }
 
   // --- Template Operations (delegated) ---
@@ -427,8 +408,8 @@ class AppStateProvider extends ChangeNotifier {
     return await templateState.getAllTemplateCategories();
   }
 
-  Future<void> addTemplateCategory(
-      String templateTypeKey, String categoryUserKey, String categoryDisplayName) async {
+  Future<void> addTemplateCategory(String templateTypeKey,
+      String categoryUserKey, String categoryDisplayName) async {
     await templateState.addTemplateCategory(
       templateTypeKey,
       categoryUserKey,
@@ -436,8 +417,8 @@ class AppStateProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> updateTemplateCategory(
-      String templateTypeKey, String categoryUserKey, String newDisplayName) async {
+  Future<void> updateTemplateCategory(String templateTypeKey,
+      String categoryUserKey, String newDisplayName) async {
     await templateState.updateTemplateCategory(
       templateTypeKey,
       categoryUserKey,
@@ -447,7 +428,8 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<void> deleteTemplateCategory(
       String templateTypeKey, String categoryUserKey) async {
-    await templateState.deleteTemplateCategory(templateTypeKey, categoryUserKey);
+    await templateState.deleteTemplateCategory(
+        templateTypeKey, categoryUserKey);
   }
 
   Future<int> getCategoryUsageCount(
@@ -552,17 +534,11 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<String?> pickAndSaveCompanyLogo(AppSettings settings) async {
-    final newPath = await FileService.instance.pickAndSaveCompanyLogo();
-    if (newPath != null) {
-      settings.updateCompanyLogo(newPath);
-      await updateAppSettings(settings);
-    }
-    return newPath;
+    return configState.pickAndSaveCompanyLogo(settings);
   }
 
   Future<void> removeCompanyLogo(AppSettings settings) async {
-    settings.updateCompanyLogo(null);
-    await updateAppSettings(settings);
+    await configState.removeCompanyLogo(settings);
   }
 
   Future<void> importAllDataFromFile(Map<String, dynamic> data) async {
@@ -582,7 +558,7 @@ class AppStateProvider extends ChangeNotifier {
   // --- Tax Helpers ---
   double? detectTaxRate(
       {String? city, String? stateAbbreviation, String? zipCode}) {
-    return TaxService.getTaxRateByAddress(
+    return configState.detectTaxRate(
       city: city,
       stateAbbreviation: stateAbbreviation,
       zipCode: zipCode,
@@ -590,15 +566,15 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<void> saveZipCodeTaxRate(String zipCode, double rate) async {
-    await TaxService.setZipCodeRate(zipCode, rate);
+    await configState.saveZipCodeTaxRate(zipCode, rate);
   }
 
   Future<void> saveStateTaxRate(String stateAbbreviation, double rate) async {
-    await TaxService.setStateRate(stateAbbreviation, rate);
+    await configState.saveStateTaxRate(stateAbbreviation, rate);
   }
 
-  bool get isTaxDatabaseAvailable => TaxService.isDatabaseAvailable;
-  String get taxDatabaseStatus => TaxService.getDatabaseStatus();
+  bool get isTaxDatabaseAvailable => configState.isTaxDatabaseAvailable;
+  String get taxDatabaseStatus => configState.taxDatabaseStatus;
   // --- Search Operations ---
   List<Customer> searchCustomers(String query) {
     return customerState.searchCustomers(query);
