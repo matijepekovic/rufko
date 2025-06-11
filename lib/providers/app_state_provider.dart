@@ -8,7 +8,6 @@ import '../models/roof_scope_data.dart';
 import '../models/project_media.dart';
 import '../models/app_settings.dart';
 import '../models/pdf_template.dart';
-import '../models/custom_app_data.dart';
 import '../services/database_service.dart';
 import '../services/pdf_service.dart';
 import 'helpers/pdf_generation_helper.dart';
@@ -24,7 +23,9 @@ import '../services/tax_service.dart';
 import '../models/message_template.dart';
 import '../models/email_template.dart';
 import '../models/template_category.dart';
+import '../models/custom_app_data.dart';
 import '../models/inspection_document.dart';
+import 'custom_fields_provider.dart';
 
 class AppStateProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
@@ -39,9 +40,8 @@ class AppStateProvider extends ChangeNotifier {
   List<PDFTemplate> _pdfTemplates = [];
   List<MessageTemplate> _messageTemplates = [];
   List<EmailTemplate> _emailTemplates = [];
-  List<CustomAppDataField> _customAppDataFields = [];
+  final CustomFieldsProvider customFields = CustomFieldsProvider();
   List<TemplateCategory> _templateCategories = [];
-  List<InspectionDocument> _inspectionDocuments = [];
 
   bool _isLoading = false;
   String _loadingMessage = '';
@@ -62,9 +62,9 @@ class AppStateProvider extends ChangeNotifier {
   List<EmailTemplate> get emailTemplates => _emailTemplates;
   List<EmailTemplate> get activeEmailTemplates =>
       _emailTemplates.where((t) => t.isActive).toList();
-  List<CustomAppDataField> get customAppDataFields => _customAppDataFields;
+  List<CustomAppDataField> get customAppDataFields => customFields.fields;
   List<InspectionDocument> get inspectionDocuments =>
-      List.unmodifiable(_inspectionDocuments);
+      customFields.inspectionDocs;
   List<TemplateCategory> get templateCategories => _templateCategories;
 
   bool get isLoading => _isLoading;
@@ -161,9 +161,9 @@ class AppStateProvider extends ChangeNotifier {
         loadPDFTemplates(),
         loadMessageTemplates(),
         loadEmailTemplates(),
-        loadCustomAppDataFields(),
+        customFields.loadFields(),
         loadTemplateCategories(),
-        loadInspectionDocuments(),
+        customFields.loadInspectionDocuments(),
       ]);
       // notifyListeners(); // This is handled by setLoading(false)
     } catch (e) {
@@ -204,14 +204,6 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<void> loadEmailTemplates() async {
     _emailTemplates = await DataLoadingHelper.loadEmailTemplates(_db);
-  }
-
-  Future<void> loadCustomAppDataFields() async {
-    _customAppDataFields = await DataLoadingHelper.loadCustomAppDataFields(_db);
-  }
-
-  Future<void> loadInspectionDocuments() async {
-    _inspectionDocuments = await DataLoadingHelper.loadInspectionDocuments(_db);
   }
 
   // --- Customer Operations ---
@@ -717,222 +709,75 @@ class AppStateProvider extends ChangeNotifier {
 
   // --- Custom App Data Field Operations ---
   Future<void> addCustomAppDataField(CustomAppDataField field) async {
-    try {
-      debugPrint('🆕 AppState: Adding custom field: ${field.fieldName}');
-      await _db.saveCustomAppDataField(field);
-      _customAppDataFields.add(field);
-      notifyListeners();
-      debugPrint(
-          '✅ AppState: Added and notified for field: ${field.fieldName}');
-    } catch (e) {
-      debugPrint('❌ AppState: Error adding custom field: $e');
-      rethrow;
-    }
+    await customFields.addField(field);
+    notifyListeners();
   }
 
   Future<void> updateCustomAppDataField(String fieldId, String newValue) async {
-    try {
-      debugPrint('🔄 AppState: Updating field value: $fieldId = "$newValue"');
-      final fieldIndex =
-          _customAppDataFields.indexWhere((f) => f.id == fieldId);
-      if (fieldIndex != -1) {
-        final field = _customAppDataFields[fieldIndex];
-        field.updateValue(newValue);
-        await _db.saveCustomAppDataField(field);
-        notifyListeners();
-        debugPrint('✅ AppState: Updated field value and notified');
-      } else {
-        debugPrint('❌ AppState: Field not found for value update: $fieldId');
-      }
-    } catch (e) {
-      debugPrint('❌ AppState: Error updating field value: $e');
-      rethrow;
-    }
+    await customFields.updateFieldValue(fieldId, newValue);
+    notifyListeners();
   }
 
   Future<void> updateCustomAppDataFieldStructure(
       CustomAppDataField updatedField) async {
-    try {
-      debugPrint(
-          '🔧 AppState: Updating field structure: ${updatedField.fieldName}');
-      await _db.saveCustomAppDataField(updatedField);
-
-      final index =
-          _customAppDataFields.indexWhere((f) => f.id == updatedField.id);
-      if (index != -1) {
-        _customAppDataFields[index] = updatedField;
-        debugPrint('✅ AppState: Updated field in memory list');
-      } else {
-        debugPrint('⚠️ AppState: Field not found in memory, adding it');
-        _customAppDataFields.add(updatedField);
-      }
-
-      notifyListeners();
-      debugPrint('✅ AppState: Field structure updated and notified');
-    } catch (e) {
-      debugPrint('❌ AppState: Error updating field structure: $e');
-      rethrow;
-    }
+    await customFields.updateFieldStructure(updatedField);
+    notifyListeners();
   }
 
   Future<void> deleteCustomAppDataField(String fieldId) async {
-    try {
-      debugPrint('🗑️ AppState: Deleting custom field: $fieldId');
-      await _db.deleteCustomAppDataField(fieldId);
-
-      final removedCount = _customAppDataFields.length;
-      _customAppDataFields.removeWhere((f) => f.id == fieldId);
-      final newCount = _customAppDataFields.length;
-
-      debugPrint(
-          '✅ AppState: Removed field from memory ($removedCount -> $newCount)');
-      notifyListeners();
-      debugPrint('✅ AppState: Field deleted and notified');
-    } catch (e) {
-      debugPrint('❌ AppState: Error deleting field: $e');
-      rethrow;
-    }
+    await customFields.deleteField(fieldId);
+    notifyListeners();
   }
 
   // --- Inspection Document Management ---
 
   List<InspectionDocument> getInspectionDocumentsForCustomer(
       String customerId) {
-    return _inspectionDocuments
-        .where((doc) => doc.customerId == customerId)
-        .toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return customFields.documentsForCustomer(customerId);
   }
 
   Future<void> addInspectionDocument(InspectionDocument document) async {
-    try {
-      await DatabaseService.instance.saveInspectionDocument(document);
-      _inspectionDocuments.add(document);
-
-      if (document.sortOrder == 0) {
-        final customerDocs =
-            getInspectionDocumentsForCustomer(document.customerId);
-        document.updateSortOrder(customerDocs.length);
-        await DatabaseService.instance.saveInspectionDocument(document);
-      }
-
-      notifyListeners();
-    } catch (e) {
-      rethrow;
-    }
+    await customFields.addInspectionDocument(document);
+    notifyListeners();
   }
 
   Future<void> deleteInspectionDocument(String documentId) async {
-    try {
-      await DatabaseService.instance.deleteInspectionDocument(documentId);
-      _inspectionDocuments.removeWhere((doc) => doc.id == documentId);
-      notifyListeners();
-    } catch (e) {
-      rethrow;
-    }
+    await customFields.deleteInspectionDocument(documentId);
+    notifyListeners();
   }
 
   Future<void> reorderCustomAppDataFields(
       String category, List<CustomAppDataField> reorderedFields) async {
-    try {
-      for (int i = 0; i < reorderedFields.length; i++) {
-        reorderedFields[i].updateField(sortOrder: i);
-      }
-
-      await DatabaseService.instance
-          .saveMultipleCustomAppDataFields(reorderedFields);
-
-      for (final field in reorderedFields) {
-        final index = _customAppDataFields.indexWhere((f) => f.id == field.id);
-        if (index != -1) {
-          _customAppDataFields[index] = field;
-        }
-      }
-
-      notifyListeners();
-    } catch (e) {
-      rethrow;
-    }
+    await customFields.reorderFields(category, reorderedFields);
+    notifyListeners();
   }
 
   List<CustomAppDataField> getCustomAppDataFieldsByCategory(String category) {
-    return _customAppDataFields.where((f) => f.category == category).toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    return customFields.fieldsByCategory(category);
   }
 
   Map<String, String> getCustomAppDataMap() {
-    final dataMap = <String, String>{};
-    for (final field in _customAppDataFields) {
-      dataMap[field.fieldName] = field.currentValue;
-    }
-    return dataMap;
+    return customFields.dataMap();
   }
 
   Future<void> addTemplateFields(
       List<CustomAppDataField> templateFields) async {
     try {
       setLoading(true, 'Adding template fields...');
-
-      for (final field in templateFields) {
-        // Check if field already exists
-        final existing = _customAppDataFields
-            .where((f) => f.fieldName == field.fieldName)
-            .toList();
-        if (existing.isEmpty) {
-          await addCustomAppDataField(field);
-        }
-      }
-
-      if (kDebugMode) {
-        debugPrint('✅ Added ${templateFields.length} template fields');
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error adding template fields: $e');
-      rethrow;
+      await customFields.addTemplateFields(templateFields);
     } finally {
       setLoading(false);
     }
   }
 
   Map<String, dynamic> exportCustomAppData() {
-    return {
-      'customAppDataFields':
-          _customAppDataFields.map((f) => f.toMap()).toList(),
-      'exportDate': DateTime.now().toIso8601String(),
-      'version': '1.0',
-    };
+    return customFields.exportData();
   }
 
   Future<void> importCustomAppData(Map<String, dynamic> data) async {
     try {
       setLoading(true, 'Importing custom app data...');
-
-      if (data['customAppDataFields'] != null) {
-        final importedFields = (data['customAppDataFields'] as List)
-            .map((fieldData) => CustomAppDataField.fromMap(fieldData))
-            .toList();
-
-        for (final field in importedFields) {
-          // Check if field already exists
-          final existingIndex = _customAppDataFields
-              .indexWhere((f) => f.fieldName == field.fieldName);
-          if (existingIndex != -1) {
-            // Update existing field
-            await updateCustomAppDataFieldStructure(field);
-          } else {
-            // Add new field
-            await addCustomAppDataField(field);
-          }
-        }
-
-        if (kDebugMode) {
-          debugPrint(
-              '✅ Imported ${importedFields.length} custom app data fields');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error importing custom app data: $e');
-      rethrow;
+      await customFields.importData(data);
     } finally {
       setLoading(false);
     }

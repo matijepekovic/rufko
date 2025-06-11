@@ -118,7 +118,7 @@ class DataLoadingHelper {
   static Future<List<InspectionDocument>> loadInspectionDocuments(
       DatabaseService db) async {
     try {
-      final docs = await DatabaseService.instance.getAllInspectionDocuments();
+      final docs = await db.getAllInspectionDocuments();
       if (kDebugMode) {
         debugPrint('✅ Loaded ${docs.length} inspection documents');
       }
@@ -144,6 +144,4 @@ class DataLoadingHelper {
       return [];
     }
   }
-
-  
 }
