@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
 import '../models/product.dart';
-import 'products/product_form_dialog.dart';
 import '../widgets/product_card.dart'; // Use our clean ProductCard
 import '../mixins/search_mixin.dart';
 import '../mixins/sort_menu_mixin.dart';
 import '../mixins/empty_state_mixin.dart';
+import '../controllers/product_dialog_manager.dart';
+import '../controllers/product_filter_controller.dart';
+import '../controllers/product_category_manager.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -21,25 +23,19 @@ class _ProductsScreenState extends State<ProductsScreen>
     with TickerProviderStateMixin, SearchMixin, SortMenuMixin, EmptyStateMixin {
   late TabController _tabController;
   // SearchMixin provides searchController, searchQuery and searchVisible
+  late ProductDialogManager _dialogManager;
   String _sortBy = 'name';
   bool _sortAscending = true;
-
   List<String> _categoryTabs = ['All'];
+  late ProductCategoryManager _categoryManager;
 
   @override
   void initState() {
     super.initState();
-    _updateCategoryTabs();
+    _dialogManager = ProductDialogManager(context);
+    _categoryManager = ProductCategoryManager(context.read<AppStateProvider>());
+    _categoryTabs = _categoryManager.getCategoryTabs();
     _tabController = TabController(length: _categoryTabs.length, vsync: this);
-  }
-
-  void _updateCategoryTabs() {
-    final appState = context.read<AppStateProvider>();
-    if (appState.appSettings != null && appState.appSettings!.productCategories.isNotEmpty) {
-      _categoryTabs = ['All', ...appState.appSettings!.productCategories];
-    } else {
-      _categoryTabs = ['All', 'Materials', 'Roofing', 'Gutters', 'Labor', 'Other'];
-    }
   }
 
   @override
@@ -117,7 +113,9 @@ class _ProductsScreenState extends State<ProductsScreen>
                   unselectedLabelColor: Colors.grey[600],
                   indicatorColor: Theme.of(context).primaryColor,
                   isScrollable: true,
-                  tabs: _categoryTabs.map((category) => Tab(text: category)).toList(),
+                  tabs: _categoryTabs
+                      .map((category) => Tab(text: category))
+                      .toList(),
                 ),
               ),
             ],
@@ -131,12 +129,14 @@ class _ProductsScreenState extends State<ProductsScreen>
           }
           return TabBarView(
             controller: _tabController,
-            children: _categoryTabs.map((category) => _buildProductsList(appState, category)).toList(),
+            children: _categoryTabs
+                .map((category) => _buildProductsList(appState, category))
+                .toList(),
           );
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddProductDialog(context),
+        onPressed: _dialogManager.showAddProductDialog,
         child: const Icon(Icons.add),
       ),
     );
@@ -160,12 +160,13 @@ class _ProductsScreenState extends State<ProductsScreen>
             prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
             suffixIcon: searchController.text.isNotEmpty
                 ? IconButton(
-              icon: Icon(Icons.clear, color: Colors.grey[600]),
-              onPressed: clearSearch,
-            )
+                    icon: Icon(Icons.clear, color: Colors.grey[600]),
+                    onPressed: clearSearch,
+                  )
                 : null,
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           onChanged: (value) => setState(() => searchQuery = value),
         ),
@@ -174,7 +175,13 @@ class _ProductsScreenState extends State<ProductsScreen>
   }
 
   Widget _buildProductsList(AppStateProvider appState, String categoryFilter) {
-    List<Product> productsToDisplay = _getFilteredProducts(appState, categoryFilter);
+    final controller = ProductFilterController(appState);
+    List<Product> productsToDisplay = controller.getFilteredProducts(
+      category: categoryFilter,
+      searchQuery: searchQuery,
+      sortBy: _sortBy,
+      sortAscending: _sortAscending,
+    );
 
     if (productsToDisplay.isEmpty) {
       return _buildEmptyState(categoryFilter);
@@ -191,9 +198,9 @@ class _ProductsScreenState extends State<ProductsScreen>
           return ProductCard(
             product: product,
             onTap: null, // Do nothing on tap
-            onEdit: () => _showEditProductDialog(context, product),
-            onDelete: () => _showDeleteConfirmation(context, product),
-            onToggleActive: () => _toggleProductStatus(product),
+            onEdit: () => _dialogManager.showEditProductDialog(product),
+            onDelete: () => _dialogManager.showDeleteConfirmation(product),
+            onToggleActive: () => _dialogManager.toggleProductStatus(product),
           );
         },
       ),
@@ -226,7 +233,7 @@ class _ProductsScreenState extends State<ProductsScreen>
           const SizedBox(height: 32),
           if (searchQuery.isEmpty)
             ElevatedButton.icon(
-              onPressed: () => _showAddProductDialog(context),
+              onPressed: _dialogManager.showAddProductDialog,
               icon: const Icon(Icons.add),
               label: const Text('Add First Product'),
             )
@@ -239,106 +246,5 @@ class _ProductsScreenState extends State<ProductsScreen>
         ],
       ),
     );
-  }
-
-  List<Product> _getFilteredProducts(AppStateProvider appState, String categoryFilter) {
-    List<Product> products = searchQuery.isEmpty
-        ? appState.products
-        : _getSearchResults(appState.products);
-
-    if (categoryFilter != 'All') {
-      products = products.where((p) =>
-      p.category.toLowerCase() == categoryFilter.toLowerCase()
-      ).toList();
-    }
-
-    products.sort((a, b) {
-      int comparison;
-      switch (_sortBy) {
-        case 'category':
-          comparison = a.category.toLowerCase().compareTo(b.category.toLowerCase());
-          break;
-        case 'price':
-          comparison = a.unitPrice.compareTo(b.unitPrice);
-          break;
-        default:
-          comparison = a.name.toLowerCase().compareTo(b.name.toLowerCase());
-      }
-      return _sortAscending ? comparison : -comparison;
-    });
-
-    return products;
-  }
-
-  List<Product> _getSearchResults(List<Product> products) {
-    final lowerQuery = searchQuery.toLowerCase();
-    return products.where((product) =>
-    product.name.toLowerCase().contains(lowerQuery) ||
-        (product.description?.toLowerCase().contains(lowerQuery) ?? false) ||
-        product.category.toLowerCase().contains(lowerQuery) ||
-        (product.sku?.toLowerCase().contains(lowerQuery) ?? false)
-    ).toList();
-  }
-
-
-  void _showAddProductDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const ProductFormDialog(),
-    );
-  }
-
-  void _showEditProductDialog(BuildContext context, Product product) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => ProductFormDialog(product: product),
-    );
-  }
-
-  void _showDeleteConfirmation(BuildContext context, Product product) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red.shade600),
-            const SizedBox(width: 12),
-            const Text('Delete Product'),
-          ],
-        ),
-        content: Text('Are you sure you want to delete "${product.name}"?\n\nThis action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<AppStateProvider>().deleteProduct(product.id);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${product.name} deleted'),
-                  backgroundColor: Colors.red.shade600,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _toggleProductStatus(Product product) {
-    product.updateInfo(isActive: !product.isActive);
-    context.read<AppStateProvider>().updateProduct(product);
   }
 }
