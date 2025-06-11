@@ -16,7 +16,6 @@ import 'helpers/data_loading_helper.dart';
 import 'helpers/template_category_helper.dart';
 import 'helpers/message_template_helper.dart';
 import 'helpers/email_template_helper.dart';
-import 'helpers/customer_helper.dart';
 import '../services/template_service.dart';
 import '../services/file_service.dart';
 import '../services/tax_service.dart';
@@ -26,15 +25,18 @@ import '../models/template_category.dart';
 import '../models/custom_app_data.dart';
 import '../models/inspection_document.dart';
 import 'custom_fields_provider.dart';
+import 'customer_state_provider.dart';
+import 'product_state_provider.dart';
+import 'quote_state_provider.dart';
 
 class AppStateProvider extends ChangeNotifier {
   final DatabaseService _db = DatabaseService.instance;
   final PdfService _pdfService = PdfService();
 
-  List<Customer> _customers = [];
-  List<Product> _products = [];
+  late final CustomerStateProvider customerState;
+  late final ProductStateProvider productState;
+  late final QuoteStateProvider quoteState;
   AppSettings? _appSettings;
-  List<SimplifiedMultiLevelQuote> _simplifiedQuotes = [];
   List<RoofScopeData> _roofScopeDataList = [];
   List<ProjectMedia> _projectMedia = [];
   List<PDFTemplate> _pdfTemplates = [];
@@ -47,10 +49,10 @@ class AppStateProvider extends ChangeNotifier {
   String _loadingMessage = '';
 
   // Getters
-  List<Customer> get customers => _customers;
-  List<Product> get products => _products;
+  List<Customer> get customers => customerState.customers;
+  List<Product> get products => productState.products;
   AppSettings? get appSettings => _appSettings;
-  List<SimplifiedMultiLevelQuote> get simplifiedQuotes => _simplifiedQuotes;
+  List<SimplifiedMultiLevelQuote> get simplifiedQuotes => quoteState.quotes;
   List<RoofScopeData> get roofScopeDataList => _roofScopeDataList;
   List<ProjectMedia> get projectMedia => _projectMedia;
   List<PDFTemplate> get pdfTemplates => _pdfTemplates;
@@ -71,7 +73,12 @@ class AppStateProvider extends ChangeNotifier {
   String get loadingMessage => _loadingMessage;
 
   AppStateProvider() {
-    // Constructor can be used for initial setup
+    customerState = CustomerStateProvider(database: _db)
+      ..addListener(notifyListeners);
+    productState = ProductStateProvider(database: _db)
+      ..addListener(notifyListeners);
+    quoteState = QuoteStateProvider(database: _db)
+      ..addListener(notifyListeners);
   }
 
   Future<void> initializeApp() async {
@@ -153,9 +160,9 @@ class AppStateProvider extends ChangeNotifier {
     setLoading(true, 'Loading data...');
     try {
       await Future.wait([
-        loadCustomers(),
-        loadProducts(),
-        loadSimplifiedQuotes(),
+        customerState.loadCustomers(),
+        productState.loadProducts(),
+        quoteState.loadQuotes(),
         loadRoofScopeData(),
         loadProjectMedia(),
         loadPDFTemplates(),
@@ -174,16 +181,9 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   // Individual load methods
-  Future<void> loadCustomers() async {
-    _customers = await DataLoadingHelper.loadCustomers(_db);
-  }
-
-  Future<void> loadProducts() async {
-    _products = await DataLoadingHelper.loadProducts(_db);
-  }
 
   Future<void> loadSimplifiedQuotes() async {
-    _simplifiedQuotes = await DataLoadingHelper.loadSimplifiedQuotes(_db);
+    await quoteState.loadQuotes();
   }
 
   Future<void> loadRoofScopeData() async {
@@ -208,36 +208,23 @@ class AppStateProvider extends ChangeNotifier {
 
   // --- Customer Operations ---
   Future<void> addCustomer(Customer customer) async {
-    await CustomerHelper.addCustomer(
-      db: _db,
-      customers: _customers,
-      customer: customer,
-    );
-    notifyListeners();
+    await customerState.addCustomer(customer);
   }
 
   Future<void> updateCustomer(Customer customer) async {
-    await CustomerHelper.updateCustomer(
-      db: _db,
-      customers: _customers,
-      customer: customer,
-    );
-    notifyListeners();
+    await customerState.updateCustomer(customer);
   }
 
   Future<void> deleteCustomer(String customerId) async {
-    await CustomerHelper.deleteCustomer(
-      db: _db,
-      customers: _customers,
-      quotes: _simplifiedQuotes,
+    await customerState.deleteCustomer(
+      customerId: customerId,
+      quotes: quoteState.quotes,
       roofScopes: _roofScopeDataList,
       media: _projectMedia,
       deleteQuote: deleteSimplifiedQuote,
       deleteRoofScope: deleteRoofScopeData,
       deleteMedia: deleteProjectMedia,
-      customerId: customerId,
     );
-    notifyListeners();
   }
 
   Future<void> loadTemplateCategories() async {
@@ -246,42 +233,21 @@ class AppStateProvider extends ChangeNotifier {
 
   // --- Product Operations ---
   Future<void> addProduct(Product product) async {
-    await _db.saveProduct(product);
-    _products.add(product);
-    notifyListeners();
+    await productState.addProduct(product);
   }
 
   Future<void> updateProduct(Product product) async {
-    await _db.saveProduct(product);
-    final index = _products.indexWhere((p) => p.id == product.id);
-    if (index != -1) _products[index] = product;
-    notifyListeners();
+    await productState.updateProduct(product);
   }
 
   Future<void> deleteProduct(String productId) async {
-    await _db.deleteProduct(productId);
-    _products.removeWhere((p) => p.id == productId);
-    notifyListeners();
+    await productState.deleteProduct(productId);
   }
 
   Future<void> importProducts(List<Product> productsToImport) async {
     setLoading(true, 'Importing products...');
     try {
-      for (final product in productsToImport) {
-        final existingIndex = _products.indexWhere(
-            (p) => p.name.toLowerCase() == product.name.toLowerCase());
-        if (existingIndex != -1) {
-          await _db.saveProduct(product);
-          _products[existingIndex] = product;
-        } else {
-          await _db.saveProduct(product);
-          _products.add(product);
-        }
-      }
-      notifyListeners();
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error importing products: $e');
-      rethrow;
+      await productState.importProducts(productsToImport);
     } finally {
       setLoading(false);
     }
@@ -289,17 +255,11 @@ class AppStateProvider extends ChangeNotifier {
 
   // --- SimplifiedMultiLevelQuote Operations ---
   Future<void> addSimplifiedQuote(SimplifiedMultiLevelQuote quote) async {
-    await _db.saveSimplifiedMultiLevelQuote(quote);
-    _simplifiedQuotes.add(quote);
-    notifyListeners();
+    await quoteState.addSimplifiedQuote(quote);
   }
 
   Future<void> updateSimplifiedQuote(SimplifiedMultiLevelQuote quote) async {
-    quote.updatedAt = DateTime.now();
-    await _db.saveSimplifiedMultiLevelQuote(quote);
-    final index = _simplifiedQuotes.indexWhere((q) => q.id == quote.id);
-    if (index != -1) _simplifiedQuotes[index] = quote;
-    notifyListeners();
+    await quoteState.updateSimplifiedQuote(quote);
   }
 
   Future<void> deleteSimplifiedQuote(String quoteId) async {
@@ -308,14 +268,12 @@ class AppStateProvider extends ChangeNotifier {
     for (var media in mediaForQuote) {
       await deleteProjectMedia(media.id);
     }
-    await _db.deleteSimplifiedMultiLevelQuote(quoteId);
-    _simplifiedQuotes.removeWhere((q) => q.id == quoteId);
-    notifyListeners();
+    await quoteState.deleteSimplifiedQuote(quoteId);
   }
 
   List<SimplifiedMultiLevelQuote> getSimplifiedQuotesForCustomer(
       String customerId) {
-    return _simplifiedQuotes.where((q) => q.customerId == customerId).toList();
+    return quoteState.getSimplifiedQuotesForCustomer(customerId);
   }
 
   Future<String> generateSimplifiedQuotePdf(
@@ -324,8 +282,7 @@ class AppStateProvider extends ChangeNotifier {
     String? selectedLevelId,
     List<String>? selectedAddonIds,
   }) async {
-    return PdfGenerationHelper.generateSimplifiedQuotePdf(
-      _pdfService,
+    return quoteState.generateSimplifiedQuotePdf(
       quote,
       customer,
       selectedLevelId: selectedLevelId,
@@ -924,30 +881,18 @@ class AppStateProvider extends ChangeNotifier {
   String get taxDatabaseStatus => TaxService.getDatabaseStatus();
   // --- Search Operations ---
   List<Customer> searchCustomers(String query) {
-    if (query.isEmpty) return _customers;
-    final lowerQuery = query.toLowerCase();
-    return _customers
-        .where((c) =>
-            c.name.toLowerCase().contains(lowerQuery) ||
-            (c.phone?.contains(lowerQuery) ?? false))
-        .toList();
+    return customerState.searchCustomers(query);
   }
 
   List<Product> searchProducts(String query) {
-    if (query.isEmpty) return _products;
-    final lowerQuery = query.toLowerCase();
-    return _products
-        .where((p) =>
-            p.name.toLowerCase().contains(lowerQuery) ||
-            (p.category.toLowerCase().contains(lowerQuery)))
-        .toList();
+    return productState.searchProducts(query);
   }
 
   List<SimplifiedMultiLevelQuote> searchSimplifiedQuotes(String query) {
-    if (query.isEmpty) return _simplifiedQuotes;
+    if (query.isEmpty) return quoteState.quotes;
     final lowerQuery = query.toLowerCase();
-    return _simplifiedQuotes.where((q) {
-      final customer = _customers.firstWhere((c) => c.id == q.customerId,
+    return quoteState.quotes.where((q) {
+      final customer = customers.firstWhere((c) => c.id == q.customerId,
           orElse: () => Customer(name: ""));
       return q.quoteNumber.toLowerCase().contains(lowerQuery) ||
           customer.name.toLowerCase().contains(lowerQuery);
@@ -957,7 +902,7 @@ class AppStateProvider extends ChangeNotifier {
   // --- Dashboard Statistics ---
   Map<String, dynamic> getDashboardStats() {
     double totalRevenue = 0;
-    for (var quote in _simplifiedQuotes) {
+    for (var quote in quoteState.quotes) {
       if (quote.status.toLowerCase() == 'accepted' && quote.levels.isNotEmpty) {
         var acceptedLevelSubtotal = quote.levels
             .map((l) => l.subtotal)
@@ -966,17 +911,17 @@ class AppStateProvider extends ChangeNotifier {
       }
     }
     return {
-      'totalCustomers': _customers.length,
-      'totalQuotes': _simplifiedQuotes.length,
-      'totalProducts': _products.length,
+      'totalCustomers': customers.length,
+      'totalQuotes': quoteState.quotes.length,
+      'totalProducts': products.length,
       'totalRevenue': totalRevenue,
-      'draftQuotes': _simplifiedQuotes
+      'draftQuotes': quoteState.quotes
           .where((q) => q.status.toLowerCase() == 'draft')
           .length,
-      'sentQuotes': _simplifiedQuotes
+      'sentQuotes': quoteState.quotes
           .where((q) => q.status.toLowerCase() == 'sent')
           .length,
-      'acceptedQuotes': _simplifiedQuotes
+      'acceptedQuotes': quoteState.quotes
           .where((q) => q.status.toLowerCase() == 'accepted')
           .length,
     };

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:rufko/providers/quote_provider.dart';
+import 'package:rufko/providers/quote_state_provider.dart';
 import 'package:rufko/models/simplified_quote.dart';
 import 'package:rufko/services/database_service.dart';
 
@@ -8,16 +8,17 @@ class MockDatabaseService extends Mock implements DatabaseService {}
 
 void main() {
   late MockDatabaseService db;
-  late QuoteProvider provider;
+  late QuoteStateProvider provider;
 
   setUp(() {
     db = MockDatabaseService();
-    provider = QuoteProvider(database: db);
+    provider = QuoteStateProvider(database: db);
   });
 
   test('loadQuotes populates list', () async {
     final quote = SimplifiedMultiLevelQuote(customerId: '1');
-    when(() => db.getAllSimplifiedMultiLevelQuotes()).thenAnswer((_) async => [quote]);
+    when(() => db.getAllSimplifiedMultiLevelQuotes())
+        .thenAnswer((_) async => [quote]);
 
     await provider.loadQuotes();
 
@@ -26,9 +27,10 @@ void main() {
 
   test('addQuote adds item to list', () async {
     final quote = SimplifiedMultiLevelQuote(customerId: '1');
-    when(() => db.saveSimplifiedMultiLevelQuote(quote)).thenAnswer((_) async {});
+    when(() => db.saveSimplifiedMultiLevelQuote(quote))
+        .thenAnswer((_) async {});
 
-    await provider.addQuote(quote);
+    await provider.addSimplifiedQuote(quote);
 
     expect(provider.quotes.contains(quote), isTrue);
     verify(() => db.saveSimplifiedMultiLevelQuote(quote)).called(1);
@@ -39,9 +41,10 @@ void main() {
     provider.quotes.add(quote);
 
     final updated = SimplifiedMultiLevelQuote(id: quote.id, customerId: '1');
-    when(() => db.saveSimplifiedMultiLevelQuote(updated)).thenAnswer((_) async {});
+    when(() => db.saveSimplifiedMultiLevelQuote(updated))
+        .thenAnswer((_) async {});
 
-    await provider.updateQuote(updated);
+    await provider.updateSimplifiedQuote(updated);
 
     expect(provider.quotes.first.id, updated.id);
   });
@@ -49,9 +52,10 @@ void main() {
   test('deleteQuote removes item from list', () async {
     final quote = SimplifiedMultiLevelQuote(customerId: '1');
     provider.quotes.add(quote);
-    when(() => db.deleteSimplifiedMultiLevelQuote(quote.id)).thenAnswer((_) async {});
+    when(() => db.deleteSimplifiedMultiLevelQuote(quote.id))
+        .thenAnswer((_) async {});
 
-    await provider.deleteQuote(quote.id);
+    await provider.deleteSimplifiedQuote(quote.id);
 
     expect(provider.quotes, isEmpty);
   });
