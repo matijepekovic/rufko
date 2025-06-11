@@ -26,7 +26,9 @@ import 'customer_detail/inspection_tab.dart';
 import '../controllers/communication_controller.dart';
 import '../controllers/communication_dialog_controller.dart';
 import '../dialogs/communication/sms_preview_dialog.dart';
+import '../dialogs/communication/sms_edit_dialog.dart';
 import '../dialogs/communication/email_preview_dialog.dart';
+import '../dialogs/communication/email_edit_dialog.dart';
 
 class CustomerDetailScreen extends StatefulWidget {
   final Customer customer;

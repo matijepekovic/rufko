@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/communication_dialog_controller.dart';
+import 'sms_edit_dialog.dart';
 
 class SmsPreviewDialog extends StatelessWidget {
   final CommunicationDialogController controller;

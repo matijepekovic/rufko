@@ -1,3 +1,8 @@
+import 'package:flutter/material.dart';
+
+import '../../controllers/communication_dialog_controller.dart';
+import 'sms_preview_dialog.dart';
+
 class SmsEditDialog extends StatefulWidget {
   final CommunicationDialogController controller;
   const SmsEditDialog({super.key, required this.controller});
