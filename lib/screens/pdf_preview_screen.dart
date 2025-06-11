@@ -9,6 +9,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as sf_pdf;
+import '../controllers/pdf_document_controller.dart';
+import '../controllers/pdf_editing_controller.dart';
+import '../models/pdf_form_field.dart';
+import '../models/edit_action.dart';
 import '../providers/app_state_provider.dart';
 import '../models/simplified_quote.dart';
 import '../models/customer.dart';
@@ -16,67 +20,6 @@ import '../models/project_media.dart';
 import '../theme/rufko_theme.dart';
 import 'package:intl/intl.dart';
 import '../mixins/file_sharing_mixin.dart';
-// Model for form fields
-class PDFFormField {
-  final String name;
-  final String type;
-  final String currentValue;
-  final Rect bounds;
-  final int pageNumber;
-  final bool isRequired;
-  final List<String>? options; // For choice fields
-
-  PDFFormField({
-    required this.name,
-    required this.type,
-    required this.currentValue,
-    required this.bounds,
-    required this.pageNumber,
-    this.isRequired = false,
-    this.options,
-  });
-
-  PDFFormField copyWith({
-    String? name,
-    String? type,
-    String? currentValue,
-    Rect? bounds,
-    int? pageNumber,
-    bool? isRequired,
-    List<String>? options,
-  }) {
-    return PDFFormField(
-      name: name ?? this.name,
-      type: type ?? this.type,
-      currentValue: currentValue ?? this.currentValue,
-      bounds: bounds ?? this.bounds,
-      pageNumber: pageNumber ?? this.pageNumber,
-      isRequired: isRequired ?? this.isRequired,
-      options: options ?? this.options,
-    );
-  }
-
-  @override
-  String toString() => 'PDFFormField($name: $currentValue)';
-}
-
-// Model for edit history (undo/redo)
-class EditAction {
-  final String fieldName;
-  final String oldValue;
-  final String newValue;
-  final DateTime timestamp;
-
-  EditAction({
-    required this.fieldName,
-    required this.oldValue,
-    required this.newValue,
-    DateTime? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now();
-
-  @override
-  String toString() => 'Edit: $fieldName "$oldValue" → "$newValue"';
-}
 
 class PdfPreviewScreen extends StatefulWidget {
   final String pdfPath;
@@ -116,14 +59,12 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   bool _hasEdits = false;
 
   // Enhanced editing features
-  final Map<String, String> _editedValues = {};
+  final PdfEditingController _editingController = PdfEditingController();
   List<PDFFormField> _formFields = [];
   final bool _showFieldOverlays = false;
   bool _isLoadingFields = false;
 
-  // Undo/Redo system
-  final List<EditAction> _editHistory = [];
-  int _currentHistoryIndex = -1;
+  // Undo/Redo system managed by controller
 
   // Visual editing
   bool _showEditingTools = false;
@@ -138,122 +79,30 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
     _currentPdfPath = widget.pdfPath;
     _loadEditableFields();
     _loadFormFields();
+    _editingController.addListener(() {
+      setState(() {
+        _hasEdits = _editingController.hasEdits;
+      });
+    });
   }
 
   @override
   void dispose() {
     _pdfController.dispose();
+    _editingController.dispose();
     super.dispose();
   }
 
   // Load form fields from PDF
   Future<void> _loadFormFields() async {
     if (_isLoadingFields) return;
-
     setState(() => _isLoadingFields = true);
-
     try {
-      debugPrint('🔍 Loading form fields from: $_currentPdfPath');
-
-      final file = File(_currentPdfPath);
-      if (!await file.exists()) {
-        debugPrint('❌ PDF file does not exist');
-        return;
-      }
-
-      final bytes = await file.readAsBytes();
-      final document = sf_pdf.PdfDocument(inputBytes: bytes);
-
-      final List<PDFFormField> fields = [];
-
-      debugPrint('📄 PDF loaded, checking for form fields...');
-      debugPrint('📊 Form fields count: ${document.form.fields.count}');
-
-      // Extract form fields using Syncfusion PDF
-      if (document.form.fields.count > 0) {
-        for (int i = 0; i < document.form.fields.count; i++) {
-          final field = document.form.fields[i];
-          final fieldName = field.name ?? 'field_$i';
-
-          debugPrint('🔍 Processing field $i: "$fieldName" (${field.runtimeType})');
-
-          // Get field bounds (this is approximate - exact positioning needs more work)
-          final bounds = Rect.fromLTWH(
-            field.bounds.left,
-            field.bounds.top,
-            field.bounds.width,
-            field.bounds.height,
-          );
-
-          String fieldType = 'text';
-          String currentValue = '';
-          List<String>? options;
-
-          // Determine field type and get current value
-          if (field is sf_pdf.PdfTextBoxField) {
-            fieldType = 'text';
-            currentValue = field.text;
-            debugPrint('   📝 Text field: "$currentValue"');
-          } else if (field is sf_pdf.PdfComboBoxField) {
-            fieldType = 'dropdown';
-            currentValue = field.selectedValue;
-            options = [];
-            for (int j = 0; j < field.items.count; j++) {
-              options.add(field.items[j].text);
-            }
-            debugPrint('   📋 Dropdown field: "$currentValue" (${options.length} options)');
-          } else if (field is sf_pdf.PdfListBoxField) {
-            fieldType = 'listbox';
-            currentValue = field.selectedValues.isNotEmpty ? field.selectedValues.first : '';
-            options = [];
-            for (int j = 0; j < field.items.count; j++) {
-              options.add(field.items[j].text);
-            }
-            debugPrint('   📋 Listbox field: "$currentValue" (${options.length} options)');
-          } else if (field is sf_pdf.PdfCheckBoxField) {
-            fieldType = 'checkbox';
-            currentValue = field.isChecked ? 'true' : 'false';
-            debugPrint('   ☑️ Checkbox field: $currentValue');
-          } else if (field is sf_pdf.PdfRadioButtonListField) {
-            fieldType = 'radio';
-            currentValue = field.selectedValue;
-            options = [];
-            for (int j = 0; j < field.items.count; j++) {
-              options.add(field.items[j].value);
-            }
-            debugPrint('   🔘 Radio field: "$currentValue" (${options.length} options)');
-          } else {
-            debugPrint('   ❓ Unknown field type: ${field.runtimeType}');
-          }
-
-          fields.add(PDFFormField(
-            name: fieldName,
-            type: fieldType,
-            currentValue: currentValue,
-            bounds: bounds,
-            pageNumber: 0, // Need to determine page number
-            isRequired: false, // Syncfusion doesn't expose this directly
-            options: options,
-          ));
-        }
-      } else {
-        debugPrint('⚠️ No form fields found in PDF');
-      }
-
-      document.dispose();
-
-      setState(() {
-        _formFields = fields;
-      });
-
-      debugPrint('✅ Loaded ${fields.length} form fields:');
-      for (final field in fields) {
-        debugPrint('   - "${field.name}" (${field.type}) = "${field.currentValue}"');
-      }
-
+      final controller = PdfDocumentController(_currentPdfPath);
+      final fields = await controller.loadFormFields();
+      setState(() => _formFields = fields);
     } catch (e) {
       debugPrint('❌ Error loading form fields: $e');
-      debugPrint('📍 Stack trace: ${StackTrace.current}');
     } finally {
       setState(() => _isLoadingFields = false);
     }
@@ -261,72 +110,25 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
 
   // Add edit action to history
   void _addEditAction(String fieldName, String oldValue, String newValue) {
-    if (oldValue == newValue) return;
-
-    // Remove any history after current index (for branching edits)
-    if (_currentHistoryIndex < _editHistory.length - 1) {
-      _editHistory.removeRange(_currentHistoryIndex + 1, _editHistory.length);
-    }
-
-    // Add new action
-    final action = EditAction(
-      fieldName: fieldName,
-      oldValue: oldValue,
-      newValue: newValue,
-    );
-
-    _editHistory.add(action);
-    _currentHistoryIndex = _editHistory.length - 1;
-
-    // Limit history size
-    if (_editHistory.length > 50) {
-      _editHistory.removeAt(0);
-      _currentHistoryIndex--;
-    }
-
-    setState(() => _hasEdits = true);
-
-    debugPrint('📝 Edit: ${action.fieldName} "${action.oldValue}" → "${action.newValue}"');
+    _editingController.addEdit(fieldName, oldValue, newValue);
   }
 
   // Undo last edit
   void _undoEdit() {
-    if (_currentHistoryIndex < 0) return;
-
-    final action = _editHistory[_currentHistoryIndex];
-    _editedValues[action.fieldName] = action.oldValue;
-    _currentHistoryIndex--;
-
-    setState(() {
-      _hasEdits = _editedValues.values.any((v) => v.isNotEmpty);
-    });
-
-    debugPrint('↶ Undo: ${action.fieldName} → "${action.oldValue}"');
+    _editingController.undo();
   }
 
   // Redo last undone edit
   void _redoEdit() {
-    if (_currentHistoryIndex >= _editHistory.length - 1) return;
-
-    _currentHistoryIndex++;
-    final action = _editHistory[_currentHistoryIndex];
-    _editedValues[action.fieldName] = action.newValue;
-
-    setState(() => _hasEdits = true);
-
-    debugPrint('↷ Redo: ${action.fieldName} → "${action.newValue}"');
+    _editingController.redo();
   }
-
-
-
-
 
   // Load information about which fields can be edited from templates
   void _loadEditableFields() {
     if (widget.templateId != null) {
       final appState = context.read<AppStateProvider>();
       final template = appState.pdfTemplates.firstWhere(
-            (t) => t.id == widget.templateId!,
+        (t) => t.id == widget.templateId!,
         orElse: () => throw Exception('Template not found'),
       );
 
@@ -353,7 +155,8 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
       'companyPhone': 'Company Phone',
       'companyEmail': 'Company Email',
     };
-    return displayNames[fieldName] ?? fieldName.replaceAll('_', ' ').toUpperCase();
+    return displayNames[fieldName] ??
+        fieldName.replaceAll('_', ' ').toUpperCase();
   }
 
   // Get current field value from quote/customer data
@@ -364,43 +167,59 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
     // Customer fields
     if (fieldName.toLowerCase().contains('customer')) {
       if (fieldName.toLowerCase().contains('name')) return customer?.name ?? '';
-      if (fieldName.toLowerCase().contains('phone')) return customer?.phone ?? '';
-      if (fieldName.toLowerCase().contains('email')) return customer?.email ?? '';
-      if (fieldName.toLowerCase().contains('address')) return customer?.fullDisplayAddress ?? '';
-      if (fieldName.toLowerCase().contains('street')) return customer?.streetAddress ?? '';
+      if (fieldName.toLowerCase().contains('phone'))
+        return customer?.phone ?? '';
+      if (fieldName.toLowerCase().contains('email'))
+        return customer?.email ?? '';
+      if (fieldName.toLowerCase().contains('address'))
+        return customer?.fullDisplayAddress ?? '';
+      if (fieldName.toLowerCase().contains('street'))
+        return customer?.streetAddress ?? '';
       if (fieldName.toLowerCase().contains('city')) return customer?.city ?? '';
-      if (fieldName.toLowerCase().contains('state')) return customer?.stateAbbreviation ?? '';
-      if (fieldName.toLowerCase().contains('zip')) return customer?.zipCode ?? '';
+      if (fieldName.toLowerCase().contains('state'))
+        return customer?.stateAbbreviation ?? '';
+      if (fieldName.toLowerCase().contains('zip'))
+        return customer?.zipCode ?? '';
     }
 
     // Quote fields
     if (fieldName.toLowerCase().contains('quote')) {
-      if (fieldName.toLowerCase().contains('number')) return quote?.quoteNumber ?? '';
+      if (fieldName.toLowerCase().contains('number'))
+        return quote?.quoteNumber ?? '';
       if (fieldName.toLowerCase().contains('date')) {
-        return quote != null ? DateFormat('MM/dd/yyyy').format(quote.createdAt) : '';
+        return quote != null
+            ? DateFormat('MM/dd/yyyy').format(quote.createdAt)
+            : '';
       }
-      if (fieldName.toLowerCase().contains('status')) return quote?.status ?? '';
+      if (fieldName.toLowerCase().contains('status'))
+        return quote?.status ?? '';
     }
 
     // Company fields
     if (fieldName.toLowerCase().contains('company')) {
       if (fieldName.toLowerCase().contains('name')) return 'Your Company Name';
       if (fieldName.toLowerCase().contains('phone')) return '(555) 123-4567';
-      if (fieldName.toLowerCase().contains('email')) return 'info@yourcompany.com';
-      if (fieldName.toLowerCase().contains('address')) return '123 Main St, Your City, ST 12345';
+      if (fieldName.toLowerCase().contains('email'))
+        return 'info@yourcompany.com';
+      if (fieldName.toLowerCase().contains('address'))
+        return '123 Main St, Your City, ST 12345';
     }
 
     // Date fields
     if (fieldName.toLowerCase().contains('date')) {
-      if (fieldName.toLowerCase().contains('today')) return DateFormat('MM/dd/yyyy').format(DateTime.now());
+      if (fieldName.toLowerCase().contains('today'))
+        return DateFormat('MM/dd/yyyy').format(DateTime.now());
       if (fieldName.toLowerCase().contains('valid')) {
-        return quote != null ? DateFormat('MM/dd/yyyy').format(quote.validUntil) : '';
+        return quote != null
+            ? DateFormat('MM/dd/yyyy').format(quote.validUntil)
+            : '';
       }
     }
 
     // Text fields
     if (fieldName.toLowerCase().contains('note')) return quote?.notes ?? '';
-    if (fieldName.toLowerCase().contains('term')) return 'Standard terms and conditions apply...';
+    if (fieldName.toLowerCase().contains('term'))
+      return 'Standard terms and conditions apply...';
 
     return '';
   }
@@ -430,11 +249,13 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
           ElevatedButton(
             onPressed: () {
               final newValue = controller.text.trim();
-              final oldValue = _editedValues[fieldName] ?? currentValue;
+              final oldValue =
+                  _editingController.editedValues[fieldName] ?? currentValue;
 
               if (newValue != oldValue) {
                 _addEditAction(fieldName, oldValue, newValue);
-                setState(() => _editedValues[fieldName] = newValue);
+                setState(() =>
+                    _editingController.editedValues[fieldName] = newValue);
               }
               Navigator.pop(context);
             },
@@ -457,7 +278,8 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
             const Text('PDF Editor', style: TextStyle(fontSize: 18)),
             Text(
               widget.suggestedFileName,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
+              style:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
               overflow: TextOverflow.ellipsis,
             ),
           ],
@@ -469,13 +291,17 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
           // Undo button
           IconButton(
             icon: const Icon(Icons.undo),
-            onPressed: _currentHistoryIndex >= 0 ? _undoEdit : null,
+            onPressed:
+                _editingController.currentHistoryIndex >= 0 ? _undoEdit : null,
             tooltip: 'Undo',
           ),
           // Redo button
           IconButton(
             icon: const Icon(Icons.redo),
-            onPressed: _currentHistoryIndex < _editHistory.length - 1 ? _redoEdit : null,
+            onPressed: _editingController.currentHistoryIndex <
+                    _editingController.history.length - 1
+                ? _redoEdit
+                : null,
             tooltip: 'Redo',
           ),
           IconButton(
@@ -493,13 +319,13 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
           IconButton(
             icon: _isSaving
                 ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : const Icon(Icons.save),
             onPressed: _isSaving ? null : _savePdf,
             tooltip: 'Save PDF',
@@ -511,8 +337,11 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
         children: [
           // Status Bar
           Container(
-            color: _hasEdits ? Colors.orange.shade100 :
-            (_isLoadingFields ? Colors.blue.shade100 : Colors.grey.shade100),
+            color: _hasEdits
+                ? Colors.orange.shade100
+                : (_isLoadingFields
+                    ? Colors.blue.shade100
+                    : Colors.grey.shade100),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
@@ -523,26 +352,35 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                   const SizedBox(width: 8),
-                  const Text('Loading form fields...', style: TextStyle(fontSize: 12)),
+                  const Text('Loading form fields...',
+                      style: TextStyle(fontSize: 12)),
                 ] else ...[
                   Icon(
-                    _hasEdits ? Icons.edit :
-                    (_showFieldOverlays ? Icons.touch_app : Icons.visibility),
+                    _hasEdits
+                        ? Icons.edit
+                        : (_showFieldOverlays
+                            ? Icons.touch_app
+                            : Icons.visibility),
                     size: 16,
-                    color: _hasEdits ? Colors.orange.shade700 :
-                    (_showFieldOverlays ? Colors.green.shade700 : Colors.blue.shade700),
+                    color: _hasEdits
+                        ? Colors.orange.shade700
+                        : (_showFieldOverlays
+                            ? Colors.green.shade700
+                            : Colors.blue.shade700),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _hasEdits
-                          ? '${_editedValues.length} fields edited - direct PDF mapping active'
+                          ? '${_editingController.editedValues.length} fields edited - direct PDF mapping active'
                           : _formFields.isNotEmpty
-                          ? '${_formFields.length} form fields detected - click directly to edit'
-                          : 'No editable form fields detected',
+                              ? '${_formFields.length} form fields detected - click directly to edit'
+                              : 'No editable form fields detected',
                       style: TextStyle(
                         fontSize: 12,
-                        color: _hasEdits ? Colors.orange.shade800 : Colors.blue.shade800,
+                        color: _hasEdits
+                            ? Colors.orange.shade800
+                            : Colors.blue.shade800,
                       ),
                     ),
                   ),
@@ -641,7 +479,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
             debugPrint('📝 Direct field edit: "$fieldName" = "$newValue"');
 
             setState(() {
-              _editedValues[fieldName] = newValue;
+              _editingController.editedValues[fieldName] = newValue;
               _hasEdits = true;
             });
 
@@ -649,7 +487,8 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
           },
           onDocumentLoaded: (details) {
             if (kDebugMode) {
-              debugPrint('📄 PDF loaded: ${details.document.pages.count} pages');
+              debugPrint(
+                  '📄 PDF loaded: ${details.document.pages.count} pages');
             }
           },
           onDocumentLoadFailed: (details) {
@@ -749,11 +588,12 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
 
   // Build quick edit button for template fields
   Widget _buildQuickEditButton(String fieldName, String displayName) {
-    final hasEdit = _editedValues.containsKey(fieldName);
+    final hasEdit = _editingController.editedValues.containsKey(fieldName);
 
     return OutlinedButton.icon(
       onPressed: () {
-        String currentValue = _editedValues[fieldName] ?? _getCurrentFieldValue(fieldName);
+        String currentValue = _editingController.editedValues[fieldName] ??
+            _getCurrentFieldValue(fieldName);
         _showTemplateFieldEditDialog(fieldName, currentValue);
       },
       icon: Icon(
@@ -784,19 +624,20 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
     setState(() => _isSaving = true);
 
     try {
-      debugPrint('💾 Starting PDF save with ${_editedValues.length} edits');
-
+      debugPrint(
+          '💾 Starting PDF save with ${_editingController.editedValues.length} edits');
+      final docController = PdfDocumentController(_currentPdfPath);
       File pdfToSave;
-
-      // If we have form field edits, apply them first
-      if (_editedValues.isNotEmpty && _formFields.isNotEmpty) {
-        debugPrint('🔧 Applying edits using template-style field mapping approach...');
-        pdfToSave = await _applyEditsUsingTemplateApproach();
+      if (_editingController.editedValues.isNotEmpty &&
+          _formFields.isNotEmpty) {
+        debugPrint(
+            '🔧 Applying edits using template-style field mapping approach...');
+        pdfToSave = await docController
+            .applyEditsUsingTemplateApproach(_editingController.editedValues);
       } else {
         debugPrint('📄 Using original file (no edits to apply)');
         pdfToSave = File(_currentPdfPath);
       }
-
       // Ensure the file exists before proceeding
       if (!await pdfToSave.exists()) {
         throw Exception('PDF file not found: ${pdfToSave.path}');
@@ -808,7 +649,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
       Directory? saveDir = await getApplicationDocumentsDirectory();
 
       String finalFileName = widget.suggestedFileName;
-      if (_editedValues.isNotEmpty) {
+      if (_editingController.editedValues.isNotEmpty) {
         final baseName = finalFileName.replaceAll('.pdf', '');
         finalFileName = '${baseName}_edited.pdf';
       }
@@ -840,12 +681,12 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
             fileName: finalFileName,
             fileType: 'pdf',
             description: widget.quote != null
-                ? 'Quote PDF: ${widget.quote!.quoteNumber}${_editedValues.isNotEmpty ? ' (edited)' : ''}'
-                : 'Generated PDF${_editedValues.isNotEmpty ? ' (edited)' : ''}',
+                ? 'Quote PDF: ${widget.quote!.quoteNumber}${_editingController.editedValues.isNotEmpty ? ' (edited)' : ''}'
+                : 'Generated PDF${_editingController.editedValues.isNotEmpty ? ' (edited)' : ''}',
             tags: [
               'quote',
               'pdf',
-              if (_editedValues.isNotEmpty) 'edited',
+              if (_editingController.editedValues.isNotEmpty) 'edited',
               if (widget.templateId != null) 'template',
             ],
             category: 'document',
@@ -863,7 +704,8 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✅ PDF saved${widget.customer != null ? ' and added to customer media' : ''}!'),
+            content: Text(
+                '✅ PDF saved${widget.customer != null ? ' and added to customer media' : ''}!'),
             backgroundColor: Colors.green,
             action: SnackBarAction(
               label: 'Open',
@@ -874,7 +716,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
         );
         Navigator.pop(context, true);
       }
-
     } catch (e) {
       debugPrint('❌ Error: $e');
       if (mounted) {
@@ -888,219 +729,6 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   }
 
   // Apply edits using PDF mapping (same as template system)
-  Future<File> _applyEditsUsingTemplateApproach() async {
-    debugPrint('🗂️ Applying ${_editedValues.length} field mappings...');
-
-    final originalFile = File(_currentPdfPath);
-    final bytes = await originalFile.readAsBytes();
-    final document = sf_pdf.PdfDocument(inputBytes: bytes);
-
-    try {
-      // Apply field mappings directly (template approach)
-      for (int i = 0; i < document.form.fields.count; i++) {
-        final field = document.form.fields[i];
-        final fieldName = field.name ?? 'field_$i';
-
-        if (_editedValues.containsKey(fieldName)) {
-          final value = _editedValues[fieldName]!;
-          debugPrint('🗂️ Mapping: $fieldName = "$value"');
-
-          field.readOnly = false;
-
-          if (field is sf_pdf.PdfTextBoxField) {
-            field.text = value;
-          } else if (field is sf_pdf.PdfCheckBoxField) {
-            field.isChecked = value.toLowerCase() == 'true';
-          } else if (field is sf_pdf.PdfComboBoxField) {
-            field.selectedValue = value;
-          } else if (field is sf_pdf.PdfRadioButtonListField) {
-            field.selectedValue = value;
-          }
-        }
-      }
-
-      // Set appearance like template system
-      document.form.setDefaultAppearance(false);
-
-      // Save mapped PDF
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/mapped_${DateTime.now().millisecondsSinceEpoch}.pdf');
-
-      final pdfBytes = await document.save();
-      await tempFile.writeAsBytes(pdfBytes);
-
-      debugPrint('✅ PDF mapping complete');
-      return tempFile;
-
-    } finally {
-      document.dispose();
-    }
-  }
-
-  // Apply form field edits to PDF
-  Future<File> _applyFormFieldEditsToPdf() async {
-    debugPrint('🔧 Applying ${_editedValues.length} form field edits to PDF...');
-    debugPrint('📝 Edits to apply: ${_editedValues.keys.join(', ')}');
-
-    final originalFile = File(_currentPdfPath);
-    final bytes = await originalFile.readAsBytes();
-    final document = sf_pdf.PdfDocument(inputBytes: bytes);
-
-    try {
-      debugPrint('📄 PDF has ${document.form.fields.count} form fields');
-
-      int editsApplied = 0;
-
-      // Apply edits to form fields
-      for (int i = 0; i < document.form.fields.count; i++) {
-        final field = document.form.fields[i];
-        final fieldName = field.name ?? 'field_$i';
-
-        debugPrint('🔍 Checking field: "$fieldName" (type: ${field.runtimeType})');
-
-        if (_editedValues.containsKey(fieldName)) {
-          final newValue = _editedValues[fieldName]!;
-          debugPrint('✏️ Applying edit: $fieldName = "$newValue"');
-
-          bool success = false;
-
-          // Apply the new value based on field type
-          if (field is sf_pdf.PdfTextBoxField) {
-            field.text = newValue;
-            success = true;
-            debugPrint('   ✅ Text field updated');
-          } else if (field is sf_pdf.PdfComboBoxField) {
-            field.selectedValue = newValue;
-            success = true;
-            debugPrint('   ✅ Combo box updated');
-          } else if (field is sf_pdf.PdfCheckBoxField) {
-            field.isChecked = newValue.toLowerCase() == 'true';
-            success = true;
-            debugPrint('   ✅ Checkbox updated to ${field.isChecked}');
-          } else if (field is sf_pdf.PdfRadioButtonListField) {
-            field.selectedValue = newValue;
-            success = true;
-            debugPrint('   ✅ Radio button updated');
-          } else if (field is sf_pdf.PdfListBoxField) {
-            // Handle list box
-            field.selectedValues = [newValue];
-            success = true;
-            debugPrint('   ✅ List box updated');
-          } else {
-            debugPrint('   ⚠️ Unknown field type: ${field.runtimeType}');
-          }
-
-          if (success) {
-            editsApplied++;
-          }
-        }
-      }
-
-      debugPrint('✅ Applied $editsApplied edits successfully');
-
-      // IMPORTANT: Set form field properties to ensure changes are saved
-      for (int i = 0; i < document.form.fields.count; i++) {
-        final field = document.form.fields[i];
-        // Make sure the field is not read-only
-        field.readOnly = false;
-      }
-
-      // Set default appearance at document level (NOT individual field level)
-      document.form.setDefaultAppearance(false);
-
-      // Save to temporary file
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/edited_${DateTime.now().millisecondsSinceEpoch}.pdf');
-
-      // Important: Use document.save() to get the bytes with form field changes
-      final List<int> pdfBytes = await document.save();
-      await tempFile.writeAsBytes(pdfBytes);
-
-      debugPrint('💾 Saved edited PDF to: ${tempFile.path}');
-      debugPrint('📊 File size: ${await tempFile.length()} bytes');
-
-      // Verify the changes were saved by re-reading the file
-      try {
-        final verifyDocument = sf_pdf.PdfDocument(inputBytes: await tempFile.readAsBytes());
-        debugPrint('🔍 Verifying saved changes...');
-
-        for (int i = 0; i < verifyDocument.form.fields.count; i++) {
-          final field = verifyDocument.form.fields[i];
-          final fieldName = field.name ?? 'field_$i';
-
-          if (_editedValues.containsKey(fieldName)) {
-            String savedValue = '';
-            if (field is sf_pdf.PdfTextBoxField) {
-              savedValue = field.text;
-            } else if (field is sf_pdf.PdfComboBoxField) {
-              savedValue = field.selectedValue;
-            } else if (field is sf_pdf.PdfCheckBoxField) {
-              savedValue = field.isChecked ? 'true' : 'false';
-            } else if (field is sf_pdf.PdfRadioButtonListField) {
-              savedValue = field.selectedValue;
-            }
-
-            final expectedValue = _editedValues[fieldName]!;
-            if (savedValue == expectedValue) {
-              debugPrint('   ✅ $fieldName: "$savedValue" (correct)');
-            } else {
-              debugPrint('   ❌ $fieldName: expected "$expectedValue", got "$savedValue"');
-            }
-          }
-        }
-
-        verifyDocument.dispose();
-      } catch (e) {
-        debugPrint('⚠️ Could not verify changes: $e');
-      }
-
-      return tempFile;
-
-    } catch (e) {
-      debugPrint('❌ Error applying form field edits: $e');
-      rethrow;
-    } finally {
-      document.dispose();
-    }
-  }
-
-  // Share PDF
-  // Enhanced unified share functionality
-  Future<void> _sharePdf() async {
-    try {
-      File fileToShare;
-
-      // If we have edits, create a temporary file with edits applied
-      if (_editedValues.isNotEmpty && _formFields.isNotEmpty) {
-        fileToShare = await _applyFormFieldEditsToPdf();
-      } else {
-        fileToShare = File(_currentPdfPath);
-      }
-
-      if (!await fileToShare.exists()) {
-        throw Exception('PDF file not found');
-      }
-
-      shareFile(
-        file: fileToShare,
-        fileName: widget.suggestedFileName,
-        customer: widget.customer,
-      );
-
-    } catch (e) {
-      if (kDebugMode) debugPrint('❌ Error preparing PDF for sharing: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to prepare PDF: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-
 // Show folder selection dialog
 
 // Build folder option widget - FIXED LAYOUT
@@ -1110,20 +738,47 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
 // Save file to specific directory
 // Show save success dialog with actions - FIXED LAYOUT (NO EXPANDED IN ACTIONS)
 
-
-
 // Show share success message
 
-
   // Discard PDF
+  Future<void> _sharePdf() async {
+    try {
+      File fileToShare;
+      final docController = PdfDocumentController(_currentPdfPath);
+      if (_editingController.editedValues.isNotEmpty &&
+          _formFields.isNotEmpty) {
+        fileToShare = await docController
+            .applyFormFieldEdits(_editingController.editedValues);
+      } else {
+        fileToShare = File(_currentPdfPath);
+      }
+      if (!await fileToShare.exists()) {
+        throw Exception('PDF file not found');
+      }
+      shareFile(
+          file: fileToShare,
+          fileName: widget.suggestedFileName,
+          customer: widget.customer);
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ Error preparing PDF for sharing: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Failed to prepare PDF: ${e.toString()}'),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
   void _discardPdf() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Discard PDF?'),
         content: Text(
-          _editHistory.isNotEmpty
-              ? 'Are you sure you want to discard this PDF and all ${_editHistory.length} edits? This action cannot be undone.'
+          _editingController.history.isNotEmpty
+              ? 'Are you sure you want to discard this PDF and all ${_editingController.history.length} edits? This action cannot be undone.'
               : 'Are you sure you want to discard this PDF? This action cannot be undone.',
         ),
         actions: [
@@ -1149,35 +804,25 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear All Edits?'),
+        title: const Text("Clear All Edits?"),
         content: const Text(
-          'This will remove all changes you have made to the PDF form fields.',
-        ),
+            "This will remove all changes you have made to the PDF form fields."),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel")),
           TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {
-                _editedValues.clear();
-                _editHistory.clear();
-                _currentHistoryIndex = -1;
-                _hasEdits = false;
-              });
-            },
-            child: const Text('Clear'),
-          ),
+              onPressed: () {
+                Navigator.pop(context);
+                _editingController.clearAll();
+                setState(() => _hasEdits = false);
+              },
+              child: const Text("Clear")),
         ],
       ),
     );
   }
-
 }
-
-// Show field selector dialog - DEBUGGING TOOL
 
 // Custom painter for form field overlays - IMPROVED
 class FormFieldOverlayPainter extends CustomPainter {
@@ -1195,7 +840,8 @@ class FormFieldOverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    debugPrint('🎨 Painting ${formFields.length} form field overlays on canvas ${size.width}x${size.height}');
+    debugPrint(
+        '🎨 Painting ${formFields.length} form field overlays on canvas ${size.width}x${size.height}');
 
     // Calculate scale factors based on standard PDF dimensions
     final scaleX = size.width / 612; // Standard PDF width
