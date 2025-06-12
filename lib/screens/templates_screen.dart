@@ -13,6 +13,8 @@ import '../widgets/common/error_snackbar.dart';
 import '../state/templates_screen_state.dart';
 import '../widgets/templates/dialgos/message_template_editor.dart';
 import '../widgets/templates/dialgos/email_template_editor.dart';
+import '../widgets/templates/dialgos/field_dialog.dart';
+import '../providers/app_state_provider.dart';
 
 class TemplatesScreen extends StatefulWidget {
   const TemplatesScreen({super.key});
@@ -89,7 +91,16 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                 ),
               ),
               onCreateField: () {
-                // TODO: hook into FieldDialog.add
+                FieldDialog.showAdd(context).then((newField) {
+                  if (newField != null && mounted) {
+                    final appState = context.read<AppStateProvider>();
+                    appState.addCustomAppDataField(newField).catchError((e) {
+                      if (mounted) {
+                        showErrorSnackBar(context, '$e');
+                      }
+                    });
+                  }
+                });
               },
             ),
           );
