@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/app_state_provider.dart';
+import 'category_creation_dialog.dart';
 import '../../../theme/rufko_theme.dart';
 
 class CategorySelectionDialog extends StatefulWidget {
@@ -11,7 +14,53 @@ class CategorySelectionDialog extends StatefulWidget {
 
 class _CategorySelectionDialogState extends State<CategorySelectionDialog> {
   String? selectedCategory;
-  final List<String> categories = const ['general'];
+  late Map<String, String> categories;
+
+  @override
+  void initState() {
+    super.initState();
+    final appState = context.read<AppStateProvider>();
+    categories = {
+      for (final c in appState.templateCategories
+          .where((cat) => cat.templateType == 'pdf_templates'))
+        c.key: c.name,
+    };
+    if (categories.isNotEmpty) selectedCategory = categories.keys.first;
+  }
+
+  Future<void> _showCreateCategoryDialog() async {
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (_) => const CategoryCreationDialog(),
+    );
+
+    if (newName != null && newName.trim().isNotEmpty && mounted) {
+      final appState = context.read<AppStateProvider>();
+      final categoryName = newName.trim();
+      final categoryKey = categoryName.toLowerCase().replaceAll(' ', '_');
+      try {
+        await appState.addTemplateCategory(
+            'pdf_templates', categoryKey, categoryName);
+        categories[categoryKey] = categoryName;
+        setState(() {
+          selectedCategory = categoryKey;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Created category: $categoryName'),
+            backgroundColor: RufkoTheme.primaryColor,
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating category: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,15 +87,28 @@ class _CategorySelectionDialogState extends State<CategorySelectionDialog> {
           Flexible(
             child: ListView(
               shrinkWrap: true,
-              children: categories.map((c) {
-                return RadioListTile<String>(
-                  value: c,
-                  groupValue: selectedCategory,
-                  title: Text(c),
-                  onChanged: (value) =>
-                      setState(() => selectedCategory = value),
-                );
-              }).toList(),
+              children: [
+                for (final entry in categories.entries)
+                  RadioListTile<String>(
+                    value: entry.key,
+                    groupValue: selectedCategory,
+                    title: Text(entry.value),
+                    onChanged: (value) =>
+                        setState(() => selectedCategory = value),
+                  ),
+                ListTile(
+                  leading: Icon(Icons.add, color: RufkoTheme.primaryColor),
+                  title: Text(
+                    'Create New Category',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: RufkoTheme.primaryColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: _showCreateCategoryDialog,
+                ),
+              ],
             ),
           ),
           Row(
