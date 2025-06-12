@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../widgets/templates/dialogs/category_selection_dialog.dart';
-import '../widgets/templates/dialogs/category_creation_dialog.dart';
+import '../widgets/templates/dialgos/category_selection_dialog.dart';
+import '../widgets/templates/dialgos/category_creation_dialog.dart';
 
 class CategoryManagementService {
   Future<String?> selectCategory(BuildContext context) async {
