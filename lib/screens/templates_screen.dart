@@ -89,7 +89,7 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                 ),
               ),
               onCreateField: () {
-                // TODO: hook into AddFieldDialog
+                // TODO: hook into FieldDialog.add
               },
             ),
           );
