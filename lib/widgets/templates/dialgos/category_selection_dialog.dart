@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../providers/app_state_provider.dart';
 import '../../../theme/rufko_theme.dart';
 
 class CategorySelectionDialog extends StatefulWidget {
@@ -11,7 +13,19 @@ class CategorySelectionDialog extends StatefulWidget {
 
 class _CategorySelectionDialogState extends State<CategorySelectionDialog> {
   String? selectedCategory;
-  final List<String> categories = const ['general'];
+  late final Map<String, String> categories;
+
+  @override
+  void initState() {
+    super.initState();
+    final appState = context.read<AppStateProvider>();
+    categories = {
+      for (final c in appState.templateCategories
+          .where((cat) => cat.templateType == 'pdf_templates'))
+        c.key: c.name,
+    };
+    if (categories.isNotEmpty) selectedCategory = categories.keys.first;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,15 +52,16 @@ class _CategorySelectionDialogState extends State<CategorySelectionDialog> {
           Flexible(
             child: ListView(
               shrinkWrap: true,
-              children: categories.map((c) {
-                return RadioListTile<String>(
-                  value: c,
-                  groupValue: selectedCategory,
-                  title: Text(c),
-                  onChanged: (value) =>
-                      setState(() => selectedCategory = value),
-                );
-              }).toList(),
+              children: [
+                for (final entry in categories.entries)
+                  RadioListTile<String>(
+                    value: entry.key,
+                    groupValue: selectedCategory,
+                    title: Text(entry.value),
+                    onChanged: (value) =>
+                        setState(() => selectedCategory = value),
+                  ),
+              ],
             ),
           ),
           Row(
