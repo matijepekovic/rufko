@@ -133,9 +133,10 @@ This project is currently undergoing systematic refactoring to improve maintaina
 | lib/services/template_service.dart | 776 | MEDIUM | PENDING |
 | lib/screens/customer_detail/media_tab_controller.dart | 651 | LOW | PENDING |
 | lib/screens/category_management_screen.dart | 649 | LOW | PENDING |
-| lib/widgets/templates/dialgos/add_field_dialog.dart | 645 | LOW | PENDING |
+| lib/widgets/templates/dialgos/field_dialog.dart | 759 | LOW | PENDING |
 | lib/widgets/templates/pdf_templates_tab.dart | 604 | LOW | PENDING |
-| lib/widgets/templates/dialgos/edit_field_dialog.dart | 601 | LOW | PENDING |
+| ~~lib/widgets/templates/dialgos/add_field_dialog.dart~~ | ~~645~~ | ~~LOW~~ | ~~REMOVED~~ |
+| ~~lib/widgets/templates/dialgos/edit_field_dialog.dart~~ | ~~601~~ | ~~LOW~~ | ~~REMOVED~~ |
 | lib/screens/templates_screen.dart | 594 | LOW | PENDING |
 | lib/providers/helpers/roof_scope_helper.dart | 583 | LOW | PENDING |
 | lib/widgets/quote_totals_section.dart | 559 | LOW | PENDING |
