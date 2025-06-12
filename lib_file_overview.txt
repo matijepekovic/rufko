@@ -1,0 +1,234 @@
+# Library File Overview
+
+This document lists the purpose of each Dart file in the `lib/` directory and notes where each component is typically used within the app.
+
+## config
+
+- **template_screen_config.dart** – defines initial configuration for the template editor screens used by `TemplateEditorScreen`. (Used by: None)
+
+## constants
+
+- **quote_form_constants.dart** – constants for quote creation defaults and labels. (Used by: quote_form_controller.dart, simplified_quote_screen.dart)
+- **template_constants.dart** – constants shared across template related views. (Used by: None)
+
+## controllers
+
+- **category_data_controller.dart** – handles loading and updating of template categories; used by category management screens. (Used by: category_management_screen.dart, category_operations_controller.dart, category_ui_builder.dart)
+- **category_dialog_manager.dart** – wraps the category dialogs for creation/editing; used in settings and template flows. (Used by: category_management_screen.dart, category_ui_builder.dart)
+- **category_operations_controller.dart** – performs add/edit/delete logic for categories; used by `CategoryManagementScreen`. (Used by: category_dialog_manager.dart, category_management_screen.dart)
+- **category_ui_builder.dart** – helper for building category list widgets. (Used by: category_management_screen.dart)
+- **communication_controller.dart** – manages sending emails and SMS messages to customers. (Used by: communication_dialog_controller.dart, customer_detail_screen.dart)
+- **communication_dialog_controller.dart** – drives the quick email/SMS edit & preview dialogs. (Used by: customer_detail_screen.dart, email_edit_dialog.dart, email_preview_dialog.dart)
+- **customer_actions_controller.dart** – common actions for a single customer such as edit/delete. (Used by: customer_detail_screen.dart)
+- **customer_dialog_manager.dart** – shows forms for adding/editing customers. (Used by: customers_screen.dart)
+- **customer_filter_controller.dart** – filtering logic for the customers list screen. (Used by: customers_screen.dart)
+- **customer_import_controller.dart** – CSV import/export functions for customer data. (Used by: customer_dialog_manager.dart, customers_screen.dart)
+- **dashboard_data_controller.dart** – loads summary metrics for the dashboard screen. (Used by: dashboard_ui_builder.dart, home_screen.dart)
+- **dashboard_navigation_controller.dart** – coordinates tab/page selection for the home/dashboard views. (Used by: dashboard_ui_builder.dart, home_screen.dart)
+- **dashboard_ui_builder.dart** – utility for building dashboard widgets. (Used by: home_screen.dart)
+- **media_selection_controller.dart** – handles image/video picking and uploads. (Used by: customer_detail_screen.dart)
+- **navigation_controller.dart** – central helper for page navigation within the app. (Used by: customer_detail_screen.dart, dashboard_ui_builder.dart, home_screen.dart)
+- **pdf_document_controller.dart** – manages the list of generated PDFs for a quote. (Used by: pdf_file_operations_controller.dart, pdf_preview_screen.dart)
+- **pdf_editing_controller.dart** – handles editing operations on PDF form fields. (Used by: pdf_preview_screen.dart, pdf_viewer_ui_builder.dart, template_field_dialog_manager.dart)
+- **pdf_file_operations_controller.dart** – saving/opening/deleting PDF files. (Used by: pdf_preview_screen.dart)
+- **pdf_generation_controller.dart** – builds PDF documents from quotes and templates. (Used by: quote_detail_controller.dart, simplified_quote_detail_screen.dart)
+- **pdf_viewer_ui_builder.dart** – utilities for PDF viewer widgets. (Used by: pdf_preview_screen.dart)
+- **product_category_manager.dart** – assigns products to categories; used in product forms. (Used by: products_screen.dart)
+- **product_dialog_manager.dart** – dialog logic for creating or editing a product. (Used by: products_screen.dart)
+- **product_filter_controller.dart** – filter/search for product list pages. (Used by: products_screen.dart)
+- **quick_actions_controller.dart** – maintains the floating quick actions menu on the dashboard. (Used by: home_screen.dart)
+- **quote_detail_controller.dart** – high level logic for the quote detail screen. (Used by: simplified_quote_detail_screen.dart)
+- **quote_filter_controller.dart** – filter/search logic for the quotes list screen. (Used by: quote_list_builder.dart)
+- **quote_form_controller.dart** – main business logic for building a new quote. (Used by: simplified_quote_screen.dart, tax_rate_dialogs.dart)
+- **quote_list_builder.dart** – helper to render quote list tiles. (Used by: quotes_screen.dart)
+- **quote_navigation_controller.dart** – manages navigation between quote related screens. (Used by: quote_list_builder.dart, quotes_screen.dart)
+- **template_field_dialog_manager.dart** – handles dialogs for editing template fields. (Used by: pdf_preview_screen.dart)
+- **ui_state_controller.dart** – keeps reactive UI state used across multiple screens. (Used by: customer_detail_screen.dart)
+
+## dialogs
+
+- **add_product_dialog.dart** – form to select and add a product to a quote. (Used by: simplified_quote_screen.dart)
+- **communication/email_edit_dialog.dart** – UI for editing an email before sending. (Used by: None)
+- **communication/email_preview_dialog.dart** – preview of generated email content. (Used by: None)
+- **communication/sms_edit_dialog.dart** – edit SMS message before sending. (Used by: None)
+- **communication/sms_preview_dialog.dart** – preview SMS body. (Used by: None)
+- **custom_item_dialog.dart** – dialog to enter custom line items for a quote. (Used by: simplified_quote_screen.dart)
+- **customer_form_dialog.dart** – main form dialog for creating/editing customers. (Used by: customer_dialog_manager.dart)
+- **discount_dialog.dart** – small dialog for selecting a discount. (Used by: simplified_quote_detail_screen.dart)
+- **help_dialog.dart** – displays help information. (Used by: settings_screen.dart)
+- **premium_feature_dialog.dart** – shown when user tries premium-only features. (Used by: settings_screen.dart)
+- **tax_rate_dialogs.dart** – simple dialog to adjust tax rate. (Used by: quote_form_controller.dart)
+- **template_selection_dialog.dart** – choose a PDF or message template from list. (Used by: pdf_generation_controller.dart)
+
+## mixins
+
+- **communication_actions_mixin.dart** – adds call/email/SMS methods to widgets. (Used by: customer_communication_mixin.dart, customer_detail_screen.dart)
+- **customer_communication_mixin.dart** – shared behaviour for contacting customers. (Used by: customer_detail_screen.dart)
+- **empty_state_mixin.dart** – helpers for displaying 'no items' states. (Used by: customers_screen.dart, products_screen.dart, quotes_screen.dart)
+- **field_type_mixin.dart** – utilities for working with form field types. (Used by: field_dialog.dart)
+- **file_sharing_mixin.dart** – helper to open or share exported files. (Used by: customer_detail_screen.dart, pdf_preview_screen.dart)
+- **responsive_breakpoints_mixin.dart** – defines custom responsive breakpoints. (Used by: dashboard_ui_builder.dart, discount_dialog.dart, home_screen.dart)
+- **responsive_dimensions_mixin.dart** – width/height helpers for layouts. (Used by: dashboard_ui_builder.dart, home_screen.dart, quick_actions_controller.dart)
+- **responsive_layout_mixin.dart** – base layout builder for responsive design. (Used by: None)
+- **responsive_spacing_mixin.dart** – spacing constants for widgets. (Used by: dashboard_ui_builder.dart, discount_dialog.dart, home_screen.dart)
+- **responsive_text_mixin.dart** – scaling text styles. (Used by: dashboard_ui_builder.dart, home_screen.dart, quick_actions_controller.dart)
+- **responsive_widget_mixin.dart** – conditionally display widgets for screen size. (Used by: dashboard_ui_builder.dart, home_screen.dart, quick_actions_controller.dart)
+- **search_mixin.dart** – search bar utilities. (Used by: customers_screen.dart, products_screen.dart, quotes_screen.dart)
+- **selection_mixin.dart** – multi-select list helper. (Used by: None)
+- **sort_menu_mixin.dart** – sorting menu handling. (Used by: customers_screen.dart, products_screen.dart, quotes_screen.dart)
+- **template_tab_mixin.dart** – logic for switching between tabs on template editor pages. (Used by: email_templates_tab.dart, fields_tab.dart, message_templates_tab.dart)
+
+## models
+
+- **app_settings.dart** – user configurable app settings stored with Hive. (Used by: app_configuration_provider.dart, app_settings.g.dart, app_state_provider.dart)
+- **app_settings.g.dart** – generated Hive adapter. (Used by: None)
+- **custom_app_data.dart** – local metadata for the app. (Used by: app_state_provider.dart, custom_app_data.g.dart, custom_fields_provider.dart)
+- **custom_app_data.g.dart** – generated adapter. (Used by: None)
+- **customer.dart** – customer model with Hive annotations. (Used by: app_state_provider.dart, communication_controller.dart, customer.g.dart)
+- **customer.g.dart** – generated adapter. (Used by: None)
+- **edit_action.dart** – small enum/model for undoable edit actions. (Used by: pdf_editing_controller.dart)
+- **email_template.dart** – email template definition. (Used by: app_state_provider.dart, data_loading_helper.dart, database_service.dart)
+- **email_template.g.dart** – generated adapter. (Used by: None)
+- **field_definition.dart** – describes a custom form field for templates. (Used by: field_category_list.dart, pdf_template.dart)
+- **inspection_document.dart** – inspection form data model. (Used by: app_state_provider.dart, custom_fields_provider.dart, data_loading_helper.dart)
+- **inspection_document.g.dart** – generated adapter. (Used by: None)
+- **message_template.dart** – SMS template model. (Used by: app_state_provider.dart, data_loading_helper.dart, database_service.dart)
+- **message_template.g.dart** – generated adapter. (Used by: None)
+- **pdf_form_field.dart** – representation of a fillable field inside a PDF. (Used by: pdf_document_controller.dart, pdf_file_operations_controller.dart, pdf_preview_screen.dart)
+- **pdf_template.dart** – PDF template metadata and paths. (Used by: app_state_provider.dart, data_loading_helper.dart, database_service.dart)
+- **pdf_template.g.dart** – generated adapter. (Used by: None)
+- **product.dart** – product/line item definition. (Used by: add_product_dialog.dart, app_state_provider.dart, data_loading_helper.dart)
+- **product.g.dart** – generated adapter. (Used by: None)
+- **project_media.dart** – stored image/video metadata for a project. (Used by: app_state_provider.dart, category_media_screen.dart, customer_helper.dart)
+- **project_media.g.dart** – generated adapter. (Used by: None)
+- **quote.dart** – detailed quote model with multiple levels and items. (Used by: add_product_dialog.dart, added_products_list.dart, addons_section.dart)
+- **quote.g.dart** – generated adapter. (Used by: None)
+- **quote_extras.dart** – helper structures used within a quote. (Used by: custom_item_dialog.dart, custom_line_items_section.dart, permits_section.dart)
+- **roof_scope_data.dart** – roof measurements for the estimator. (Used by: app_state_provider.dart, customer_helper.dart, customer_state_provider.dart)
+- **roof_scope_data.g.dart** – generated adapter. (Used by: None)
+- **simplified_quote.dart** – lighter quote summary used in lists. (Used by: addons_section.dart, app_state_provider.dart, customer_helper.dart)
+- **simplified_quote.g.dart** – generated adapter. (Used by: None)
+- **tab_configuration.dart** – configuration for dynamic tab views. (Used by: None)
+- **template_category.dart** – grouping for templates. (Used by: app_state_provider.dart, data_loading_helper.dart, database_service.dart)
+- **template_category.g.dart** – generated adapter. (Used by: None)
+- **template_creation_request.dart** – data required to create a new template from a PDF. (Used by: None)
+- **template_editor_config.dart** – config options for the template editor screen. (Used by: None)
+
+## navigation
+
+- **template_navigation_handler.dart** – routes and logic for navigating between template-related screens. (Used by: template_creation_service.dart, templates_screen.dart)
+
+## providers
+
+- **app_configuration_provider.dart** – loads basic configuration such as theme. (Used by: app_state_provider.dart)
+- **app_state_provider.dart** – global state management for customers, products, quotes and templates. (Used by: add_product_dialog.dart, category_data_controller.dart, category_operations_controller.dart)
+- **custom_fields_provider.dart** – manages custom field definitions. (Used by: app_state_provider.dart)
+- **customer_provider.dart** – CRUD access to customer data. (Used by: main.dart)
+- **customer_state_provider.dart** – reactive selection state for customer detail screen. (Used by: app_state_provider.dart)
+- **helpers/customer_helper.dart** – utility methods for customer provider. (Used by: None)
+- **helpers/data_loading_helper.dart** – async data loaders used by AppStateProvider. (Used by: None)
+- **helpers/email_template_helper.dart** – helper for loading/saving email templates. (Used by: None)
+- **helpers/message_template_helper.dart** – helper for message templates. (Used by: None)
+- **helpers/pdf_generation_helper.dart** – encapsulates PDF generation routines. (Used by: None)
+- **helpers/product_helper.dart** – common product-related helpers. (Used by: None)
+- **helpers/quote_helper.dart** – assist with quote CRUD and persistence. (Used by: None)
+- **helpers/roof_scope_helper.dart** – parse roof measurement CSVs. (Used by: None)
+- **helpers/template_category_helper.dart** – functions for dealing with template categories. (Used by: None)
+- **media_state_provider.dart** – state for selected media items. (Used by: app_state_provider.dart)
+- **product_provider.dart** – CRUD for products. (Used by: main.dart)
+- **product_state_provider.dart** – holds currently selected product/category. (Used by: app_state_provider.dart)
+- **quote_provider.dart** – manages quote records. (Used by: main.dart)
+- **quote_state_provider.dart** – reactive state for quote screens. (Used by: app_state_provider.dart)
+- **template_provider.dart** – CRUD for templates. (Used by: main.dart)
+- **template_state_provider.dart** – selected template and edit state. (Used by: app_state_provider.dart)
+
+## screens
+
+- **category_management_screen.dart** – UI to manage template categories and levels. (Used by: template_navigation_handler.dart)
+- **customer_detail/** – subdirectory with multiple widgets forming the customer detail view: category_media_screen, edit dialogs, communication enhancements, inspection/media tabs and project notes. (Used by: None)
+- **customer_detail_screen.dart** – parent screen combining tabs for a customer. (Used by: customers_screen.dart, dashboard_ui_builder.dart)
+- **customers_screen.dart** – master list of customers with filtering and import/export. (Used by: home_screen.dart)
+- **home_screen.dart** – main application dashboard using layouts for large/small screens. (Used by: main.dart)
+- **inspection_viewer_screen.dart** – viewer for roof inspection documents. (Used by: inspection_floating_button.dart, inspection_tab.dart)
+- **layouts/home_layout_large.dart** – wide-screen layout. (Used by: None)
+- **layouts/home_layout_small.dart** – phone-sized layout. (Used by: None)
+- **pdf_preview_screen.dart** – displays a generated PDF for preview/share. (Used by: media_tab_controller.dart, pdf_generation_controller.dart, pdf_templates_tab.dart)
+- **products/product_form_dialog.dart** – large form for creating or editing a product. (Used by: None)
+- **products_screen.dart** – list of products. (Used by: home_screen.dart)
+- **quotes_screen.dart** – list of quotes with filters. (Used by: home_screen.dart)
+- **settings/** – collection of dialogs and screens for managing app settings, discount levels and units. (Used by: None)
+- **settings_screen.dart** – root settings page. (Used by: home_screen.dart)
+- **simplified_quote_detail_screen.dart** – compact detail view for a simplified quote. (Used by: dashboard_ui_builder.dart, navigation_controller.dart, quote_form_controller.dart)
+- **simplified_quote_screen.dart** – start of a quick quote flow. (Used by: navigation_controller.dart, quote_navigation_controller.dart, simplified_quote_detail_screen.dart)
+- **templates_screen.dart** – list of available templates (email/message/PDF). (Used by: home_screen.dart, pdf_templates_tab.dart)
+- **template_editor_screen.dart** – full editor for PDF templates including field mapping. (Used by: pdf_templates_tab.dart, template_navigation_handler.dart)
+
+## services
+
+- **category_management_service.dart** – data layer for template categories stored in Hive or SQLite. (Used by: template_creation_service.dart, templates_screen.dart)
+- **database_service.dart** – main persistence service for all models. (Used by: app_configuration_provider.dart, app_state_provider.dart, custom_fields_provider.dart)
+- **file_service.dart** – file I/O helpers for saving and picking files. (Used by: app_configuration_provider.dart, app_state_provider.dart)
+- **pdf_field_mapping_service.dart** – manages link between PDF fields and app fields. (Used by: pdf_preview_screen.dart, template_editor_screen.dart, template_field_dialog_manager.dart)
+- **pdf_interaction_service.dart** – wrapper around PDF viewer interactions. (Used by: template_editor_screen.dart)
+- **pdf_service.dart** – low level PDF generation and manipulation utilities. (Used by: pdf_generation_helper.dart, quote_provider.dart, quote_state_provider.dart)
+- **settings/settings_data_service.dart** – reads/writes user settings. (Used by: None)
+- **simple_pdf_editing_service.dart** – quick modifications to PDF documents. (Used by: None)
+- **tax_service.dart** – retrieves tax rates and handles tax calculations. (Used by: app_configuration_provider.dart, main.dart)
+- **template_creation_service.dart** – builds a template object from an uploaded PDF. (Used by: templates_screen.dart)
+- **template_management_service.dart** – high level create/update/delete for templates. (Used by: template_editor_screen.dart)
+- **template_service.dart** – general template persistence and retrieval. (Used by: pdf_generation_helper.dart, pdf_service.dart, template_state_provider.dart)
+
+## state
+
+- **category_selection_state.dart** – model for which template categories are selected in UI. (Used by: None)
+- **field_mapping_state.dart** – state while mapping PDF fields to app fields. (Used by: None)
+- **template_editor_state.dart** – holds unsaved edits to a template being edited. (Used by: None)
+- **templates_screen_state.dart** – stores filters and selections on the templates list screen. (Used by: templates_screen.dart)
+
+## theme
+
+- **rufko_theme.dart** – central theme definition and color palette. (Used by: category_creation_dialog.dart, category_dialog_manager.dart, category_management_screen.dart)
+
+## utils
+
+- **common_utils.dart** – miscellaneous helper methods used across widgets. (Used by: category_media_screen.dart, customer_detail_screen.dart, fields_tab.dart)
+- **dashboard_status_helper.dart** – derives dashboard card status from data. (Used by: dashboard_ui_builder.dart)
+- **pdf_field_utils.dart** – conversions between PDF field types. (Used by: field_category_list.dart, field_mapping_bottom_sheet.dart)
+- **pdf_utils.dart** – convenience wrappers around the `pdf` package. (Used by: None)
+- **settings_constants.dart** – constants for settings screens. (Used by: help_dialog.dart, premium_feature_dialog.dart, settings_section.dart)
+- **template_screen_utils.dart** – helpers for building template screens. (Used by: None)
+- **template_validation_utils.dart** – functions for validating user created templates. (Used by: None)
+- **template_validator.dart** – class used to validate templates before saving. (Used by: template_management_service.dart)
+
+## widgets
+
+- **added_products_list.dart** – list of products already added to the quote. (Used by: quote_products_section.dart)
+- **addons_section.dart** – UI section for selecting optional add-ons. (Used by: simplified_quote_detail_screen.dart)
+- **common/** – shared widgets like error snackbar, field category list and a loading overlay. (Used by: None)
+- **customer_card.dart** – card widget representing a customer in lists. (Used by: customers_screen.dart)
+- **custom_line_items_section.dart** – area for entering custom line items. (Used by: simplified_quote_screen.dart)
+- **dashboard_card.dart** – card widget used on dashboard screen. (Used by: None)
+- **discounts_section.dart** – form section to enter discounts on a quote. (Used by: simplified_quote_detail_screen.dart)
+- **inspection_floating_button.dart** – floating action button for inspection viewer. (Used by: simplified_quote_screen.dart)
+- **level_details_card.dart** – shows pricing details for a quote level. (Used by: simplified_quote_detail_screen.dart)
+- **level_selector_card.dart** – widget for selecting active quote level. (Used by: simplified_quote_detail_screen.dart)
+- **main_product_selection.dart** – widget to select the primary product for a quote. (Used by: main_product_section.dart)
+- **permits_section.dart** – UI for entering permit information. (Used by: simplified_quote_screen.dart)
+- **product_card.dart** – card widget for a single product. (Used by: products_screen.dart)
+- **quote_form/** – widgets specific to the quote form flow (main product, product list, generation section). (Used by: None)
+- **quote_header_card.dart** – header with customer info at top of quote. (Used by: simplified_quote_detail_screen.dart)
+- **quote_levels_preview.dart** – preview widget for multi-level quotes. (Used by: simplified_quote_screen.dart)
+- **quote_total_card.dart** – displays totals for an individual quote level. (Used by: simplified_quote_detail_screen.dart)
+- **quote_totals_section.dart** – calculates and shows final quote totals. (Used by: quote_products_section.dart)
+- **quote_type_selector.dart** – toggles between single or multi-level quote types. (Used by: main_product_section.dart)
+- **settings/** – widgets used on settings screens like company logo picker and tile layout. (Used by: None)
+- **tax_rate_section.dart** – input section for tax rates. (Used by: quote_products_section.dart)
+- **template_editor/** – widgets for the PDF template editor such as field mapping sheets and PDF viewer wrapper. (Used by: None)
+- **templates/** – dialogs and tabs for managing template categories and templates themselves including the template FAB manager and app bar. (Used by: None)
+
+- **template_app_bar.dart** – reusable app bar for template screens. (Used by: templates_screen.dart)
+
+## main entry
+
+- **main.dart** – Flutter entry point that sets up providers and routes to `HomeScreen`. (Used by: quote.dart)
+

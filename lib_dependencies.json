@@ -1,0 +1,1085 @@
+{
+  "lib/config/template_screen_config.dart": [],
+  "lib/constants/quote_form_constants.dart": [
+    "lib/controllers/quote_form_controller.dart",
+    "lib/screens/simplified_quote_screen.dart"
+  ],
+  "lib/constants/template_constants.dart": [],
+  "lib/controllers/category_data_controller.dart": [
+    "lib/controllers/category_operations_controller.dart",
+    "lib/controllers/category_ui_builder.dart",
+    "lib/screens/category_management_screen.dart"
+  ],
+  "lib/controllers/category_dialog_manager.dart": [
+    "lib/controllers/category_ui_builder.dart",
+    "lib/screens/category_management_screen.dart"
+  ],
+  "lib/controllers/category_operations_controller.dart": [
+    "lib/controllers/category_dialog_manager.dart",
+    "lib/screens/category_management_screen.dart"
+  ],
+  "lib/controllers/category_ui_builder.dart": [
+    "lib/screens/category_management_screen.dart"
+  ],
+  "lib/controllers/communication_controller.dart": [
+    "lib/controllers/communication_dialog_controller.dart",
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/controllers/communication_dialog_controller.dart": [
+    "lib/screens/customer_detail_screen.dart",
+    "lib/dialogs/communication/email_edit_dialog.dart",
+    "lib/dialogs/communication/email_preview_dialog.dart",
+    "lib/dialogs/communication/sms_edit_dialog.dart",
+    "lib/dialogs/communication/sms_preview_dialog.dart"
+  ],
+  "lib/controllers/customer_actions_controller.dart": [
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/controllers/customer_dialog_manager.dart": [
+    "lib/screens/customers_screen.dart"
+  ],
+  "lib/controllers/customer_filter_controller.dart": [
+    "lib/screens/customers_screen.dart"
+  ],
+  "lib/controllers/customer_import_controller.dart": [
+    "lib/controllers/customer_dialog_manager.dart",
+    "lib/screens/customers_screen.dart"
+  ],
+  "lib/controllers/dashboard_data_controller.dart": [
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/screens/home_screen.dart"
+  ],
+  "lib/controllers/dashboard_navigation_controller.dart": [
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/screens/home_screen.dart"
+  ],
+  "lib/controllers/dashboard_ui_builder.dart": [
+    "lib/screens/home_screen.dart"
+  ],
+  "lib/controllers/media_selection_controller.dart": [
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/controllers/navigation_controller.dart": [
+    "lib/controllers/quote_list_builder.dart",
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/screens/customer_detail_screen.dart",
+    "lib/screens/quotes_screen.dart",
+    "lib/screens/home_screen.dart"
+  ],
+  "lib/controllers/pdf_document_controller.dart": [
+    "lib/controllers/pdf_file_operations_controller.dart",
+    "lib/screens/pdf_preview_screen.dart"
+  ],
+  "lib/controllers/pdf_editing_controller.dart": [
+    "lib/controllers/pdf_viewer_ui_builder.dart",
+    "lib/controllers/template_field_dialog_manager.dart",
+    "lib/screens/pdf_preview_screen.dart"
+  ],
+  "lib/controllers/pdf_file_operations_controller.dart": [
+    "lib/screens/pdf_preview_screen.dart"
+  ],
+  "lib/controllers/pdf_generation_controller.dart": [
+    "lib/controllers/quote_detail_controller.dart",
+    "lib/screens/simplified_quote_detail_screen.dart"
+  ],
+  "lib/controllers/pdf_viewer_ui_builder.dart": [
+    "lib/screens/pdf_preview_screen.dart"
+  ],
+  "lib/controllers/product_category_manager.dart": [
+    "lib/screens/products_screen.dart"
+  ],
+  "lib/controllers/product_dialog_manager.dart": [
+    "lib/screens/products_screen.dart"
+  ],
+  "lib/controllers/product_filter_controller.dart": [
+    "lib/screens/products_screen.dart"
+  ],
+  "lib/controllers/quick_actions_controller.dart": [
+    "lib/screens/home_screen.dart"
+  ],
+  "lib/controllers/quote_detail_controller.dart": [
+    "lib/screens/simplified_quote_detail_screen.dart"
+  ],
+  "lib/controllers/quote_filter_controller.dart": [
+    "lib/controllers/quote_list_builder.dart"
+  ],
+  "lib/controllers/quote_form_controller.dart": [
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/dialogs/tax_rate_dialogs.dart"
+  ],
+  "lib/controllers/quote_list_builder.dart": [
+    "lib/screens/quotes_screen.dart"
+  ],
+  "lib/controllers/quote_navigation_controller.dart": [
+    "lib/controllers/quote_list_builder.dart",
+    "lib/screens/quotes_screen.dart"
+  ],
+  "lib/controllers/template_field_dialog_manager.dart": [
+    "lib/screens/pdf_preview_screen.dart"
+  ],
+  "lib/controllers/ui_state_controller.dart": [
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/dialogs/add_product_dialog.dart": [
+    "lib/screens/simplified_quote_screen.dart"
+  ],
+  "lib/dialogs/communication/email_edit_dialog.dart": [
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/dialogs/communication/email_preview_dialog.dart": [
+    "lib/screens/customer_detail_screen.dart",
+    "lib/dialogs/communication/email_edit_dialog.dart"
+  ],
+  "lib/dialogs/communication/sms_edit_dialog.dart": [
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/dialogs/communication/sms_preview_dialog.dart": [
+    "lib/screens/customer_detail_screen.dart",
+    "lib/dialogs/communication/sms_edit_dialog.dart"
+  ],
+  "lib/dialogs/custom_item_dialog.dart": [
+    "lib/screens/simplified_quote_screen.dart"
+  ],
+  "lib/dialogs/customer_form_dialog.dart": [
+    "lib/controllers/customer_dialog_manager.dart"
+  ],
+  "lib/dialogs/discount_dialog.dart": [
+    "lib/screens/simplified_quote_detail_screen.dart"
+  ],
+  "lib/dialogs/help_dialog.dart": [
+    "lib/screens/settings_screen.dart"
+  ],
+  "lib/dialogs/premium_feature_dialog.dart": [
+    "lib/screens/settings_screen.dart"
+  ],
+  "lib/dialogs/tax_rate_dialogs.dart": [
+    "lib/controllers/quote_form_controller.dart"
+  ],
+  "lib/dialogs/template_selection_dialog.dart": [
+    "lib/controllers/pdf_generation_controller.dart"
+  ],
+  "lib/main.dart": [
+    "lib/models/quote.dart"
+  ],
+  "lib/mixins/communication_actions_mixin.dart": [
+    "lib/screens/customer_detail_screen.dart",
+    "lib/mixins/customer_communication_mixin.dart"
+  ],
+  "lib/mixins/customer_communication_mixin.dart": [
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/mixins/empty_state_mixin.dart": [
+    "lib/screens/quotes_screen.dart",
+    "lib/screens/customers_screen.dart",
+    "lib/screens/products_screen.dart"
+  ],
+  "lib/mixins/field_type_mixin.dart": [
+    "lib/widgets/templates/dialgos/field_dialog.dart"
+  ],
+  "lib/mixins/file_sharing_mixin.dart": [
+    "lib/screens/customer_detail_screen.dart",
+    "lib/screens/pdf_preview_screen.dart"
+  ],
+  "lib/mixins/responsive_breakpoints_mixin.dart": [
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/controllers/quick_actions_controller.dart",
+    "lib/screens/home_screen.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/screens/simplified_quote_detail_screen.dart",
+    "lib/widgets/quote_form/main_product_section.dart",
+    "lib/widgets/quote_form/quote_products_section.dart",
+    "lib/widgets/quote_form/quote_generation_section.dart",
+    "lib/mixins/responsive_widget_mixin.dart",
+    "lib/mixins/responsive_spacing_mixin.dart",
+    "lib/mixins/responsive_layout_mixin.dart",
+    "lib/mixins/responsive_text_mixin.dart",
+    "lib/dialogs/discount_dialog.dart"
+  ],
+  "lib/mixins/responsive_dimensions_mixin.dart": [
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/controllers/quick_actions_controller.dart",
+    "lib/screens/home_screen.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/screens/simplified_quote_detail_screen.dart",
+    "lib/mixins/responsive_widget_mixin.dart",
+    "lib/mixins/responsive_layout_mixin.dart"
+  ],
+  "lib/mixins/responsive_layout_mixin.dart": [],
+  "lib/mixins/responsive_spacing_mixin.dart": [
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/controllers/quick_actions_controller.dart",
+    "lib/screens/home_screen.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/screens/simplified_quote_detail_screen.dart",
+    "lib/widgets/quote_form/main_product_section.dart",
+    "lib/widgets/quote_form/quote_products_section.dart",
+    "lib/widgets/quote_form/quote_generation_section.dart",
+    "lib/mixins/responsive_layout_mixin.dart",
+    "lib/dialogs/discount_dialog.dart"
+  ],
+  "lib/mixins/responsive_text_mixin.dart": [
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/controllers/quick_actions_controller.dart",
+    "lib/screens/home_screen.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/screens/simplified_quote_detail_screen.dart",
+    "lib/mixins/responsive_layout_mixin.dart"
+  ],
+  "lib/mixins/responsive_widget_mixin.dart": [
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/controllers/quick_actions_controller.dart",
+    "lib/screens/home_screen.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/screens/simplified_quote_detail_screen.dart",
+    "lib/mixins/responsive_layout_mixin.dart"
+  ],
+  "lib/mixins/search_mixin.dart": [
+    "lib/screens/quotes_screen.dart",
+    "lib/screens/customers_screen.dart",
+    "lib/screens/products_screen.dart"
+  ],
+  "lib/mixins/selection_mixin.dart": [],
+  "lib/mixins/sort_menu_mixin.dart": [
+    "lib/screens/quotes_screen.dart",
+    "lib/screens/customers_screen.dart",
+    "lib/screens/products_screen.dart"
+  ],
+  "lib/mixins/template_tab_mixin.dart": [
+    "lib/widgets/templates/email_templates_tab.dart",
+    "lib/widgets/templates/pdf_templates_tab.dart",
+    "lib/widgets/templates/fields_tab.dart",
+    "lib/widgets/templates/message_templates_tab.dart"
+  ],
+  "lib/models/app_settings.dart": [
+    "lib/providers/app_configuration_provider.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/models/app_settings.g.dart",
+    "lib/screens/settings_screen.dart",
+    "lib/screens/settings/company_info_screen.dart",
+    "lib/screens/settings/discount_settings_screen.dart",
+    "lib/widgets/settings/company_logo_picker.dart",
+    "lib/widgets/settings/settings_section.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart"
+  ],
+  "lib/models/custom_app_data.dart": [
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/custom_fields_provider.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/models/custom_app_data.g.dart",
+    "lib/screens/customer_detail/inspection_tab.dart",
+    "lib/widgets/templates/dialgos/field_dialog.dart",
+    "lib/widgets/templates/fields_tab.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart"
+  ],
+  "lib/models/customer.dart": [
+    "lib/controllers/quote_list_builder.dart",
+    "lib/controllers/customer_dialog_manager.dart",
+    "lib/controllers/media_selection_controller.dart",
+    "lib/controllers/quote_navigation_controller.dart",
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/controllers/pdf_file_operations_controller.dart",
+    "lib/controllers/pdf_generation_controller.dart",
+    "lib/controllers/communication_controller.dart",
+    "lib/controllers/quote_detail_controller.dart",
+    "lib/controllers/navigation_controller.dart",
+    "lib/controllers/customer_filter_controller.dart",
+    "lib/controllers/dashboard_data_controller.dart",
+    "lib/controllers/quote_filter_controller.dart",
+    "lib/controllers/customer_actions_controller.dart",
+    "lib/controllers/quote_form_controller.dart",
+    "lib/providers/helpers/customer_helper.dart",
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/helpers/pdf_generation_helper.dart",
+    "lib/providers/customer_state_provider.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/providers/customer_provider.dart",
+    "lib/providers/quote_state_provider.dart",
+    "lib/providers/template_state_provider.dart",
+    "lib/providers/quote_provider.dart",
+    "lib/models/customer.g.dart",
+    "lib/screens/customer_detail/project_notes_section.dart",
+    "lib/screens/customer_detail/inspection_tab.dart",
+    "lib/screens/customer_detail/media_tab_controller.dart",
+    "lib/screens/customer_detail/media_tab.dart",
+    "lib/screens/customer_detail/customer_edit_dialog.dart",
+    "lib/screens/customer_detail/enhanced_communication_dialog.dart",
+    "lib/screens/customer_detail/quotes_tab.dart",
+    "lib/screens/customer_detail/info_tab.dart",
+    "lib/screens/customer_detail_screen.dart",
+    "lib/screens/pdf_preview_screen.dart",
+    "lib/screens/inspection_viewer_screen.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/screens/customers_screen.dart",
+    "lib/screens/simplified_quote_detail_screen.dart",
+    "lib/widgets/tax_rate_section.dart",
+    "lib/widgets/inspection_floating_button.dart",
+    "lib/widgets/customer_card.dart",
+    "lib/widgets/quote_form/quote_products_section.dart",
+    "lib/widgets/quote_header_card.dart",
+    "lib/mixins/customer_communication_mixin.dart",
+    "lib/mixins/file_sharing_mixin.dart",
+    "lib/dialogs/tax_rate_dialogs.dart",
+    "lib/dialogs/customer_form_dialog.dart",
+    "lib/services/pdf_field_mapping_service.dart",
+    "lib/services/template_service.dart",
+    "lib/services/pdf_service.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart",
+    "lib/utils/pdf_utils.dart"
+  ],
+  "lib/models/edit_action.dart": [
+    "lib/controllers/pdf_editing_controller.dart"
+  ],
+  "lib/models/email_template.dart": [
+    "lib/providers/template_provider.dart",
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/helpers/email_template_helper.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/providers/template_state_provider.dart",
+    "lib/models/email_template.g.dart",
+    "lib/widgets/templates/email_templates_tab.dart",
+    "lib/widgets/templates/dialgos/email_template_editor.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart"
+  ],
+  "lib/models/field_definition.dart": [
+    "lib/models/pdf_template.dart",
+    "lib/widgets/common/field_category_list.dart"
+  ],
+  "lib/models/inspection_document.dart": [
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/custom_fields_provider.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/models/inspection_document.g.dart",
+    "lib/screens/customer_detail/inspection_tab.dart",
+    "lib/screens/inspection_viewer_screen.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart"
+  ],
+  "lib/models/message_template.dart": [
+    "lib/providers/template_provider.dart",
+    "lib/providers/helpers/message_template_helper.dart",
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/providers/template_state_provider.dart",
+    "lib/models/message_template.g.dart",
+    "lib/widgets/templates/dialgos/message_template_editor.dart",
+    "lib/widgets/templates/message_templates_tab.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart"
+  ],
+  "lib/models/pdf_form_field.dart": [
+    "lib/controllers/pdf_file_operations_controller.dart",
+    "lib/controllers/pdf_viewer_ui_builder.dart",
+    "lib/controllers/pdf_document_controller.dart",
+    "lib/screens/pdf_preview_screen.dart"
+  ],
+  "lib/models/pdf_template.dart": [
+    "lib/controllers/pdf_generation_controller.dart",
+    "lib/providers/template_provider.dart",
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/helpers/pdf_generation_helper.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/providers/template_state_provider.dart",
+    "lib/models/pdf_template.g.dart",
+    "lib/screens/template_editor_screen.dart",
+    "lib/widgets/template_editor/field_selection_dialog.dart",
+    "lib/widgets/template_editor/field_mapping_bottom_sheet.dart",
+    "lib/widgets/common/field_category_list.dart",
+    "lib/widgets/templates/pdf_templates_tab.dart",
+    "lib/dialogs/template_selection_dialog.dart",
+    "lib/services/pdf_field_mapping_service.dart",
+    "lib/services/template_service.dart",
+    "lib/services/pdf_service.dart",
+    "lib/services/template_management_service.dart",
+    "lib/services/database_service.dart",
+    "lib/state/template_editor_state.dart",
+    "lib/state/field_mapping_state.dart",
+    "lib/main.dart",
+    "lib/utils/template_validator.dart"
+  ],
+  "lib/models/product.dart": [
+    "lib/controllers/product_filter_controller.dart",
+    "lib/controllers/product_dialog_manager.dart",
+    "lib/controllers/quote_form_controller.dart",
+    "lib/providers/product_state_provider.dart",
+    "lib/providers/helpers/product_helper.dart",
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/providers/product_provider.dart",
+    "lib/models/product.g.dart",
+    "lib/models/pdf_template.dart",
+    "lib/screens/products/product_form_dialog.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/screens/products_screen.dart",
+    "lib/widgets/template_editor/field_selection_dialog.dart",
+    "lib/widgets/quote_form/main_product_section.dart",
+    "lib/widgets/quote_form/quote_products_section.dart",
+    "lib/widgets/common/field_category_list.dart",
+    "lib/widgets/quote_totals_section.dart",
+    "lib/widgets/main_product_selection.dart",
+    "lib/widgets/quote_levels_preview.dart",
+    "lib/widgets/product_card.dart",
+    "lib/dialogs/add_product_dialog.dart",
+    "lib/services/template_service.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart"
+  ],
+  "lib/models/project_media.dart": [
+    "lib/controllers/pdf_file_operations_controller.dart",
+    "lib/providers/media_state_provider.dart",
+    "lib/providers/helpers/customer_helper.dart",
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/customer_state_provider.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/models/project_media.g.dart",
+    "lib/screens/customer_detail/full_screen_image_viewer.dart",
+    "lib/screens/customer_detail/category_media_screen.dart",
+    "lib/screens/customer_detail/media_details_dialog.dart",
+    "lib/screens/customer_detail/media_tab_controller.dart",
+    "lib/screens/customer_detail/media_tab.dart",
+    "lib/services/simple_pdf_editing_service.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart"
+  ],
+  "lib/models/quote.dart": [
+    "lib/controllers/quote_list_builder.dart",
+    "lib/controllers/quote_navigation_controller.dart",
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/controllers/pdf_file_operations_controller.dart",
+    "lib/controllers/pdf_generation_controller.dart",
+    "lib/controllers/quote_detail_controller.dart",
+    "lib/controllers/navigation_controller.dart",
+    "lib/controllers/dashboard_data_controller.dart",
+    "lib/controllers/quote_filter_controller.dart",
+    "lib/controllers/quote_form_controller.dart",
+    "lib/providers/helpers/customer_helper.dart",
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/helpers/quote_helper.dart",
+    "lib/providers/helpers/pdf_generation_helper.dart",
+    "lib/providers/customer_state_provider.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/providers/quote_state_provider.dart",
+    "lib/providers/template_state_provider.dart",
+    "lib/providers/quote_provider.dart",
+    "lib/models/simplified_quote.dart",
+    "lib/models/quote.g.dart",
+    "lib/models/simplified_quote.g.dart",
+    "lib/screens/customer_detail/quotes_tab.dart",
+    "lib/screens/pdf_preview_screen.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/screens/simplified_quote_detail_screen.dart",
+    "lib/widgets/added_products_list.dart",
+    "lib/widgets/discounts_section.dart",
+    "lib/widgets/quote_form/quote_products_section.dart",
+    "lib/widgets/quote_form/quote_generation_section.dart",
+    "lib/widgets/addons_section.dart",
+    "lib/widgets/quote_header_card.dart",
+    "lib/widgets/level_details_card.dart",
+    "lib/widgets/quote_totals_section.dart",
+    "lib/widgets/quote_levels_preview.dart",
+    "lib/widgets/quote_total_card.dart",
+    "lib/widgets/level_selector_card.dart",
+    "lib/dialogs/discount_dialog.dart",
+    "lib/dialogs/add_product_dialog.dart",
+    "lib/services/pdf_field_mapping_service.dart",
+    "lib/services/template_service.dart",
+    "lib/services/pdf_service.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart",
+    "lib/utils/pdf_utils.dart"
+  ],
+  "lib/models/quote_extras.dart": [
+    "lib/controllers/quote_form_controller.dart",
+    "lib/models/simplified_quote.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/widgets/custom_line_items_section.dart",
+    "lib/widgets/permits_section.dart",
+    "lib/widgets/quote_form/quote_products_section.dart",
+    "lib/widgets/quote_totals_section.dart",
+    "lib/dialogs/custom_item_dialog.dart"
+  ],
+  "lib/models/roof_scope_data.dart": [
+    "lib/controllers/quote_navigation_controller.dart",
+    "lib/controllers/quote_form_controller.dart",
+    "lib/providers/helpers/customer_helper.dart",
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/helpers/roof_scope_helper.dart",
+    "lib/providers/customer_state_provider.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/models/roof_scope_data.g.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/services/pdf_service.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart"
+  ],
+  "lib/models/simplified_quote.dart": [
+    "lib/controllers/quote_list_builder.dart",
+    "lib/controllers/quote_navigation_controller.dart",
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/controllers/pdf_file_operations_controller.dart",
+    "lib/controllers/pdf_generation_controller.dart",
+    "lib/controllers/quote_detail_controller.dart",
+    "lib/controllers/navigation_controller.dart",
+    "lib/controllers/dashboard_data_controller.dart",
+    "lib/controllers/quote_filter_controller.dart",
+    "lib/controllers/quote_form_controller.dart",
+    "lib/providers/helpers/customer_helper.dart",
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/helpers/quote_helper.dart",
+    "lib/providers/helpers/pdf_generation_helper.dart",
+    "lib/providers/customer_state_provider.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/providers/quote_state_provider.dart",
+    "lib/providers/template_state_provider.dart",
+    "lib/providers/quote_provider.dart",
+    "lib/models/simplified_quote.g.dart",
+    "lib/screens/customer_detail/quotes_tab.dart",
+    "lib/screens/pdf_preview_screen.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/screens/simplified_quote_detail_screen.dart",
+    "lib/widgets/discounts_section.dart",
+    "lib/widgets/quote_form/quote_products_section.dart",
+    "lib/widgets/quote_form/quote_generation_section.dart",
+    "lib/widgets/addons_section.dart",
+    "lib/widgets/quote_header_card.dart",
+    "lib/widgets/level_details_card.dart",
+    "lib/widgets/quote_totals_section.dart",
+    "lib/widgets/quote_levels_preview.dart",
+    "lib/widgets/quote_total_card.dart",
+    "lib/widgets/level_selector_card.dart",
+    "lib/dialogs/discount_dialog.dart",
+    "lib/services/pdf_field_mapping_service.dart",
+    "lib/services/template_service.dart",
+    "lib/services/pdf_service.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart",
+    "lib/utils/pdf_utils.dart"
+  ],
+  "lib/models/tab_configuration.dart": [],
+  "lib/models/template_category.dart": [
+    "lib/providers/template_provider.dart",
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/helpers/template_category_helper.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/providers/template_state_provider.dart",
+    "lib/models/template_category.g.dart",
+    "lib/services/database_service.dart",
+    "lib/main.dart"
+  ],
+  "lib/models/template_creation_request.dart": [],
+  "lib/models/template_editor_config.dart": [],
+  "lib/navigation/template_navigation_handler.dart": [
+    "lib/screens/templates_screen.dart",
+    "lib/services/template_creation_service.dart"
+  ],
+  "lib/providers/app_configuration_provider.dart": [
+    "lib/providers/app_state_provider.dart"
+  ],
+  "lib/providers/app_state_provider.dart": [
+    "lib/controllers/quote_list_builder.dart",
+    "lib/controllers/customer_dialog_manager.dart",
+    "lib/controllers/media_selection_controller.dart",
+    "lib/controllers/quote_navigation_controller.dart",
+    "lib/controllers/pdf_file_operations_controller.dart",
+    "lib/controllers/category_operations_controller.dart",
+    "lib/controllers/ui_state_controller.dart",
+    "lib/controllers/pdf_generation_controller.dart",
+    "lib/controllers/communication_controller.dart",
+    "lib/controllers/quote_detail_controller.dart",
+    "lib/controllers/customer_filter_controller.dart",
+    "lib/controllers/dashboard_data_controller.dart",
+    "lib/controllers/category_data_controller.dart",
+    "lib/controllers/product_filter_controller.dart",
+    "lib/controllers/quote_filter_controller.dart",
+    "lib/controllers/customer_actions_controller.dart",
+    "lib/controllers/product_dialog_manager.dart",
+    "lib/controllers/category_ui_builder.dart",
+    "lib/controllers/quote_form_controller.dart",
+    "lib/controllers/product_category_manager.dart",
+    "lib/screens/customer_detail/inspection_tab.dart",
+    "lib/screens/customer_detail/media_tab_controller.dart",
+    "lib/screens/customer_detail/media_tab.dart",
+    "lib/screens/customer_detail/customer_edit_dialog.dart",
+    "lib/screens/customer_detail/enhanced_communication_dialog.dart",
+    "lib/screens/customer_detail/quotes_tab.dart",
+    "lib/screens/customer_detail/info_tab.dart",
+    "lib/screens/customer_detail_screen.dart",
+    "lib/screens/quotes_screen.dart",
+    "lib/screens/pdf_preview_screen.dart",
+    "lib/screens/settings_screen.dart",
+    "lib/screens/inspection_viewer_screen.dart",
+    "lib/screens/home_screen.dart",
+    "lib/screens/products/product_form_dialog.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/screens/template_editor_screen.dart",
+    "lib/screens/templates_screen.dart",
+    "lib/screens/settings/data_management_screen.dart",
+    "lib/screens/settings/company_info_screen.dart",
+    "lib/screens/settings/discount_settings_screen.dart",
+    "lib/screens/customers_screen.dart",
+    "lib/screens/simplified_quote_detail_screen.dart",
+    "lib/screens/products_screen.dart",
+    "lib/widgets/tax_rate_section.dart",
+    "lib/widgets/inspection_floating_button.dart",
+    "lib/widgets/templates/email_templates_tab.dart",
+    "lib/widgets/templates/dialgos/field_dialog.dart",
+    "lib/widgets/templates/dialgos/message_template_editor.dart",
+    "lib/widgets/templates/dialgos/email_template_editor.dart",
+    "lib/widgets/templates/dialgos/category_selection_dialog.dart",
+    "lib/widgets/templates/pdf_templates_tab.dart",
+    "lib/widgets/templates/fields_tab.dart",
+    "lib/widgets/templates/message_templates_tab.dart",
+    "lib/widgets/settings/company_logo_picker.dart",
+    "lib/widgets/settings/settings_section.dart",
+    "lib/widgets/main_product_selection.dart",
+    "lib/mixins/template_tab_mixin.dart",
+    "lib/mixins/customer_communication_mixin.dart",
+    "lib/dialogs/add_product_dialog.dart",
+    "lib/dialogs/tax_rate_dialogs.dart",
+    "lib/dialogs/customer_form_dialog.dart",
+    "lib/services/pdf_field_mapping_service.dart",
+    "lib/services/pdf_service.dart",
+    "lib/services/settings/settings_data_service.dart",
+    "lib/services/template_management_service.dart",
+    "lib/main.dart",
+    "lib/utils/pdf_utils.dart"
+  ],
+  "lib/providers/custom_fields_provider.dart": [
+    "lib/providers/app_state_provider.dart"
+  ],
+  "lib/providers/customer_provider.dart": [
+    "lib/main.dart"
+  ],
+  "lib/providers/customer_state_provider.dart": [
+    "lib/providers/app_state_provider.dart"
+  ],
+  "lib/providers/helpers/customer_helper.dart": [
+    "lib/providers/customer_state_provider.dart"
+  ],
+  "lib/providers/helpers/data_loading_helper.dart": [
+    "lib/providers/product_state_provider.dart",
+    "lib/providers/media_state_provider.dart",
+    "lib/providers/custom_fields_provider.dart",
+    "lib/providers/customer_state_provider.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/providers/quote_state_provider.dart",
+    "lib/providers/template_state_provider.dart"
+  ],
+  "lib/providers/helpers/email_template_helper.dart": [
+    "lib/providers/template_state_provider.dart"
+  ],
+  "lib/providers/helpers/message_template_helper.dart": [
+    "lib/providers/template_state_provider.dart"
+  ],
+  "lib/providers/helpers/pdf_generation_helper.dart": [
+    "lib/providers/app_state_provider.dart",
+    "lib/providers/template_state_provider.dart"
+  ],
+  "lib/providers/helpers/product_helper.dart": [
+    "lib/providers/product_state_provider.dart"
+  ],
+  "lib/providers/helpers/quote_helper.dart": [
+    "lib/providers/quote_state_provider.dart"
+  ],
+  "lib/providers/helpers/roof_scope_helper.dart": [
+    "lib/providers/app_state_provider.dart"
+  ],
+  "lib/providers/helpers/template_category_helper.dart": [
+    "lib/providers/template_state_provider.dart"
+  ],
+  "lib/providers/media_state_provider.dart": [
+    "lib/providers/app_state_provider.dart"
+  ],
+  "lib/providers/product_provider.dart": [
+    "lib/main.dart"
+  ],
+  "lib/providers/product_state_provider.dart": [
+    "lib/providers/app_state_provider.dart"
+  ],
+  "lib/providers/quote_provider.dart": [
+    "lib/main.dart"
+  ],
+  "lib/providers/quote_state_provider.dart": [
+    "lib/providers/app_state_provider.dart"
+  ],
+  "lib/providers/template_provider.dart": [
+    "lib/main.dart"
+  ],
+  "lib/providers/template_state_provider.dart": [
+    "lib/providers/app_state_provider.dart"
+  ],
+  "lib/screens/category_management_screen.dart": [
+    "lib/navigation/template_navigation_handler.dart"
+  ],
+  "lib/screens/customer_detail/category_media_screen.dart": [],
+  "lib/screens/customer_detail/customer_edit_dialog.dart": [
+    "lib/controllers/customer_actions_controller.dart"
+  ],
+  "lib/screens/customer_detail/enhanced_communication_dialog.dart": [
+    "lib/mixins/customer_communication_mixin.dart"
+  ],
+  "lib/screens/customer_detail/full_screen_image_viewer.dart": [
+    "lib/screens/customer_detail/media_tab_controller.dart"
+  ],
+  "lib/screens/customer_detail/info_tab.dart": [
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/screens/customer_detail/inspection_tab.dart": [
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/screens/customer_detail/media_details_dialog.dart": [
+    "lib/screens/customer_detail/media_tab_controller.dart"
+  ],
+  "lib/screens/customer_detail/media_tab.dart": [
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/screens/customer_detail/media_tab_controller.dart": [
+    "lib/controllers/customer_actions_controller.dart",
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/screens/customer_detail/project_notes_section.dart": [
+    "lib/screens/customer_detail/info_tab.dart"
+  ],
+  "lib/screens/customer_detail/quotes_tab.dart": [
+    "lib/screens/customer_detail_screen.dart"
+  ],
+  "lib/screens/customer_detail_screen.dart": [
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/screens/customers_screen.dart"
+  ],
+  "lib/screens/customers_screen.dart": [
+    "lib/screens/home_screen.dart"
+  ],
+  "lib/screens/home_screen.dart": [
+    "lib/main.dart"
+  ],
+  "lib/screens/inspection_viewer_screen.dart": [
+    "lib/screens/customer_detail/inspection_tab.dart",
+    "lib/widgets/inspection_floating_button.dart"
+  ],
+  "lib/screens/layouts/home_layout_large.dart": [
+    "lib/screens/home_screen.dart"
+  ],
+  "lib/screens/layouts/home_layout_small.dart": [
+    "lib/screens/home_screen.dart"
+  ],
+  "lib/screens/pdf_preview_screen.dart": [
+    "lib/controllers/pdf_generation_controller.dart",
+    "lib/screens/customer_detail/media_tab_controller.dart",
+    "lib/screens/template_editor_screen.dart",
+    "lib/widgets/templates/pdf_templates_tab.dart",
+    "lib/utils/pdf_utils.dart"
+  ],
+  "lib/screens/products/product_form_dialog.dart": [
+    "lib/controllers/product_dialog_manager.dart"
+  ],
+  "lib/screens/products_screen.dart": [
+    "lib/screens/home_screen.dart"
+  ],
+  "lib/screens/quotes_screen.dart": [
+    "lib/screens/home_screen.dart"
+  ],
+  "lib/screens/settings/category_manager_dialog.dart": [
+    "lib/screens/settings_screen.dart"
+  ],
+  "lib/screens/settings/company_info_screen.dart": [
+    "lib/screens/settings_screen.dart"
+  ],
+  "lib/screens/settings/data_management_screen.dart": [
+    "lib/screens/settings_screen.dart"
+  ],
+  "lib/screens/settings/discount_settings_dialog.dart": [
+    "lib/screens/settings/discount_settings_screen.dart"
+  ],
+  "lib/screens/settings/discount_settings_screen.dart": [
+    "lib/screens/settings_screen.dart"
+  ],
+  "lib/screens/settings/quote_levels_manager_dialog.dart": [
+    "lib/screens/settings_screen.dart"
+  ],
+  "lib/screens/settings/units_manager_dialog.dart": [
+    "lib/screens/settings_screen.dart"
+  ],
+  "lib/screens/settings_screen.dart": [
+    "lib/screens/home_screen.dart"
+  ],
+  "lib/screens/simplified_quote_detail_screen.dart": [
+    "lib/controllers/quote_navigation_controller.dart",
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/controllers/navigation_controller.dart",
+    "lib/controllers/quote_form_controller.dart"
+  ],
+  "lib/screens/simplified_quote_screen.dart": [
+    "lib/controllers/quote_navigation_controller.dart",
+    "lib/controllers/navigation_controller.dart",
+    "lib/screens/simplified_quote_detail_screen.dart"
+  ],
+  "lib/screens/template_editor_screen.dart": [
+    "lib/widgets/templates/pdf_templates_tab.dart",
+    "lib/navigation/template_navigation_handler.dart"
+  ],
+  "lib/screens/templates_screen.dart": [
+    "lib/screens/home_screen.dart",
+    "lib/widgets/templates/pdf_templates_tab.dart"
+  ],
+  "lib/services/category_management_service.dart": [
+    "lib/screens/templates_screen.dart",
+    "lib/services/template_creation_service.dart"
+  ],
+  "lib/services/database_service.dart": [
+    "lib/providers/app_configuration_provider.dart",
+    "lib/providers/product_state_provider.dart",
+    "lib/providers/media_state_provider.dart",
+    "lib/providers/template_provider.dart",
+    "lib/providers/helpers/message_template_helper.dart",
+    "lib/providers/helpers/customer_helper.dart",
+    "lib/providers/helpers/product_helper.dart",
+    "lib/providers/helpers/data_loading_helper.dart",
+    "lib/providers/helpers/quote_helper.dart",
+    "lib/providers/helpers/email_template_helper.dart",
+    "lib/providers/helpers/template_category_helper.dart",
+    "lib/providers/custom_fields_provider.dart",
+    "lib/providers/customer_state_provider.dart",
+    "lib/providers/app_state_provider.dart",
+    "lib/providers/customer_provider.dart",
+    "lib/providers/quote_state_provider.dart",
+    "lib/providers/product_provider.dart",
+    "lib/providers/template_state_provider.dart",
+    "lib/providers/quote_provider.dart",
+    "lib/services/template_service.dart",
+    "lib/services/pdf_service.dart",
+    "lib/main.dart"
+  ],
+  "lib/services/file_service.dart": [
+    "lib/providers/app_configuration_provider.dart",
+    "lib/providers/app_state_provider.dart"
+  ],
+  "lib/services/pdf_field_mapping_service.dart": [
+    "lib/controllers/template_field_dialog_manager.dart",
+    "lib/screens/pdf_preview_screen.dart",
+    "lib/screens/template_editor_screen.dart"
+  ],
+  "lib/services/pdf_interaction_service.dart": [
+    "lib/screens/template_editor_screen.dart"
+  ],
+  "lib/services/pdf_service.dart": [
+    "lib/providers/helpers/pdf_generation_helper.dart",
+    "lib/providers/quote_state_provider.dart",
+    "lib/providers/template_state_provider.dart",
+    "lib/providers/quote_provider.dart"
+  ],
+  "lib/services/settings/settings_data_service.dart": [
+    "lib/screens/settings/data_management_screen.dart"
+  ],
+  "lib/services/simple_pdf_editing_service.dart": [],
+  "lib/services/tax_service.dart": [
+    "lib/providers/app_configuration_provider.dart",
+    "lib/main.dart"
+  ],
+  "lib/services/template_creation_service.dart": [
+    "lib/screens/templates_screen.dart"
+  ],
+  "lib/services/template_management_service.dart": [
+    "lib/screens/template_editor_screen.dart"
+  ],
+  "lib/services/template_service.dart": [
+    "lib/providers/helpers/pdf_generation_helper.dart",
+    "lib/providers/template_state_provider.dart",
+    "lib/services/pdf_service.dart"
+  ],
+  "lib/state/category_selection_state.dart": [],
+  "lib/state/field_mapping_state.dart": [],
+  "lib/state/template_editor_state.dart": [],
+  "lib/state/templates_screen_state.dart": [
+    "lib/screens/templates_screen.dart"
+  ],
+  "lib/theme/rufko_theme.dart": [
+    "lib/controllers/category_dialog_manager.dart",
+    "lib/controllers/dashboard_ui_builder.dart",
+    "lib/controllers/ui_state_controller.dart",
+    "lib/controllers/category_ui_builder.dart",
+    "lib/screens/pdf_preview_screen.dart",
+    "lib/screens/home_screen.dart",
+    "lib/screens/simplified_quote_screen.dart",
+    "lib/screens/template_editor_screen.dart",
+    "lib/screens/category_management_screen.dart",
+    "lib/screens/simplified_quote_detail_screen.dart",
+    "lib/widgets/template_editor/field_selection_dialog.dart",
+    "lib/widgets/templates/dialgos/field_dialog.dart",
+    "lib/widgets/templates/dialgos/category_creation_dialog.dart",
+    "lib/widgets/templates/dialgos/category_selection_dialog.dart",
+    "lib/widgets/templates/floating_action_buttons/template_fab_manager.dart",
+    "lib/widgets/templates/pdf_templates_tab.dart",
+    "lib/widgets/templates/fields_tab.dart",
+    "lib/widgets/templates/template_app_bar.dart",
+    "lib/mixins/file_sharing_mixin.dart",
+    "lib/dialogs/discount_dialog.dart",
+    "lib/main.dart"
+  ],
+  "lib/utils/common_utils.dart": [
+    "lib/screens/customer_detail/category_media_screen.dart",
+    "lib/screens/customer_detail/inspection_tab.dart",
+    "lib/screens/customer_detail/media_details_dialog.dart",
+    "lib/screens/customer_detail/media_tab.dart",
+    "lib/screens/customer_detail/info_tab.dart",
+    "lib/screens/customer_detail_screen.dart",
+    "lib/widgets/templates/fields_tab.dart",
+    "lib/mixins/file_sharing_mixin.dart",
+    "lib/services/simple_pdf_editing_service.dart"
+  ],
+  "lib/utils/dashboard_status_helper.dart": [
+    "lib/controllers/dashboard_ui_builder.dart"
+  ],
+  "lib/utils/pdf_field_utils.dart": [
+    "lib/widgets/template_editor/field_mapping_bottom_sheet.dart",
+    "lib/widgets/common/field_category_list.dart"
+  ],
+  "lib/utils/pdf_utils.dart": [],
+  "lib/utils/settings_constants.dart": [
+    "lib/widgets/settings/settings_section.dart",
+    "lib/dialogs/help_dialog.dart",
+    "lib/dialogs/premium_feature_dialog.dart"
+  ],
+  "lib/utils/template_screen_utils.dart": [],
+  "lib/utils/template_validation_utils.dart": [],
+  "lib/utils/template_validator.dart": [
+    "lib/services/template_management_service.dart"
+  ],
+  "lib/widgets/added_products_list.dart": [
+    "lib/widgets/quote_form/quote_products_section.dart"
+  ],
+  "lib/widgets/addons_section.dart": [
+    "lib/screens/simplified_quote_detail_screen.dart"
+  ],
+  "lib/widgets/common/error_snackbar.dart": [
+    "lib/screens/templates_screen.dart"
+  ],
+  "lib/widgets/common/field_category_list.dart": [
+    "lib/widgets/template_editor/field_selection_dialog.dart"
+  ],
+  "lib/widgets/common/loading_overlay.dart": [
+    "lib/screens/template_editor_screen.dart"
+  ],
+  "lib/widgets/custom_line_items_section.dart": [
+    "lib/screens/simplified_quote_screen.dart"
+  ],
+  "lib/widgets/customer_card.dart": [
+    "lib/screens/customers_screen.dart"
+  ],
+  "lib/widgets/dashboard_card.dart": [],
+  "lib/widgets/discounts_section.dart": [
+    "lib/screens/simplified_quote_detail_screen.dart"
+  ],
+  "lib/widgets/inspection_floating_button.dart": [
+    "lib/screens/simplified_quote_screen.dart"
+  ],
+  "lib/widgets/level_details_card.dart": [
+    "lib/screens/simplified_quote_detail_screen.dart"
+  ],
+  "lib/widgets/level_selector_card.dart": [
+    "lib/screens/simplified_quote_detail_screen.dart"
+  ],
+  "lib/widgets/main_product_selection.dart": [
+    "lib/widgets/quote_form/main_product_section.dart"
+  ],
+  "lib/widgets/permits_section.dart": [
+    "lib/screens/simplified_quote_screen.dart"
+  ],
+  "lib/widgets/product_card.dart": [
+    "lib/screens/products_screen.dart"
+  ],
+  "lib/widgets/quote_form/main_product_section.dart": [
+    "lib/screens/simplified_quote_screen.dart"
+  ],
+  "lib/widgets/quote_form/quote_generation_section.dart": [
+    "lib/screens/simplified_quote_screen.dart"
+  ],
+  "lib/widgets/quote_form/quote_products_section.dart": [
+    "lib/screens/simplified_quote_screen.dart"
+  ],
+  "lib/widgets/quote_header_card.dart": [
+    "lib/screens/simplified_quote_detail_screen.dart"
+  ],
+  "lib/widgets/quote_levels_preview.dart": [
+    "lib/screens/simplified_quote_screen.dart"
+  ],
+  "lib/widgets/quote_total_card.dart": [
+    "lib/screens/simplified_quote_detail_screen.dart"
+  ],
+  "lib/widgets/quote_totals_section.dart": [
+    "lib/widgets/quote_form/quote_products_section.dart"
+  ],
+  "lib/widgets/quote_type_selector.dart": [
+    "lib/widgets/quote_form/main_product_section.dart"
+  ],
+  "lib/widgets/settings/company_logo_picker.dart": [
+    "lib/screens/settings/company_info_screen.dart"
+  ],
+  "lib/widgets/settings/settings_section.dart": [
+    "lib/screens/settings_screen.dart"
+  ],
+  "lib/widgets/settings/settings_tile.dart": [
+    "lib/screens/settings/data_management_screen.dart",
+    "lib/screens/settings/discount_settings_screen.dart",
+    "lib/widgets/settings/settings_section.dart"
+  ],
+  "lib/widgets/tax_rate_section.dart": [
+    "lib/widgets/quote_form/quote_products_section.dart"
+  ],
+  "lib/widgets/template_editor/field_mapping_bottom_sheet.dart": [
+    "lib/screens/template_editor_screen.dart"
+  ],
+  "lib/widgets/template_editor/field_selection_dialog.dart": [
+    "lib/screens/template_editor_screen.dart"
+  ],
+  "lib/widgets/template_editor/mapping_mode_banner.dart": [
+    "lib/screens/template_editor_screen.dart"
+  ],
+  "lib/widgets/template_editor/pdf_viewer_widget.dart": [
+    "lib/screens/template_editor_screen.dart"
+  ],
+  "lib/widgets/template_editor/template_upload_widget.dart": [
+    "lib/screens/template_editor_screen.dart"
+  ],
+  "lib/widgets/templates/dialgos/category_creation_dialog.dart": [
+    "lib/widgets/templates/dialgos/category_selection_dialog.dart",
+    "lib/services/category_management_service.dart"
+  ],
+  "lib/widgets/templates/dialgos/category_selection_dialog.dart": [
+    "lib/services/category_management_service.dart"
+  ],
+  "lib/widgets/templates/dialgos/email_template_editor.dart": [
+    "lib/screens/templates_screen.dart",
+    "lib/widgets/templates/email_templates_tab.dart"
+  ],
+  "lib/widgets/templates/dialgos/field_dialog.dart": [
+    "lib/screens/templates_screen.dart",
+    "lib/widgets/templates/fields_tab.dart"
+  ],
+  "lib/widgets/templates/dialgos/message_template_editor.dart": [
+    "lib/screens/templates_screen.dart",
+    "lib/widgets/templates/message_templates_tab.dart"
+  ],
+  "lib/widgets/templates/dialgos/template_type_selector.dart": [],
+  "lib/widgets/templates/email_templates_tab.dart": [
+    "lib/screens/templates_screen.dart"
+  ],
+  "lib/widgets/templates/fields_tab.dart": [
+    "lib/screens/templates_screen.dart"
+  ],
+  "lib/widgets/templates/floating_action_buttons/template_fab_manager.dart": [
+    "lib/screens/templates_screen.dart"
+  ],
+  "lib/widgets/templates/message_templates_tab.dart": [
+    "lib/screens/templates_screen.dart"
+  ],
+  "lib/widgets/templates/pdf_templates_tab.dart": [
+    "lib/screens/templates_screen.dart"
+  ],
+  "lib/widgets/templates/template_app_bar.dart": [
+    "lib/screens/templates_screen.dart"
+  ]
+}
