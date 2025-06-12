@@ -167,3 +167,30 @@ This project is currently undergoing systematic refactoring to improve maintaina
 - ✅ 2025-06-11 Extracted customer helper
 - ✅ 2025-06-11 Fixed analyzer errors and cleaned imports
 See `AGENTS.MD` for detailed refactoring progress and methodology.
+## Templates Screen Refactor Checklist
+- [x] Create services layer files
+  - [x] lib/services/template_creation_service.dart
+  - [x] lib/services/category_management_service.dart
+- [x] Extract UI components
+  - [x] lib/widgets/templates/template_app_bar.dart
+  - [x] lib/widgets/templates/floating_action_buttons/template_fab_manager.dart
+  - [x] lib/widgets/templates/dialogs/category_selection_dialog.dart
+  - [x] lib/widgets/templates/dialogs/category_creation_dialog.dart
+  - [x] lib/widgets/templates/dialogs/template_type_selector.dart
+  - [x] lib/widgets/common/error_snackbar.dart
+- [x] State management classes
+  - [x] lib/state/templates_screen_state.dart
+  - [x] lib/state/category_selection_state.dart
+- [x] Navigation handler
+  - [x] lib/navigation/template_navigation_handler.dart
+- [x] Configuration and constants
+  - [x] lib/config/template_screen_config.dart
+  - [x] lib/constants/template_constants.dart
+- [x] Data models
+  - [x] lib/models/template_creation_request.dart
+  - [x] lib/models/tab_configuration.dart
+- [x] Utility functions
+  - [x] lib/utils/template_screen_utils.dart
+- [x] Refactor main screen
+  - [x] lib/screens/templates_screen.dart
+- [x] Verify with `flutter analyze`
