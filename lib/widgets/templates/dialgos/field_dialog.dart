@@ -312,7 +312,9 @@ class _FieldDialogState extends State<FieldDialog> with FieldTypeMixin {
       } else if (_currentCategories.isNotEmpty) {
         _selectedFieldCategory = _currentCategories.first;
       } else {
-        _selectedFieldCategory = '';
+        // When no categories exist yet, default to the special
+        // "Create New Category" option so the dropdown has a valid value.
+        _selectedFieldCategory = _createNewCategoryValue;
       }
       _selectedFieldType = 'text';
       _isRequired = false;
