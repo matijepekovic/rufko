@@ -6,8 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import '../widgets/template_editor/field_mapping_bottom_sheet.dart';
 import '../widgets/template_editor/field_selection_dialog.dart';
-import '../widgets/common/field_category_list.dart';
-import '../utils/pdf_field_utils.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
@@ -17,8 +15,6 @@ import '../widgets/template_editor/pdf_viewer_widget.dart';
 import '../widgets/template_editor/template_upload_widget.dart';
 
 import '../models/pdf_template.dart';
-import '../models/product.dart';
-import '../models/field_definition.dart';
 import '../providers/app_state_provider.dart';
 import 'pdf_preview_screen.dart';
 import '../theme/rufko_theme.dart';
@@ -336,24 +332,6 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     );
   }
 
-  void _showMappingHelp() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('How to Map Fields'),
-        content: const Text(
-          'Select a field from the list to link it with the chosen PDF field. '
-          'Existing links can be replaced by choosing another field.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _uploadAndCreateTemplate() async {
     final messenger = ScaffoldMessenger.of(context);

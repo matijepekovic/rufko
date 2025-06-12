@@ -3,15 +3,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_state_provider.dart';
-import '../models/simplified_quote.dart'; // Using the new quote model
-import '../models/roof_scope_data.dart'; // For creating new quotes
 
-import '../controllers/quote_filter_controller.dart';
 import '../controllers/quote_navigation_controller.dart';
 import '../controllers/quote_list_builder.dart';
 // Import the new screens
-import 'simplified_quote_screen.dart';
-import 'simplified_quote_detail_screen.dart';
+
 import '../mixins/search_mixin.dart';
 import '../mixins/sort_menu_mixin.dart';
 import '../mixins/empty_state_mixin.dart';
@@ -26,9 +22,6 @@ class QuotesScreen extends StatefulWidget {
 class _QuotesScreenState extends State<QuotesScreen>
     with TickerProviderStateMixin, SearchMixin, SortMenuMixin, EmptyStateMixin {
   late TabController _tabController;
-  // SearchMixin provides searchController, searchQuery and searchVisible
-  // String _sortBy = 'date'; // 'date', 'amount', 'customer', 'status' // You can re-add sorting later
-  // bool _sortAscending = false;
   late QuoteNavigationController _navigationController;
   late QuoteListBuilder _listBuilder;
 

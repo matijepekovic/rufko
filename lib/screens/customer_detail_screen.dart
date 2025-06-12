@@ -6,11 +6,8 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../utils/common_utils.dart';
 import '../models/customer.dart';
-import '../models/simplified_quote.dart';
 import '../providers/app_state_provider.dart';
-import '../theme/rufko_theme.dart';
-import 'simplified_quote_screen.dart';
-import 'simplified_quote_detail_screen.dart';
+
 import '../mixins/file_sharing_mixin.dart';
 import '../mixins/communication_actions_mixin.dart';
 import '../mixins/customer_communication_mixin.dart';

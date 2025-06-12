@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../theme/rufko_theme.dart';
 import '../mixins/responsive_spacing_mixin.dart';
 import '../mixins/responsive_text_mixin.dart';
 import '../mixins/responsive_dimensions_mixin.dart';

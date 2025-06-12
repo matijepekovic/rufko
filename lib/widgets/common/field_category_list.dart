@@ -142,7 +142,7 @@ class _FieldCategoryListState extends State<FieldCategoryList> {
       ),
       subtitle: isMapped
           ? Text(
-              'Already mapped to: ${existing!.pdfFormFieldName}',
+              'Already mapped to: ${existing.pdfFormFieldName}',
               style: TextStyle(color: Colors.orange.shade700, fontSize: 12),
             )
           : Text(
