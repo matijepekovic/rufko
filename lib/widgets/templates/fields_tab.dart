@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/custom_app_data.dart';
 import '../../providers/app_state_provider.dart';
-import 'dialgos/field_dialog.dart';
+import 'dialgos/add_field_dialog.dart';
+import 'dialgos/edit_field_dialog.dart';
 import '../../utils/common_utils.dart';
 import '../../theme/rufko_theme.dart';
 import '../../mixins/template_tab_mixin.dart';
@@ -15,6 +16,7 @@ class FieldsTab extends StatefulWidget {
 }
 
 class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
+
   // Implement required mixin properties
   @override
   Color get primaryColor => RufkoTheme.primaryColor;
@@ -49,11 +51,9 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
     }
 
     if (searchQuery.isNotEmpty) {
-      filtered = filtered
-          .where((f) =>
-              f.displayName.toLowerCase().contains(searchQuery.toLowerCase()) ||
-              f.fieldName.toLowerCase().contains(searchQuery.toLowerCase()))
-          .toList();
+      filtered = filtered.where((f) =>
+      f.displayName.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          f.fieldName.toLowerCase().contains(searchQuery.toLowerCase())).toList();
     }
 
     return filtered..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
@@ -85,8 +85,7 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
   }
 
   @override
-  Widget buildItemTile(
-      dynamic item, bool isSelected, bool isSmallScreen, bool isVerySmall) {
+  Widget buildItemTile(dynamic item, bool isSelected, bool isSmallScreen, bool isVerySmall) {
     final field = item as CustomAppDataField;
 
     return InkWell(
@@ -102,8 +101,7 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
           color: isSelected ? primaryColor.withValues(alpha: 0.1) : null,
           border: isSelected
               ? Border.all(color: primaryColor, width: 1)
-              : const Border(
-                  bottom: BorderSide(color: Colors.grey, width: 0.2)),
+              : const Border(bottom: BorderSide(color: Colors.grey, width: 0.2)),
         ),
         child: Row(
           children: [
@@ -139,7 +137,9 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+
                   SizedBox(height: isVerySmall ? 2 : 3),
+
                   Row(
                     children: [
                       Expanded(
@@ -155,6 +155,7 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
+
                       Text(
                         field.fieldType,
                         style: TextStyle(
@@ -165,12 +166,14 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
                       ),
                     ],
                   ),
+
                   if (field.currentValue.isNotEmpty) ...[
                     SizedBox(height: isVerySmall ? 2 : 3),
                     Container(
                       padding: EdgeInsets.symmetric(
                           horizontal: isVerySmall ? 4 : 6,
-                          vertical: isVerySmall ? 1 : 2),
+                          vertical: isVerySmall ? 1 : 2
+                      ),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? primaryColor.withValues(alpha: 0.2)
@@ -181,7 +184,8 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
                         field.currentValue,
                         style: TextStyle(
                             fontSize: isVerySmall ? 9 : 10,
-                            fontWeight: FontWeight.w500),
+                            fontWeight: FontWeight.w500
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -205,8 +209,7 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: isSelected
-                    ? Icon(Icons.check,
-                        color: Colors.white, size: isVerySmall ? 12 : 14)
+                    ? Icon(Icons.check, color: Colors.white, size: isVerySmall ? 12 : 14)
                     : null,
               )
             else
@@ -249,8 +252,7 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
   @override
   Widget build(BuildContext context) {
     // Check if we're embedded in Templates screen (no Scaffold needed)
-    final bool isEmbedded =
-        ModalRoute.of(context)?.settings.name != '/custom_app_data';
+    final bool isEmbedded = ModalRoute.of(context)?.settings.name != '/custom_app_data';
 
     if (isEmbedded) {
       // Return just the content without Scaffold/AppBar when embedded
@@ -293,43 +295,27 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
   // Field-specific helper methods (these are unique to fields)
   Color _getFieldTypeColor(String fieldType) {
     switch (fieldType) {
-      case 'text':
-        return Colors.blue;
-      case 'number':
-        return Colors.green;
-      case 'email':
-        return Colors.orange;
-      case 'phone':
-        return Colors.purple;
-      case 'multiline':
-        return Colors.teal;
-      case 'date':
-        return Colors.red;
-      case 'currency':
-        return Colors.amber;
-      default:
-        return Colors.grey;
+      case 'text': return Colors.blue;
+      case 'number': return Colors.green;
+      case 'email': return Colors.orange;
+      case 'phone': return Colors.purple;
+      case 'multiline': return Colors.teal;
+      case 'date': return Colors.red;
+      case 'currency': return Colors.amber;
+      default: return Colors.grey;
     }
   }
 
   IconData _getFieldTypeIcon(String fieldType) {
     switch (fieldType) {
-      case 'text':
-        return Icons.text_fields;
-      case 'number':
-        return Icons.numbers;
-      case 'email':
-        return Icons.email;
-      case 'phone':
-        return Icons.phone;
-      case 'multiline':
-        return Icons.notes;
-      case 'date':
-        return Icons.calendar_today;
-      case 'currency':
-        return Icons.attach_money;
-      default:
-        return Icons.input;
+      case 'text': return Icons.text_fields;
+      case 'number': return Icons.numbers;
+      case 'email': return Icons.email;
+      case 'phone': return Icons.phone;
+      case 'multiline': return Icons.notes;
+      case 'date': return Icons.calendar_today;
+      case 'currency': return Icons.attach_money;
+      default: return Icons.input;
     }
   }
 
@@ -372,7 +358,7 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
               categoryNames[categoryKey] = categoryName;
             }
 
-            return FieldDialog.add(
+            return AddFieldDialog(
               categories: availableCategories,
               categoryNames: categoryNames,
             );
@@ -428,8 +414,8 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
               }
             }
 
-            return FieldDialog.edit(
-              field,
+            return EditFieldDialog(
+              field: field,
               categories: availableCategories,
               categoryNames: categoryNames,
             );
@@ -556,4 +542,6 @@ class _FieldsTabState extends State<FieldsTab> with TemplateTabMixin {
   void dispose() {
     super.dispose();
   }
+
+
 }
