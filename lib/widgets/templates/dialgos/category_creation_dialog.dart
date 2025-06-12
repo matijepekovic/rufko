@@ -12,6 +12,18 @@ class _CategoryCreationDialogState extends State<CategoryCreationDialog> {
   final TextEditingController controller = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    controller.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Dialog(
       child: Padding(
@@ -35,8 +47,8 @@ class _CategoryCreationDialogState extends State<CategoryCreationDialog> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: controller.text.isNotEmpty
-                      ? () => Navigator.of(context).pop(controller.text)
+                  onPressed: controller.text.trim().isNotEmpty
+                      ? () => Navigator.of(context).pop(controller.text.trim())
                       : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: RufkoTheme.primaryColor,
