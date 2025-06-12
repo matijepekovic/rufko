@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/app_state_provider.dart';
 import '../../../theme/rufko_theme.dart';
-import 'category_creation_dialog.dart';
 
 class CategorySelectionDialog extends StatefulWidget {
   const CategorySelectionDialog({super.key});
@@ -26,25 +25,6 @@ class _CategorySelectionDialogState extends State<CategorySelectionDialog> {
         c.key: c.name,
     };
     if (categories.isNotEmpty) selectedCategory = categories.keys.first;
-  }
-
-  Future<void> _addCategory() async {
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (_) => const CategoryCreationDialog(),
-    );
-    if (newName != null && newName.trim().isNotEmpty && mounted) {
-      final appState = context.read<AppStateProvider>();
-      final key = newName
-          .toLowerCase()
-          .replaceAll(RegExp(r'[^\w\s]'), '')
-          .replaceAll(' ', '_');
-      await appState.addTemplateCategory('pdf_templates', key, newName.trim());
-      setState(() {
-        categories[key] = newName.trim();
-        selectedCategory = key;
-      });
-    }
   }
 
   @override
@@ -87,12 +67,6 @@ class _CategorySelectionDialogState extends State<CategorySelectionDialog> {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              TextButton.icon(
-                onPressed: _addCategory,
-                icon: const Icon(Icons.add),
-                label: const Text('New Category'),
-              ),
-              const Spacer(),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text('Cancel'),
