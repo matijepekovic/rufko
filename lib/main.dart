@@ -3,31 +3,31 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'services/tax_service.dart';
+import 'core/services/external/tax_service.dart';
 // Your Core Models
-import 'models/customer.dart';
-import 'models/product.dart';
-import 'models/quote.dart'; // Contains QuoteItem
-import 'models/roof_scope_data.dart';
-import 'models/project_media.dart';
-import 'models/app_settings.dart';
-import 'models/simplified_quote.dart';
-import 'models/pdf_template.dart'; // Crucial: Import this to get PdfFormFieldTypeAdapter etc.
-import 'models/custom_app_data.dart';
-import 'models/message_template.dart';
+import 'data/models/business/customer.dart';
+import 'data/models/business/product.dart';
+import 'data/models/business/quote.dart'; // Contains QuoteItem
+import 'data/models/business/roof_scope_data.dart';
+import 'data/models/media/project_media.dart';
+import 'data/models/settings/app_settings.dart';
+import 'data/models/business/simplified_quote.dart';
+import 'data/models/templates/pdf_template.dart'; // Crucial: Import this to get PdfFormFieldTypeAdapter etc.
+import 'data/models/settings/custom_app_data.dart';
+import 'data/models/templates/message_template.dart';
 // Your Services and Providers
-import 'providers/app_state_provider.dart';
-import 'providers/customer_provider.dart';
-import 'providers/product_provider.dart';
-import 'providers/quote_provider.dart';
-import 'providers/template_provider.dart';
-import 'services/database_service.dart';
-import 'models/email_template.dart';
-import 'models/inspection_document.dart';
-import 'theme/rufko_theme.dart';
+import 'data/providers/state/app_state_provider.dart';
+import 'data/providers/customer_provider.dart';
+import 'data/providers/product_provider.dart';
+import 'data/providers/quote_provider.dart';
+import 'data/providers/template_provider.dart';
+import 'core/services/database/database_service.dart';
+import 'data/models/templates/email_template.dart';
+import 'data/models/media/inspection_document.dart';
+import 'app/theme/rufko_theme.dart';
 // Your Screens
-import 'screens/home_screen.dart';
-import 'models/template_category.dart';
+import 'features/dashboard/presentation/screens/home_screen.dart';
+import 'data/models/templates/template_category.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:rufko/providers/quote_state_provider.dart';
-import 'package:rufko/models/simplified_quote.dart';
-import 'package:rufko/services/database_service.dart';
+import 'package:rufko/data/providers/state/quote_state_provider.dart';
+import 'package:rufko/data/models/business/simplified_quote.dart';
+import 'package:rufko/core/services/database/database_service.dart';
 
 class MockDatabaseService extends Mock implements DatabaseService {}
 

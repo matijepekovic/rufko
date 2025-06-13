@@ -9,11 +9,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:rufko/main.dart';
-import 'package:rufko/providers/app_state_provider.dart';
-import 'package:rufko/providers/customer_provider.dart';
-import 'package:rufko/providers/product_state_provider.dart';
-import 'package:rufko/providers/quote_state_provider.dart';
-import 'package:rufko/providers/template_provider.dart';
+import 'package:rufko/data/providers/state/app_state_provider.dart';
+import 'package:rufko/data/providers/customer_provider.dart';
+import 'package:rufko/data/providers/state/product_state_provider.dart';
+import 'package:rufko/data/providers/state/quote_state_provider.dart';
+import 'package:rufko/data/providers/template_provider.dart';
 
 Widget _createTestApp() {
   return MultiProvider(

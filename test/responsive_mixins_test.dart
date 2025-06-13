@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:rufko/mixins/responsive_breakpoints_mixin.dart';
-import 'package:rufko/mixins/responsive_dimensions_mixin.dart';
-import 'package:rufko/mixins/responsive_text_mixin.dart';
+import 'package:rufko/core/mixins/ui/responsive_breakpoints_mixin.dart';
+import 'package:rufko/core/mixins/ui/responsive_dimensions_mixin.dart';
+import 'package:rufko/core/mixins/ui/responsive_text_mixin.dart';
 
 class _MixinTester
     with ResponsiveBreakpointsMixin, ResponsiveDimensionsMixin, ResponsiveTextMixin {}

@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:rufko/services/file_service.dart';
+import 'package:rufko/core/services/storage/file_service.dart';
 
 void main() {
   test('saveExportedData writes json file', () async {

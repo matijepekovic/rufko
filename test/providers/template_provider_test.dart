@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:rufko/providers/template_provider.dart';
-import 'package:rufko/models/pdf_template.dart';
-import 'package:rufko/models/message_template.dart';
-import 'package:rufko/models/email_template.dart';
-import 'package:rufko/models/template_category.dart';
-import 'package:rufko/services/database_service.dart';
+import 'package:rufko/data/providers/template_provider.dart';
+import 'package:rufko/data/models/templates/pdf_template.dart';
+import 'package:rufko/data/models/templates/message_template.dart';
+import 'package:rufko/data/models/templates/email_template.dart';
+import 'package:rufko/data/models/templates/template_category.dart';
+import 'package:rufko/core/services/database/database_service.dart';
 
 class MockDatabaseService extends Mock implements DatabaseService {}
 

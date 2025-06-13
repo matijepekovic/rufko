@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:rufko/providers/custom_fields_provider.dart';
-import 'package:rufko/models/custom_app_data.dart';
-import 'package:rufko/models/inspection_document.dart';
-import 'package:rufko/services/database_service.dart';
+import 'package:rufko/data/providers/state/custom_fields_provider.dart';
+import 'package:rufko/data/models/settings/custom_app_data.dart';
+import 'package:rufko/data/models/media/inspection_document.dart';
+import 'package:rufko/core/services/database/database_service.dart';
 
 class MockDatabaseService extends Mock implements DatabaseService {}
 
