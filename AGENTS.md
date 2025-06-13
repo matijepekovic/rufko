@@ -1,101 +1,374 @@
-# Refactoring Progress Log
+# 🤖 AI Agent Instructions: Repository Pattern Implementation
 
-## Project Overview
-- **Goal:** Break down large files (>500 lines) into manageable components
-- **Status:** IN_PROGRESS
-- **Current Focus:** lib/providers/app_state_provider.dart
-- **Files Remaining:** 28
+## 📋 **Mission Overview**
+Implement clean architecture repository pattern in the Rufko Flutter app. This is a **massive application** with complex interdependencies. You must analyze the scope of each section and determine appropriate completion boundaries based on actual complexity discovered.
 
-## Discovery Phase
-### Large Files Identified (>500 lines):
-| File | Lines | Priority | Status |
-|------|-------|----------|---------|
-| lib/providers/app_state_provider.dart | 1139 | HIGH | IN_PROGRESS |
-| lib/screens/customer_detail_screen.dart | 1596 | HIGH | PENDING |
-| lib/screens/customer_detail/info_tab.dart | 1585 | HIGH | PENDING |
-| lib/screens/settings_screen.dart | 1469 | HIGH | PENDING |
-| lib/screens/products/product_form_dialog.dart | 1337 | HIGH | PENDING |
-| lib/screens/pdf_preview_screen.dart | 1312 | HIGH | PENDING |
-| lib/widgets/templates/dialgos/email_template_editor.dart | 1222 | HIGH | PENDING |
-| lib/widgets/templates/dialgos/message_template_editor.dart | 1187 | HIGH | PENDING |
-| lib/services/database_service.dart | 1176 | HIGH | PENDING |
-| lib/screens/home_screen.dart | 364 | HIGH | IN_PROGRESS |
-| lib/services/pdf_service.dart | 1045 | HIGH | PENDING |
-| lib/screens/template_editor_screen.dart | 974 | MEDIUM | PENDING |
-| lib/screens/customer_detail/inspection_tab.dart | 944 | MEDIUM | PENDING |
-| lib/services/template_service.dart | 776 | MEDIUM | PENDING |
-| lib/widgets/templates/dialgos/field_dialog.dart | 759 | LOW | PENDING |
-| lib/screens/customer_detail/media_tab_controller.dart | 651 | LOW | PENDING |
-| lib/screens/category_management_screen.dart | 649 | LOW | PENDING |
-| lib/widgets/templates/pdf_templates_tab.dart | 604 | LOW | PENDING |
-| ~~lib/widgets/templates/dialgos/add_field_dialog.dart~~ | ~~645~~ | ~~LOW~~ | ~~REMOVED~~ |
-| ~~lib/widgets/templates/dialgos/edit_field_dialog.dart~~ | ~~601~~ | ~~LOW~~ | ~~REMOVED~~ |
-| lib/screens/templates_screen.dart | 594 | LOW | PENDING |
-| lib/providers/helpers/roof_scope_helper.dart | 583 | LOW | PENDING |
-| lib/widgets/quote_totals_section.dart | 559 | LOW | PENDING |
-| lib/screens/simplified_quote_detail_screen.dart | 555 | LOW | PENDING |
-| lib/widgets/templates/fields_tab.dart | 546 | LOW | PENDING |
-| lib/mixins/customer_communication_mixin.dart | 518 | LOW | PENDING |
-| lib/screens/customers_screen.dart | 514 | LOW | PENDING |
-| lib/mixins/template_tab_mixin.dart | 512 | LOW | PENDING |
-| lib/mixins/file_sharing_mixin.dart | 504 | LOW | PENDING |
-| lib/widgets/templates/email_templates_tab.dart | 503 | LOW | PENDING |
+## 🎯 **Critical Success Criteria**
+- ✅ **ZERO functionality lost** - Every feature must work exactly as before
+- ✅ **ZERO new errors/warnings** - `flutter analyze` must be clean after each section
+- ✅ **ALL tests pass** - Existing functionality cannot break
+- ✅ **Complete each section 100%** before proceeding - No partial implementations
+- ✅ **Validate exhaustively** - Test every affected component thoroughly
 
-## Current Refactoring Session
+## 🧠 **Adaptive Section Planning**
+**You decide section scope based on:**
+- Number of files that need modification
+- Complexity of interdependencies discovered
+- Risk level of changes required
+- Testing requirements for validation
 
-### Target File: lib/providers/app_state_provider.dart
-**Original Size:** 1924 lines
-**Status:** EXECUTING
+**Section completion rules:**
+- Only mark section complete when 100% validated
+- If section becomes too large, split it further
+- If section is too small, combine with next logical step
+- Document your decision-making process
 
-#### Analysis Results:
-- **Main Responsibilities:**
-  1. Maintain global application state for customers, products, templates, settings, and media.
-  2. Coordinate data loading, persistence, and PDF generation through service classes.
-- **Dependencies:** DatabaseService, PdfService, TemplateService, FileService, TaxService, syncfusion
-- **Extraction Candidates:**
-  1. PDF generation methods → providers/helpers/pdf_generation_helper.dart
-  2. Data loading helpers → providers/helpers/data_loader.dart
+---
 
-#### Refactoring Plan:
-1. Extract PDF generation methods to `lib/providers/helpers/pdf_generation_helper.dart`
-   - Purpose: encapsulate all PDF assembly logic
-   - Size estimate: ~150 lines
-   - Dependencies: PdfService, FileService, syncfusion
-2. Extract data loading functions to `lib/providers/helpers/data_loader.dart`
-   - Purpose: centralize asynchronous retrieval of customers, products, templates, etc.
-   - Size estimate: ~200 lines
-   - Dependencies: DatabaseService, TemplateService
+## 🚀 **PHASE 1: Environment & Discovery**
 
-#### Execution Log:
-- ✅ 2025-06-11T03:30Z Extracted data loading helper → `lib/providers/helpers/data_loading_helper.dart` (reduced by ~100 lines)
-- ✅ 2025-06-11T04:10Z Extracted PDF generation methods → `lib/providers/helpers/pdf_generation_helper.dart` (reduced by ~110 lines)
-- ✅ 2025-06-11T03:21Z Extracted RoofScope parsing helper → `lib/providers/helpers/roof_scope_helper.dart` (reduced by ~600 lines)
-- ✅ 2025-06-11T04:10Z Updated setup script to clone Flutter repo
-- ✅ 2025-06-11T04:10Z Extracted template category helper → `lib/providers/helpers/template_category_helper.dart` (reduced by ~90 lines)
-- ✅ 2025-06-11T04:30Z Extracted message template helper → `lib/providers/helpers/message_template_helper.dart` (reduced by ~50 lines)
-- ✅ 2025-06-11T04:50Z Extracted email template helper → `lib/providers/helpers/email_template_helper.dart` (reduced by ~30 lines)
-- ✅ 2025-06-11T05:10Z Removed leftover review comment in `app_state_provider.dart`
-- ✅ 2025-06-11T05:20Z Extracted customer helper → `lib/providers/helpers/customer_helper.dart` (reduced by ~20 lines)
-- ✅ 2025-06-11T05:17Z Fixed analyzer errors and cleaned imports; simplified `loadTemplateCategories`
+### **STEP 1A: Environment Check & Setup**
+```bash
+# Check if Flutter already installed
+if command -v flutter &> /dev/null; then
+    echo "Flutter already installed: $(flutter --version)"
+    flutter doctor -v
+else
+    echo "Installing Flutter..."
+    git clone https://github.com/flutter/flutter.git -b stable ~/flutter
+    export PATH="$PATH:$HOME/flutter/bin"
+    flutter doctor -v
+fi
 
-#### Validation Results:
-- **New file size:** 1139 lines (was 1972 lines)
-- **Functionality preserved:** YES
-- **All imports working:** YES
-- **Status:** NEEDS_MORE_WORK
+# Verify environment is ready
+flutter doctor --android-licenses || true
+flutter config --enable-web
+```
 
-- ✅ 2025-06-11T18:00Z Extracted customer screen helpers → lib/controllers/customer_filter_controller.dart, lib/controllers/customer_dialog_manager.dart, lib/controllers/customer_import_controller.dart, lib/dialogs/customer_form_dialog.dart (reduced customers_screen.dart by ~270 lines)
-- ✅ 2025-06-11T18:15Z Formatted helpers and ran `flutter analyze`
-## Completed Refactorings
+### **STEP 1B: Project State Analysis**
+```bash
+cd /path/to/rufko/project
 
-## Next Actions
-- [x] Analyze lib/providers/app_state_provider.dart
-- [x] Plan extraction of PDF generation helper
-- [x] Continue with lib/providers/app_state_provider.dart
-- [x] Extract PDF generation helper
-- [x] Update priority list with latest scan
-- [ ] Further reduce lib/providers/app_state_provider.dart
+# Capture current state
+flutter clean
+flutter pub get
+flutter analyze > analysis_before.txt 2>&1
+flutter test > tests_before.txt 2>&1 || true
 
-## Architecture Improvements
+# Test current functionality
+flutter build web --release
+flutter run -d chrome --debug &
+FLUTTER_PID=$!
+sleep 30  # Let app start
+kill $FLUTTER_PID
 
-## Notes & Lessons Learned
+echo "=== BASELINE CAPTURED ==="
+echo "Analyze errors: $(grep -c 'error:' analysis_before.txt || echo 0)"
+echo "Analyze warnings: $(grep -c 'warning:' analysis_before.txt || echo 0)"
+echo "Test failures: $(grep -c 'FAILED:' tests_before.txt || echo 0)"
+```
+
+### **STEP 1C: Deep Architecture Discovery**
+```bash
+# Create comprehensive file inventory
+find lib -name "*.dart" | grep -E "(provider|service|repository|controller)" > architecture_files.txt
+
+echo "=== ARCHITECTURE ANALYSIS ==="
+echo "Total Dart files: $(find lib -name "*.dart" | wc -l)"
+echo "Provider files: $(find lib -name "*provider*.dart" | wc -l)"
+echo "Service files: $(find lib -name "*service*.dart" | wc -l)"
+echo "Controller files: $(find lib -name "*controller*.dart" | wc -l)"
+echo "Model files: $(find lib -name "*.dart" -path "*/models/*" | wc -l)"
+```
+
+**Analyze each provider file and document:**
+- Dependencies on DatabaseService
+- Methods that directly call database operations
+- Public API surface that UI components use
+- Interdependencies between providers
+
+**Create comprehensive mapping:**
+```bash
+# Document current data flow
+mkdir -p docs/repository_migration
+cat > docs/repository_migration/current_architecture.md << 'EOF'
+# Current Architecture Analysis
+
+## Data Flow
+UI Components → Controllers → Providers → DatabaseService → Hive/Storage
+
+## Provider Analysis
+[Document each provider found and its database dependencies]
+
+## Risk Assessment
+[Identify high-risk areas based on complexity and interdependencies]
+
+## Migration Strategy
+[Based on actual findings, determine migration approach]
+EOF
+```
+
+**Section 1 Completion Criteria:**
+- [ ] Environment fully functional
+- [ ] Baseline metrics captured (errors, warnings, test results)
+- [ ] Complete architectural analysis documented
+- [ ] All provider → database relationships mapped
+- [ ] Migration strategy defined based on actual complexity
+- [ ] Risk assessment complete
+
+**✅ PHASE 1 COMPLETE - Document findings and proceed only when 100% validated**
+
+---
+
+## 🏗️ **PHASE 2: Repository Infrastructure**
+
+### **STEP 2A: Determine Repository Scope**
+Based on your analysis from Phase 1, decide:
+- Which entities need repositories first (start with least dependent)
+- How many repository interfaces to create in this phase
+- Whether to tackle one domain at a time or multiple
+
+**Decision Framework:**
+```bash
+# Count dependencies for each major entity
+echo "=== DEPENDENCY ANALYSIS ==="
+grep -r "Customer" lib --include="*.dart" | wc -l
+grep -r "Product" lib --include="*.dart" | wc -l  
+grep -r "Quote" lib --include="*.dart" | wc -l
+grep -r "Template" lib --include="*.dart" | wc -l
+
+# Determine starting point (lowest dependency count or most isolated)
+```
+
+### **STEP 2B: Create Repository Infrastructure**
+Based on your analysis, create directory structure:
+
+```bash
+# Create base structure (adapt based on your analysis)
+mkdir -p lib/features/{customers,products,quotes,templates}/{domain,data}/repositories
+
+# Document your decisions
+cat > docs/repository_migration/infrastructure_decisions.md << 'EOF'
+# Infrastructure Decisions
+
+## Repository Priority Order
+[List order based on dependency analysis]
+
+## Directory Structure Created
+[Document what you created and why]
+
+## Phase 2 Scope  
+[Clearly define what will be completed in this phase]
+EOF
+```
+
+### **STEP 2C: Create Base Repository Interfaces**
+For the entities you've chosen to tackle in this phase:
+
+1. **Analyze the DatabaseService methods** each entity uses
+2. **Create abstract repository interface** with those exact methods
+3. **Validate interface design** against actual usage patterns
+
+```dart
+// Example structure - adapt based on your findings
+abstract class [Entity]Repository {
+  // Include ONLY methods actually used by providers
+  // Match exact signatures from DatabaseService
+  // Add documentation explaining each method's purpose
+}
+```
+
+**Section 2 Completion Criteria:**
+- [ ] Directory structure created and documented
+- [ ] Repository interfaces created for chosen entities
+- [ ] All interfaces validated against actual DatabaseService usage
+- [ ] `flutter analyze` shows no new errors
+- [ ] Documentation explains all decisions made
+- [ ] Scope clearly defined for next phase
+
+**✅ PHASE 2 COMPLETE - Validate everything works before proceeding**
+
+---
+
+## 🔧 **PHASE 3: Repository Implementation**
+
+### **STEP 3A: Assess Implementation Complexity**
+For each repository interface created in Phase 2:
+- Count how many DatabaseService methods need to be wrapped
+- Identify any complex logic that needs to be preserved
+- Check for error handling patterns that must be maintained
+
+### **STEP 3B: Implement Repository Classes**
+Create concrete implementations:
+
+```dart
+class [Entity]RepositoryImpl implements [Entity]Repository {
+  final DatabaseService _databaseService;
+  
+  [Entity]RepositoryImpl(this._databaseService);
+  
+  // Implement each interface method
+  // Preserve all existing logic and error handling
+  // Add comprehensive documentation
+}
+```
+
+**For each implementation:**
+1. **Wrap existing DatabaseService calls** - don't change logic
+2. **Preserve error handling** exactly as it exists
+3. **Add logging/debugging** support
+4. **Validate each method** works identically to direct database calls
+
+### **STEP 3C: Create Repository Tests**
+```dart
+// Create test files for each repository
+// Test both interface contract and implementation behavior
+// Ensure compatibility with existing DatabaseService behavior
+```
+
+**Section 3 Completion Criteria:**
+- [ ] All repository implementations completed
+- [ ] Every method tested and validated
+- [ ] Error handling preserved exactly
+- [ ] Performance impact measured (should be negligible)
+- [ ] `flutter analyze` clean
+- [ ] All existing tests still pass
+
+**✅ PHASE 3 COMPLETE - Implementation validated**
+
+---
+
+## 🔄 **PHASE 4: Provider Integration**
+
+### **STEP 4A: Provider Migration Planning**
+**This is the highest-risk phase.** For each provider that will be modified:
+
+1. **Document current public API** - what controllers/UI components call
+2. **Identify internal database calls** to be replaced with repository calls
+3. **Plan migration order** - start with providers that have fewest dependents
+4. **Create rollback strategy** for each provider
+
+### **STEP 4B: Incremental Provider Migration**
+**One provider at a time:**
+
+1. **Create backup** of original provider
+2. **Add repository injection** to provider constructor
+3. **Replace DatabaseService calls** with repository calls ONE METHOD AT A TIME
+4. **Test after each method change**
+5. **Validate public API unchanged**
+
+```dart
+// Example migration pattern
+class CustomerStateProvider extends ChangeNotifier {
+  final DatabaseService database;
+  final CustomerRepository _customerRepository;  // ADD
+  
+  CustomerStateProvider({required this.database}) {
+    _customerRepository = CustomerRepositoryImpl(database);  // ADD
+  }
+  
+  // Change methods one by one:
+  // OLD: await database.saveCustomer(customer);
+  // NEW: await _customerRepository.saveCustomer(customer);
+}
+```
+
+### **STEP 4C: Validate Each Provider Migration**
+After each provider migration:
+```bash
+# Run comprehensive validation
+flutter analyze
+flutter test
+flutter build web --release
+
+# Test UI functionality manually
+flutter run -d chrome --debug
+# Navigate through all features that use the migrated provider
+# Verify identical behavior to before migration
+```
+
+**Section 4 Completion Criteria:**
+- [ ] Each provider migrated successfully
+- [ ] All UI functionality works identically
+- [ ] Public APIs unchanged
+- [ ] All tests pass
+- [ ] Performance maintained
+- [ ] Error messages unchanged
+
+**✅ PHASE 4 COMPLETE - All providers migrated and validated**
+
+---
+
+## 🧪 **PHASE 5: Testing & Validation**
+
+### **STEP 5A: Comprehensive Feature Testing**
+Test every major application flow:
+- Customer creation, editing, deletion
+- Quote generation and management
+- Product management
+- Template operations
+- Media handling
+- Export/import functionality
+
+### **STEP 5B: Performance Validation**
+```bash
+# Measure app performance before/after
+flutter run --profile -d chrome
+# Test loading times, response times
+# Ensure no performance degradation
+```
+
+### **STEP 5C: Create Repository Usage Examples**
+```dart
+// Document how to use repositories for future development
+// Create examples for testing repositories
+// Document patterns for extending repositories
+```
+
+**Section 5 Completion Criteria:**
+- [ ] All features tested and working
+- [ ] Performance maintained or improved
+- [ ] Documentation complete
+- [ ] Examples created for future developers
+- [ ] Migration guide written
+
+**✅ PHASE 5 COMPLETE - Repository pattern fully implemented**
+
+---
+
+## 📊 **COMPLETION VALIDATION**
+
+### **Final Validation Checklist:**
+- [ ] `flutter analyze` completely clean
+- [ ] All existing tests pass
+- [ ] All new repository tests pass
+- [ ] Manual testing of all features successful
+- [ ] Performance benchmarks met
+- [ ] Documentation complete
+- [ ] No regressions identified
+
+### **Success Metrics:**
+```bash
+# Compare before/after metrics
+echo "=== BEFORE MIGRATION ==="
+cat analysis_before.txt | grep -E "(error|warning)" | wc -l
+
+echo "=== AFTER MIGRATION ==="
+flutter analyze | grep -E "(error|warning)" | wc -l
+
+echo "=== TESTS ==="
+flutter test
+
+echo "=== BUILD ==="
+flutter build web --release
+```
+
+### **Deliverables:**
+- [ ] Complete repository pattern implementation
+- [ ] Clean architecture structure
+- [ ] Comprehensive documentation
+- [ ] Migration guide for future features
+- [ ] Test coverage for all repositories
+- [ ] Performance validation report
+
+**🎉 MISSION COMPLETE - Repository pattern successfully implemented with zero regressions**
