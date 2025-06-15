@@ -2,21 +2,20 @@
 
 import 'package:flutter/material.dart';
 import '../../../../data/models/business/customer.dart';
+import 'package:provider/provider.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
 import '../screens/inspection_viewer_screen.dart';
 
 class InspectionFloatingButton extends StatelessWidget {
   final Customer customer;
-  final AppStateProvider appState;
-
   const InspectionFloatingButton({
     super.key,
     required this.customer,
-    required this.appState,
   });
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.read<AppStateProvider>();
     final inspectionDocs = appState.getInspectionDocumentsForCustomer(customer.id);
 
     if (inspectionDocs.isEmpty) {
