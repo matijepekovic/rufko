@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 
 import '../controllers/pdf_generation_controller.dart';
 import '../controllers/quote_detail_controller.dart';
-import '../controllers/quote_totals_controller.dart';
 
 import '../../../../data/models/business/customer.dart';
 import '../../../../data/models/business/simplified_quote.dart';
@@ -52,7 +51,6 @@ class _SimplifiedQuoteDetailScreenState
         ResponsiveWidgetMixin {
   late final QuoteDetailController _controller;
   late PDFGenerationController _pdfController;
-  late QuoteTotalsController _totalsController;
   final _currencyFormat = NumberFormat.currency(symbol: '\$');
 
   @override
@@ -61,10 +59,6 @@ class _SimplifiedQuoteDetailScreenState
     _controller = QuoteDetailController(
       quote: widget.quote,
       customer: widget.customer,
-    );
-    _totalsController = QuoteTotalsController(
-      quote: widget.quote,
-      selectedLevelId: _controller.selectedLevelId ?? '',
     );
     _pdfController = PDFGenerationController(
       context: context,
@@ -75,9 +69,6 @@ class _SimplifiedQuoteDetailScreenState
     _controller.addListener(() {
       setState(() {});
       _pdfController.selectedLevelId = _controller.selectedLevelId;
-      if (_controller.selectedLevelId != null) {
-        _totalsController.selectedLevelId = _controller.selectedLevelId!;
-      }
     });
   }
 
@@ -235,7 +226,8 @@ class _SimplifiedQuoteDetailScreenState
   Widget _buildTotalSection() {
     if (_controller.selectedLevelId == null) return const SizedBox.shrink();
     return QuoteTotalCard(
-      controller: _totalsController,
+      quote: widget.quote,
+      selectedLevelId: _controller.selectedLevelId!,
       currencyFormat: _currencyFormat,
     );
   }
