@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
+import '../../controllers/placeholder_help_controller.dart';
 import '../../../../../data/models/templates/email_template.dart';
-import '../../../../../data/providers/state/app_state_provider.dart';
 
 /// Dialog for showing placeholder help and selection
 /// Extracted from EmailTemplateEditorScreen for reusability
 class PlaceholderHelpDialog extends StatefulWidget {
   final Function(String) onPlaceholderSelected;
+  final PlaceholderHelpController controller;
 
   const PlaceholderHelpDialog({
     super.key,
     required this.onPlaceholderSelected,
+    required this.controller,
   });
 
   @override
@@ -20,7 +20,6 @@ class PlaceholderHelpDialog extends StatefulWidget {
 
 class _PlaceholderHelpDialogState extends State<PlaceholderHelpDialog> {
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
 
   @override
   void initState() {
@@ -36,7 +35,7 @@ class _PlaceholderHelpDialogState extends State<PlaceholderHelpDialog> {
 
   void _onSearchChanged() {
     setState(() {
-      _searchQuery = _searchController.text.toLowerCase();
+      widget.controller.searchQuery = _searchController.text;
     });
   }
 
@@ -100,14 +99,12 @@ class _PlaceholderHelpDialogState extends State<PlaceholderHelpDialog> {
         decoration: InputDecoration(
           hintText: 'Search fields...',
           prefixIcon: const Icon(Icons.search, size: 20),
-          suffixIcon: _searchQuery.isNotEmpty
+          suffixIcon: widget.controller.searchQuery.isNotEmpty
               ? IconButton(
                   icon: const Icon(Icons.clear, size: 20),
                   onPressed: () {
                     _searchController.clear();
-                    setState(() {
-                      _searchQuery = '';
-                    });
+                    widget.controller.searchQuery = '';
                   },
                 )
               : null,
@@ -122,35 +119,8 @@ class _PlaceholderHelpDialogState extends State<PlaceholderHelpDialog> {
   }
 
   Widget _buildFieldsList() {
-    final appState = context.read<AppStateProvider>();
-    final availableProducts = appState.products;
-    final customFields = appState.customAppDataFields;
-
-    final categorizedFields = EmailTemplate.getCategorizedAppDataFieldTypes(
-      availableProducts,
-      customFields,
-    );
-
-    // Filter fields based on search query
-    final filteredCategories = <String, List<String>>{};
-
-    for (final entry in categorizedFields.entries) {
-      final categoryName = entry.key;
-      final fields = entry.value;
-
-      final filteredFields = fields.where((field) {
-        if (_searchQuery.isEmpty) return true;
-
-        final fieldDisplayName = EmailTemplate.getFieldDisplayName(field, customFields);
-        return fieldDisplayName.toLowerCase().contains(_searchQuery) ||
-            field.toLowerCase().contains(_searchQuery) ||
-            categoryName.toLowerCase().contains(_searchQuery);
-      }).toList();
-
-      if (filteredFields.isNotEmpty) {
-        filteredCategories[categoryName] = filteredFields;
-      }
-    }
+    final filteredCategories = widget.controller.filteredCategories;
+    final customFields = widget.controller.customFields;
 
     if (filteredCategories.isEmpty) {
       return _buildEmptyState();

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../../data/models/templates/email_template.dart';
 import '../../../../../data/providers/state/app_state_provider.dart';
 import '../../controllers/email_template_editor_controller.dart';
+import '../../controllers/placeholder_help_controller.dart';
 import '../form_components/template_form_field.dart';
 import '../form_components/placeholder_display_widget.dart';
 import '../form_components/template_preview_widget.dart';
@@ -419,9 +420,13 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
   }
 
   void _showFieldSelector() {
+    final controller = PlaceholderHelpController(
+      appState: context.read<AppStateProvider>(),
+    );
     showDialog(
       context: context,
       builder: (context) => PlaceholderHelpDialog(
+        controller: controller,
         onPlaceholderSelected: _insertField,
       ),
     );
