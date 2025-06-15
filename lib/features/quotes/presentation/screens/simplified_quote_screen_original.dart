@@ -12,7 +12,6 @@ import '../../../../app/theme/rufko_theme.dart';
 import '../widgets/form/main_product_section.dart';
 import '../widgets/form/quote_products_section.dart';
 import '../widgets/form/quote_generation_section.dart';
-import '../../../../app/constants/quote_form_constants.dart';
 import '../widgets/sections/permits_section.dart';
 import '../widgets/sections/custom_line_items_section.dart';
 import '../widgets/quote_levels_preview.dart';
@@ -49,11 +48,13 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
         ResponsiveTextMixin,
         ResponsiveWidgetMixin {
   late QuoteFormController _controller;
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
     _controller = QuoteFormController(
+      context: context,
       customer: widget.customer,
       roofScopeData: widget.roofScopeData,
       existingQuote: widget.existingQuote,
@@ -76,7 +77,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
   String get _quoteType => _controller.quoteType;
   Product? get _mainProduct => _controller.mainProduct;
   double get _mainQuantity => _controller.mainQuantity;
-  List<Product> get _addedProducts => _controller.addedProducts;
+  List<QuoteItem> get _addedProducts => _controller.addedProducts;
   List<QuoteLevel> get _quoteLevels => _controller.quoteLevels;
   double get _taxRate => _controller.taxRate;
   List<PermitItem> get _permits => _controller.permits;
@@ -85,7 +86,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isSmallScreen = isSmallScreenSize(context);
+    final isSmallScreen = isCompact(context);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -95,54 +96,53 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
           children: [
             Text(
               _isEditMode ? 'Edit Quote' : 'Create Quote',
-              style: headlineSmallBold(context)?.copyWith(color: Colors.white),
+              style: headlineSmall(context).copyWith(color: Colors.white),
             ),
             Text(
-              '${widget.customer.firstName} ${widget.customer.lastName}',
-              style: bodySmall(context)?.copyWith(color: Colors.white70),
+              widget.customer.name,
+              style: bodySmall(context).copyWith(color: Colors.white70),
             ),
           ],
         ),
         backgroundColor: RufkoTheme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _controller.resetForm(),
-            tooltip: 'Reset Form',
-          ),
-        ],
+        actions: const [],
       ),
-      body: _buildBody(isSmallScreen),
+      body: Form(
+        key: _formKey,
+        child: _buildBody(isSmallScreen),
+      ),
       floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
   Widget _buildBody(bool isSmallScreen) {
     return SingleChildScrollView(
-      padding: EdgeInsets.all(paddingMedium(context)),
+      padding: EdgeInsets.all(spacingMD(context)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildMainProductSelection(),
-          SizedBox(height: spacingLarge(context)),
+          SizedBox(height: spacingXL(context)),
           _buildAddedProductsList(),
-          if (_quoteType == QuoteFormConstants.multiLevelQuote) ...[
-            SizedBox(height: spacingLarge(context)),
+          if (_quoteType == 'multi-level') ...[
+            SizedBox(height: spacingXL(context)),
             QuoteLevelsPreview(
               quoteLevels: _quoteLevels,
-              onCreateLevels: _createQuoteLevels,
+              mainProduct: _mainProduct,
+              mainQuantity: _mainQuantity,
               quoteType: _quoteType,
             ),
           ],
-          SizedBox(height: spacingLarge(context)),
+          SizedBox(height: spacingXL(context)),
           PermitsSection(
             permits: _permits,
-            onAddPressed: _controller.addPermitItem,
-            onRemovePermit: _controller.removePermitItem,
-            showPermitsRequirement: true,
-            onHidePermitsPressed: (value) {
+            noPermitsRequired: _controller.noPermitsRequired,
+            onPermitAdded: _controller.addPermit,
+            onPermitRemoved: _controller.removePermit,
+            onNoPermitsRequiredChanged: (value) {
+              _controller.noPermitsRequired = value;
               if (value) {
                 _permits.clear();
               }
@@ -230,32 +230,29 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
     );
   }
 
-  // METHODS
-  void _createQuoteLevels() => _controller.createQuoteLevels();
-
   void _switchQuoteType(String newType) => _controller.switchQuoteType(newType);
 
-  void _handleProductChanged(Product? product) => _controller.setMainProduct(product);
+  void _handleProductChanged(Product? product) => _controller.mainProduct = product;
 
-  void _handleQuantityChanged(double quantity) => _controller.setMainQuantity(quantity);
+  void _handleQuantityChanged(double quantity) => _controller.mainQuantity = quantity;
 
   void _showAddProductDialog() {
     showDialog(
       context: context,
       builder: (context) => AddProductDialog(
-        existingProducts: _addedProducts,
-        onProductSelected: _addProduct,
+        onProductAdded: _addProduct,
       ),
     );
   }
 
-  void _addProduct(Product product) => _controller.addProduct(product);
+  void _addProduct(QuoteItem product) => _controller.addProduct(product);
 
-  void _removeProduct(Product product) => _controller.removeProduct(product);
+  void _removeProduct(QuoteItem product) => _controller.removeProduct(product);
 
-  void _handleTaxRateChanged(double rate) => _controller.setTaxRate(rate);
+  void _handleTaxRateChanged(double rate) => _controller.taxRate = rate;
 
   void _autoDetectTaxRate(AppStateProvider appState) => _controller.autoDetectTaxRate(appState);
 
-  void _generateQuote() => _controller.generateQuote(context);
+  void _generateQuote() =>
+      _controller.generateQuote(context.read<AppStateProvider>(), _formKey);
 }
