@@ -1,17 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/dialogs/help_dialog.dart';
 import '../../../../shared/widgets/dialogs/premium_feature_dialog.dart';
-import '../../../../data/providers/state/app_state_provider.dart';
-import '../../../../data/models/settings/app_settings.dart';
+import '../widgets/settings_section.dart';
+import '../controllers/product_configuration_controller.dart';
 import 'company_info_screen.dart';
 import 'data_management_screen.dart';
 import 'discount_settings_screen.dart';
-import '../widgets/settings_section.dart';
-import 'category_manager_dialog.dart';
-import 'quote_levels_manager_dialog.dart';
-import 'units_manager_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -72,49 +67,14 @@ class SettingsScreen extends StatelessWidget {
   }
 
   static void _showCategoriesManager(BuildContext context) {
-    final appState = context.read<AppStateProvider>();
-    final settings = appState.appSettings ?? AppSettings();
-    showDialog(
-      context: context,
-      builder: (context) => CategoryManagerDialog(
-        categories: List.from(settings.productCategories),
-        onSave: (updated) {
-          settings.updateProductCategories(updated);
-          appState.updateAppSettings(settings);
-        },
-      ),
-    );
+    ProductConfigurationController(context).showCategoriesManager();
   }
 
   static void _showUnitsManager(BuildContext context) {
-    final appState = context.read<AppStateProvider>();
-    final settings = appState.appSettings ?? AppSettings();
-    showDialog(
-      context: context,
-      builder: (context) => UnitsManagerDialog(
-        units: List.from(settings.productUnits),
-        defaultUnit: settings.defaultUnit,
-        onSave: (units, def) {
-          settings.updateProductUnits(units);
-          settings.updateDefaultUnit(def);
-          appState.updateAppSettings(settings);
-        },
-      ),
-    );
+    ProductConfigurationController(context).showUnitsManager();
   }
 
   static void _showQuoteLevelsManager(BuildContext context) {
-    final appState = context.read<AppStateProvider>();
-    final settings = appState.appSettings ?? AppSettings();
-    showDialog(
-      context: context,
-      builder: (context) => QuoteLevelsManagerDialog(
-        levelNames: List.from(settings.defaultQuoteLevelNames),
-        onSave: (levels) {
-          settings.updateDefaultQuoteLevelNames(levels);
-          appState.updateAppSettings(settings);
-        },
-      ),
-    );
+    ProductConfigurationController(context).showQuoteLevelsManager();
   }
 }

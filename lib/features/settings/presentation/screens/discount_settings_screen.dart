@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
-import 'discount_settings_dialog.dart';
-import '../../../../data/models/settings/app_settings.dart';
-import '../../../../data/providers/state/app_state_provider.dart';
+import '../controllers/discount_settings_controller.dart';
 import '../widgets/settings_tile.dart';
 
 /// Screen wrapper around [DiscountSettingsDialog].
@@ -12,8 +8,8 @@ class DiscountSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appState = context.read<AppStateProvider>();
-    final settings = appState.appSettings ?? AppSettings();
+    final controller = DiscountSettingsController(context);
+    final settings = controller.currentSettings;
     return Scaffold(
       appBar: AppBar(title: const Text('Discount Settings')),
       body: ListView(
@@ -25,28 +21,12 @@ class DiscountSettingsScreen extends StatelessWidget {
             title: 'Discount System',
             subtitle:
                 'Max discount: ${settings.defaultDiscountLimit.toStringAsFixed(1)}%',
-            onTap: () => _showDialog(context, settings, appState),
+            onTap: controller.showDiscountDialog,
           ),
         ],
       ),
     );
   }
 
-  void _showDialog(
-      BuildContext context, AppSettings settings, AppStateProvider appState) {
-    showDialog(
-      context: context,
-      builder: (c) => DiscountSettingsDialog(
-        discountTypes: List.from(settings.discountTypes),
-        defaultDiscountLimit: settings.defaultDiscountLimit,
-        onSave: (types, limit) {
-          settings.updateDiscountSettings(types: types, discountLimit: limit);
-          appState.updateAppSettings(settings);
-          Navigator.pop(c);
-          ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Discount settings updated!')));
-        },
-      ),
-    );
-  }
+  // Deprecated private handler removed in favor of controller
 }
