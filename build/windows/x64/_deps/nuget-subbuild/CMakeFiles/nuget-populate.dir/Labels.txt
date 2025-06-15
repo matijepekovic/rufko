@@ -1,0 +1,15 @@
+# Target labels
+ nuget-populate
+# Source files and their labels
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/nuget-populate
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/0a7af4a654a039af953f6693b564b72e/nuget-populate.rule
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/21f00342286d465cfd2b834726be8a6e/nuget-populate-complete.rule
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/15bb19658c67172d5afac07fe7f1c3bc/nuget-populate-build.rule
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/15bb19658c67172d5afac07fe7f1c3bc/nuget-populate-configure.rule
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/15bb19658c67172d5afac07fe7f1c3bc/nuget-populate-copyfile.rule
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/15bb19658c67172d5afac07fe7f1c3bc/nuget-populate-download.rule
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/15bb19658c67172d5afac07fe7f1c3bc/nuget-populate-install.rule
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/15bb19658c67172d5afac07fe7f1c3bc/nuget-populate-mkdir.rule
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/15bb19658c67172d5afac07fe7f1c3bc/nuget-populate-patch.rule
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/15bb19658c67172d5afac07fe7f1c3bc/nuget-populate-test.rule
+C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/_deps/nuget-subbuild/CMakeFiles/15bb19658c67172d5afac07fe7f1c3bc/nuget-populate-update.rule

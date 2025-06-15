@@ -1,0 +1,10 @@
+^C:\USERS\ADMINISTRATOR\ANDROIDSTUDIOPROJECTS\RUFKO\BUILD\WINDOWS\X64\CMAKEFILES\F8F410F569A00CB266AAD57D374E9A2D\INSTALL_FORCE.RULE
+setlocal
+cd .
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

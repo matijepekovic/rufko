@@ -1,0 +1,10 @@
+^C:\USERS\ADMINISTRATOR\ANDROIDSTUDIOPROJECTS\RUFKO\BUILD\WINDOWS\X64\CMAKEFILES\F8F410F569A00CB266AAD57D374E9A2D\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SC:/Users/Administrator/AndroidStudioProjects/rufko/windows -BC:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64 --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/rufko.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

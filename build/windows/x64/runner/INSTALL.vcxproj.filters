@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\Administrator\AndroidStudioProjects\rufko\build\windows\x64\CMakeFiles\d46cdcd9025135402ca2f5fe3d49243e\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{3D5C92FB-6D60-3F1D-B306-F9CAE5611C5B}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

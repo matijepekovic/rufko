@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(mv:*)",
+      "Bash(flutter test:*)",
+      "Bash(flutter run:*)",
+      "Bash(flutter:*)",
+      "Bash(java:*)",
+      "Bash(ls:*)",
+      "Bash(rg:*)",
+      "Bash(dart analyze:*)",
+      "Bash(find:*)",
+      "Bash(awk:*)",
+      "Bash(rm:*)",
+      "Bash(cp:*)"
+    ],
+    "deny": []
+  }
+}
