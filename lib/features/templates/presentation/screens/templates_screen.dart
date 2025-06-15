@@ -13,7 +13,8 @@ import '../../../../shared/widgets/common/error_snackbar.dart';
 import '../../../../shared/state/templates_screen_state.dart';
 import '../widgets/dialogs/message_template_editor.dart';
 import '../widgets/dialogs/email_template_editor.dart';
-import '../controllers/templates_screen_controller.dart';
+import '../widgets/dialogs/field_dialog.dart';
+import '../../../../data/providers/state/app_state_provider.dart';
 
 class TemplatesScreen extends StatefulWidget {
   const TemplatesScreen({super.key});
@@ -27,14 +28,12 @@ class _TemplatesScreenState extends State<TemplatesScreen>
   late final TabController _tabController;
   late final TemplateCreationService _creationService;
   late final TemplateNavigationHandler _navigationHandler;
-  late final TemplatesScreenController _controller;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _navigationHandler = TemplateNavigationHandler();
-    _controller = TemplatesScreenController(context);
     _creationService = TemplateCreationService(
       navigationHandler: _navigationHandler,
       categoryService: CategoryManagementService(),
@@ -96,7 +95,19 @@ class _TemplatesScreenState extends State<TemplatesScreen>
                   builder: (_) => const EmailTemplateEditorScreen(),
                 ),
               ),
-              onCreateField: _controller.addCustomField,
+              onCreateField: () async {
+                final newField = await FieldDialog.showAdd(context);
+                if (newField != null && mounted) {
+                  final appState = context.read<AppStateProvider>();
+                  try {
+                    await appState.addCustomAppDataField(newField);
+                  } catch (e) {
+                    if (mounted) {
+                      showErrorSnackBar(context, '$e');
+                    }
+                  }
+                }
+              },
             ),
           );
         },

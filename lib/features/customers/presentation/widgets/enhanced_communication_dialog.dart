@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../../../../data/models/business/customer.dart';
-import '../controllers/communication_entry_controller.dart';
+import '../../../../data/providers/state/app_state_provider.dart';
 
 class EnhancedCommunicationDialog extends StatefulWidget {
   final Customer customer;
@@ -21,8 +23,6 @@ class _EnhancedCommunicationDialogState extends State<EnhancedCommunicationDialo
   final _contentController = TextEditingController();
   final _subjectController = TextEditingController();
 
-  late CommunicationEntryController _controller;
-
   String _selectedType = 'call';
   bool _isUrgent = false;
 
@@ -31,16 +31,6 @@ class _EnhancedCommunicationDialogState extends State<EnhancedCommunicationDialo
     'email': {'label': '📧 Email', 'hint': 'Summary of email content...'},
     'text': {'label': '💬 Text Message', 'hint': 'Text message content...'},
   };
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = CommunicationEntryController(
-      context: context,
-      customer: widget.customer,
-      onCommunicationAdded: widget.onCommunicationAdded,
-    );
-  }
 
   @override
   void dispose() {
@@ -185,12 +175,31 @@ class _EnhancedCommunicationDialogState extends State<EnhancedCommunicationDialo
 
   void _saveCommunication() {
     if (!_formKey.currentState!.validate()) return;
-    _controller.saveCommunication(
-      typeLabel: _communicationTypes[_selectedType]!['label'] as String,
-      isUrgent: _isUrgent,
-      subject: _subjectController.text,
-      content: _contentController.text,
-    );
-    Navigator.pop(context);
+    try {
+      String prefix = _communicationTypes[_selectedType]!['label'].toString().split(' ')[0];
+      String message = prefix;
+      if (_isUrgent) message += ' [URGENT]';
+      if (_subjectController.text.trim().isNotEmpty) {
+        message += ' [${_subjectController.text.trim()}]';
+      }
+      message += ' ${_contentController.text.trim()}';
+      widget.customer.addCommunication(message);
+      context.read<AppStateProvider>().updateCustomer(widget.customer);
+      Navigator.pop(context);
+      widget.onCommunicationAdded?.call();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Communication logged successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error saving communication: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

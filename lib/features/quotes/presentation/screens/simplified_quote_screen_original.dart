@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../data/models/business/customer.dart';
 import '../../../../data/models/business/product.dart';
 import '../../../../data/models/business/roof_scope_data.dart';
 import '../../../../data/models/business/simplified_quote.dart';
 import '../../../../data/models/business/quote.dart';
+import '../../../../data/providers/state/app_state_provider.dart';
 import '../../../../data/models/business/quote_extras.dart';
 import '../../../media/presentation/widgets/inspection_floating_button.dart';
 import '../../../../app/theme/rufko_theme.dart';
@@ -162,6 +164,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
   Widget _buildFloatingActionButton() {
     return InspectionFloatingButton(
       customer: widget.customer,
+      appState: context.read<AppStateProvider>(),
     );
   }
 
@@ -189,7 +192,8 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
       permits: _permits,
       customLineItems: _customLineItems,
       onTaxRateChanged: _handleTaxRateChanged,
-      onAutoDetectPressed: _autoDetectTaxRate,
+      onAutoDetectPressed: () =>
+          _autoDetectTaxRate(context.read<AppStateProvider>()),
       customer: widget.customer,
     );
   }
@@ -247,7 +251,8 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
 
   void _handleTaxRateChanged(double rate) => _controller.taxRate = rate;
 
-  void _autoDetectTaxRate() => _controller.autoDetectTaxRate();
+  void _autoDetectTaxRate(AppStateProvider appState) => _controller.autoDetectTaxRate(appState);
 
-  void _generateQuote() => _controller.generateQuote(_formKey);
+  void _generateQuote() =>
+      _controller.generateQuote(context.read<AppStateProvider>(), _formKey);
 }
