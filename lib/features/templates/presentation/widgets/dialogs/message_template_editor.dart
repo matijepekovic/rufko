@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../../../../data/models/templates/message_template.dart';
 import '../../../../../data/providers/state/app_state_provider.dart';
 import '../../controllers/message_template_editor_controller.dart';
-import '../../controllers/placeholder_help_controller.dart';
 import '../form_components/template_form_field.dart';
 import '../form_components/placeholder_display_widget.dart';
 import '../form_components/message_preview_widget.dart';
@@ -393,13 +392,9 @@ class _MessageTemplateEditorScreenState extends State<MessageTemplateEditorScree
   }
 
   void _showFieldSelector() {
-    final controller = PlaceholderHelpController(
-      appState: context.read<AppStateProvider>(),
-    );
     showDialog(
       context: context,
       builder: (context) => PlaceholderHelpDialog(
-        controller: controller,
         onPlaceholderSelected: _insertField,
       ),
     );

@@ -1,27 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../controllers/quote_totals_controller.dart';
+import '../../../../../data/models/business/simplified_quote.dart';
 
 class QuoteTotalCard extends StatelessWidget {
-  final QuoteTotalsController controller;
+  final SimplifiedMultiLevelQuote quote;
+  final String selectedLevelId;
   final NumberFormat currencyFormat;
 
   const QuoteTotalCard({
     super.key,
-    required this.controller,
+    required this.quote,
+    required this.selectedLevelId,
     required this.currencyFormat,
   });
 
   @override
   Widget build(BuildContext context) {
-    final combinedSubtotal = controller.combinedSubtotal;
+    final level = quote.levels.firstWhere((l) => l.id == selectedLevelId);
+    final levelSubtotal = level.subtotal;
+    final addonSubtotal = quote.addons.fold(0.0, (sum, a) => sum + a.totalPrice);
+    final combinedSubtotal = levelSubtotal + addonSubtotal;
 
-    final totalDiscount = controller.totalDiscount;
+    final discountSummary = quote.getDiscountSummary(selectedLevelId);
+    final totalDiscount = discountSummary['totalDiscount'] as double;
+    final subtotalAfterDiscount = combinedSubtotal - totalDiscount;
 
-    final taxRate = controller.taxRate;
-    final taxAmount = controller.taxAmount;
-    final finalTotal = controller.finalTotal;
+    final taxRate = quote.taxRate;
+    final taxAmount = subtotalAfterDiscount * (taxRate / 100);
+    final finalTotal = subtotalAfterDiscount + taxAmount;
 
     return Card(
       color: Theme.of(context).primaryColor.withAlpha(20),
