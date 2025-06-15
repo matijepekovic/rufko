@@ -1,12 +1,11 @@
 // lib/screens/inspection_viewer_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'dart:io';
 import '../../../../data/models/business/customer.dart';
 import '../../../../data/models/media/inspection_document.dart';
-import '../../../../data/providers/state/app_state_provider.dart';
+import '../controllers/inspection_viewer_controller.dart';
 
 class InspectionViewerScreen extends StatefulWidget {
   final Customer customer;
@@ -23,29 +22,23 @@ class InspectionViewerScreen extends StatefulWidget {
 }
 
 class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
-  late PageController _pageController;
-  int _currentPage = 0;
-  List<InspectionDocument> _documents = [];
+  late InspectionViewerController _controller;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: widget.initialIndex ?? 0);
-    _currentPage = widget.initialIndex ?? 0;
-    _loadDocuments();
+    _controller = InspectionViewerController(
+      context: context,
+      customer: widget.customer,
+      initialIndex: widget.initialIndex ?? 0,
+    )..addListener(() => setState(() {}));
   }
 
-  void _loadDocuments() {
-    final appState = context.read<AppStateProvider>();
-    _documents = appState.getInspectionDocumentsForCustomer(widget.customer.id);
-
-    // Sort by sortOrder
-    _documents.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-  }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _controller.pageController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -70,7 +63,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
           ],
         ),
         actions: [
-          if (_documents.isNotEmpty)
+          if (_controller.documents.isNotEmpty)
             Center(
               child: Container(
                 margin: const EdgeInsets.only(right: 16),
@@ -80,7 +73,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${_currentPage + 1} / ${_documents.length}',
+                  '${_controller.currentPage + 1} / ${_controller.documents.length}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -91,27 +84,25 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
             ),
         ],
       ),
-      body: _documents.isEmpty
+      body: _controller.documents.isEmpty
           ? _buildEmptyState()
           : Stack(
         children: [
           // Document viewer
           PageView.builder(
-            controller: _pageController,
-            itemCount: _documents.length,
+            controller: _controller.pageController,
+            itemCount: _controller.documents.length,
             onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
+              _controller.updateCurrentPage(index);
             },
             itemBuilder: (context, index) {
-              final document = _documents[index];
+              final document = _controller.documents[index];
               return _buildDocumentView(document);
             },
           ),
 
           // Navigation buttons overlay
-          if (_documents.length > 1) ...[
+          if (_controller.documents.length > 1) ...[
             // Left navigation button
             Positioned(
               left: 16,
@@ -119,7 +110,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
               bottom: 0,
               child: Center(
                 child: AnimatedOpacity(
-                  opacity: _currentPage > 0 ? 1.0 : 0.3,
+                  opacity: _controller.currentPage > 0 ? 1.0 : 0.3,
                   duration: const Duration(milliseconds: 200),
                   child: Container(
                     decoration: BoxDecoration(
@@ -132,7 +123,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
                         color: Colors.white,
                         size: 32,
                       ),
-                      onPressed: _currentPage > 0 ? _goToPreviousPage : null,
+                      onPressed: _controller.currentPage > 0 ? _goToPreviousPage : null,
                       tooltip: 'Previous document',
                     ),
                   ),
@@ -147,7 +138,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
               bottom: 0,
               child: Center(
                 child: AnimatedOpacity(
-                  opacity: _currentPage < _documents.length - 1 ? 1.0 : 0.3,
+                  opacity: _controller.currentPage < _controller.documents.length - 1 ? 1.0 : 0.3,
                   duration: const Duration(milliseconds: 200),
                   child: Container(
                     decoration: BoxDecoration(
@@ -160,7 +151,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
                         color: Colors.white,
                         size: 32,
                       ),
-                      onPressed: _currentPage < _documents.length - 1 ? _goToNextPage : null,
+                      onPressed: _controller.currentPage < _controller.documents.length - 1 ? _goToNextPage : null,
                       tooltip: 'Next document',
                     ),
                   ),
@@ -170,7 +161,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
           ],
 
           // Enhanced page indicator at bottom
-          if (_documents.length > 1)
+          if (_controller.documents.length > 1)
             Positioned(
               left: 0,
               right: 0,
@@ -188,7 +179,7 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        _documents[_currentPage].displayTitle,
+                        _controller.documents[_controller.currentPage].displayTitle,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -201,15 +192,15 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(
-                        _documents.length,
+                        _controller.documents.length,
                             (index) => GestureDetector(
                           onTap: () => _goToPage(index),
                           child: Container(
-                            width: index == _currentPage ? 24 : 8,
+                            width: index == _controller.currentPage ? 24 : 8,
                             height: 8,
                             margin: const EdgeInsets.symmetric(horizontal: 4),
                             decoration: BoxDecoration(
-                              color: index == _currentPage
+                              color: index == _controller.currentPage
                                   ? Colors.white
                                   : Colors.white.withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(4),
@@ -228,29 +219,15 @@ class _InspectionViewerScreenState extends State<InspectionViewerScreen> {
   }
 
   void _goToPreviousPage() {
-    if (_currentPage > 0) {
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
+    _controller.goToPreviousPage();
   }
 
   void _goToNextPage() {
-    if (_currentPage < _documents.length - 1) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
+    _controller.goToNextPage();
   }
 
   void _goToPage(int page) {
-    _pageController.animateToPage(
-      page,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
+    _controller.goToPage(page);
   }
 
   Widget _buildEmptyState() {

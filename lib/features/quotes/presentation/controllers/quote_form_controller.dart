@@ -5,6 +5,7 @@ import '../../../../data/models/business/roof_scope_data.dart';
 import '../../../../data/models/business/simplified_quote.dart';
 import '../../../../data/models/business/quote.dart';
 import '../../../../data/models/business/quote_extras.dart';
+import 'package:provider/provider.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
 import '../screens/simplified_quote_detail_screen.dart';
 import '../widgets/dialogs/tax_rate_dialogs.dart';
@@ -16,12 +17,13 @@ class QuoteFormController extends ChangeNotifier {
     required this.customer,
     this.roofScopeData,
     this.existingQuote,
-  });
+  }) : appState = context.read<AppStateProvider>();
 
   final BuildContext context;
   final Customer customer;
   final RoofScopeData? roofScopeData;
   final SimplifiedMultiLevelQuote? existingQuote;
+  final AppStateProvider appState;
 
   bool get isEditMode => existingQuote != null;
   SimplifiedMultiLevelQuote? get editingQuote => existingQuote;
@@ -166,7 +168,7 @@ class QuoteFormController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void autoDetectTaxRate(AppStateProvider appState) {
+  void autoDetectTaxRate() {
     final c = customer;
     final detectedRate = appState.detectTaxRate(
       city: c.city,
@@ -216,7 +218,7 @@ class QuoteFormController extends ChangeNotifier {
   }
 
 
-  void loadExistingQuoteData(AppStateProvider appState) {
+  void loadExistingQuoteData() {
     if (editingQuote == null) return;
 
     _taxRate = editingQuote!.taxRate;
@@ -253,8 +255,7 @@ class QuoteFormController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> generateQuote(
-      AppStateProvider appState, GlobalKey<FormState> formKey) async {
+  Future<void> generateQuote(GlobalKey<FormState> formKey) async {
     if (!(formKey.currentState?.validate() ?? false)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

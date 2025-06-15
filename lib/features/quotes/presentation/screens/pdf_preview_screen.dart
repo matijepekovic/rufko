@@ -4,15 +4,14 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../controllers/pdf_document_controller.dart';
 import '../controllers/pdf_editing_controller.dart';
 import '../controllers/pdf_file_operations_controller.dart';
 import '../controllers/pdf_viewer_ui_builder.dart';
+import '../controllers/pdf_preview_controller.dart';
 import '../../../templates/presentation/controllers/template_field_dialog_manager.dart';
 import '../../../../data/models/ui/pdf_form_field.dart';
-import '../../../../data/providers/state/app_state_provider.dart';
 import '../../../../data/models/business/simplified_quote.dart';
 import '../../../../data/models/business/customer.dart';
 import '../../../../app/theme/rufko_theme.dart';
@@ -64,6 +63,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   late PdfFileOperationsController _fileOpsController;
   late PdfViewerUIBuilder _uiBuilder;
   late TemplateFieldDialogManager _dialogManager;
+  late PdfPreviewController _previewController;
 
   // Undo/Redo system managed by controller
 
@@ -80,6 +80,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
     _currentPdfPath = widget.pdfPath;
     _fileOpsController = PdfFileOperationsController(context);
     _dialogManager = TemplateFieldDialogManager(context, _editingController);
+    _previewController = PdfPreviewController(context);
     _uiBuilder = PdfViewerUIBuilder(
       context,
       pdfViewerKey: _pdfViewerKey,
@@ -133,10 +134,8 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   // Load information about which fields can be edited from templates
   void _loadEditableFields() {
     if (widget.templateId != null) {
-      final appState = context.read<AppStateProvider>();
-      _editableFields = PdfFieldMappingService.instance
-          .getEditableFields(widget.templateId!, appState);
-
+      _editableFields =
+          _previewController.loadEditableFields(widget.templateId!);
       debugPrint('🔍 Found ${_editableFields.length} editable template fields');
     }
   }
