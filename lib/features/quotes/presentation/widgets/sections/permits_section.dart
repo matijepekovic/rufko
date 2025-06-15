@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../data/models/business/quote_extras.dart';
-import '../../services/quote_calculation_service.dart';
 
 class PermitsSection extends StatelessWidget {
   final List<PermitItem> permits;
@@ -176,7 +175,7 @@ class PermitsSection extends StatelessWidget {
                   ),
                   Text(
                     NumberFormat.currency(symbol: '\$').format(
-                      QuoteCalculationService.calculatePermitsTotal(permits),
+                      permits.fold(0.0, (sum, p) => sum + p.amount),
                     ),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,

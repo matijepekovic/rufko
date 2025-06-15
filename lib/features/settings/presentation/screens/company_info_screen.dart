@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../controllers/company_info_controller.dart';
+import 'package:provider/provider.dart';
+
 import '../../../../data/models/settings/app_settings.dart';
+import '../../../../data/providers/state/app_state_provider.dart';
 import '../widgets/company_logo_picker.dart';
 
 /// Screen to edit company information.
@@ -17,14 +19,14 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
 
-  late CompanyInfoController _controller;
   late AppSettings _settings;
+  late AppStateProvider _appState;
 
   @override
   void initState() {
     super.initState();
-    _controller = CompanyInfoController(context: context);
-    _settings = _controller.settings;
+    _appState = context.read<AppStateProvider>();
+    _settings = _appState.appSettings ?? AppSettings();
     _nameController = TextEditingController(text: _settings.companyName ?? '');
     _addressController =
         TextEditingController(text: _settings.companyAddress ?? '');
@@ -44,7 +46,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
           children: [
             CompanyLogoPicker(
               settings: _settings,
-              appState: _controller.appState,
+              appState: _appState,
               onChanged: () => setState(() {}),
             ),
             const SizedBox(height: 20),
@@ -95,12 +97,24 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
   }
 
   void _save() {
-    _controller.saveInfo(
-      name: _nameController.text.trim(),
-      address: _addressController.text.trim(),
-      phone: _phoneController.text.trim(),
-      email: _emailController.text.trim(),
+    _settings.updateCompanyInfo(
+      name: _nameController.text.trim().isEmpty
+          ? null
+          : _nameController.text.trim(),
+      address: _addressController.text.trim().isEmpty
+          ? null
+          : _addressController.text.trim(),
+      phone: _phoneController.text.trim().isEmpty
+          ? null
+          : _phoneController.text.trim(),
+      email: _emailController.text.trim().isEmpty
+          ? null
+          : _emailController.text.trim(),
     );
+    _appState.updateAppSettings(_settings);
     Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Company information updated!')),
+    );
   }
 }
