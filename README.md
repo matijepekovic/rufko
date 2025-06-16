@@ -7,6 +7,4 @@ This repository previously contained a nested `rufko/` directory with a duplicat
 ## Getting Started
 
 ## Codex Setup
-Run `setup.sh` before running Flutter commands in Codex.
-
 

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../data/models/settings/app_settings.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
+import '../../../../core/services/settings/company_info_service.dart';
 
 /// Controller handling loading and saving of company information.
 class CompanyInfoController {
@@ -21,13 +22,15 @@ class CompanyInfoController {
     required String phone,
     required String email,
   }) {
-    settings.updateCompanyInfo(
-      name: name.isEmpty ? null : name,
-      address: address.isEmpty ? null : address,
-      phone: phone.isEmpty ? null : phone,
-      email: email.isEmpty ? null : email,
+    // Business logic extracted to service
+    CompanyInfoService.saveCompanyInfo(
+      appState: appState,
+      settings: settings,
+      name: name,
+      address: address,
+      phone: phone,
+      email: email,
     );
-    appState.updateAppSettings(settings);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Company information updated!')),
     );

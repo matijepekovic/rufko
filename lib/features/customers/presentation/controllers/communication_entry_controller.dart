@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../data/models/business/customer.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
+import '../../../../core/services/communication/communication_service.dart';
 
 /// Controller handling creation and saving of communication entries.
 class CommunicationEntryController {
@@ -22,17 +23,16 @@ class CommunicationEntryController {
     required bool isUrgent,
     required String subject,
     required String content,
-  }) {
+  }) async {
     try {
-      String prefix = typeLabel.split(' ').first;
-      String message = prefix;
-      if (isUrgent) message += ' [URGENT]';
-      if (subject.trim().isNotEmpty) {
-        message += ' [${subject.trim()}]';
-      }
-      message += ' ${content.trim()}';
-      customer.addCommunication(message);
-      context.read<AppStateProvider>().updateCustomer(customer);
+      await CommunicationService.saveCommunicationEntry(
+        appState: context.read<AppStateProvider>(),
+        customer: customer,
+        typeLabel: typeLabel,
+        isUrgent: isUrgent,
+        subject: subject,
+        content: content,
+      );
       onCommunicationAdded?.call();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

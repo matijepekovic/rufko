@@ -1,0 +1,7 @@
+{
+  "codeConnect": {
+    "parser": "dart",
+    "include": ["lib/**/*.dart"],
+    "exclude": []
+  }
+}

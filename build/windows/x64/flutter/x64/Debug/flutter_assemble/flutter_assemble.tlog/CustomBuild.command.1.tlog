@@ -1,0 +1,28 @@
+^C:\USERS\ADMINISTRATOR\ANDROIDSTUDIOPROJECTS\RUFKO\BUILD\WINDOWS\X64\CMAKEFILES\444D4D7230A12E1A0E5291942192E999\FLUTTER_WINDOWS.DLL.RULE
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -E env FLUTTER_ROOT=C:\flutter PROJECT_DIR=C:\Users\Administrator\AndroidStudioProjects\rufko FLUTTER_ROOT=C:\flutter FLUTTER_EPHEMERAL_DIR=C:\Users\Administrator\AndroidStudioProjects\rufko\windows\flutter\ephemeral PROJECT_DIR=C:\Users\Administrator\AndroidStudioProjects\rufko FLUTTER_TARGET=C:\Users\Administrator\AndroidStudioProjects\rufko\lib\main.dart DART_DEFINES=Zmx1dHRlci5pbnNwZWN0b3Iuc3RydWN0dXJlZEVycm9ycz10cnVl,RkxVVFRFUl9WRVJTSU9OPTMuMzIuMQ==,RkxVVFRFUl9DSEFOTkVMPXN0YWJsZQ==,RkxVVFRFUl9HSVRfVVJMPWh0dHBzOi8vZ2l0aHViLmNvbS9mbHV0dGVyL2ZsdXR0ZXIuZ2l0,RkxVVFRFUl9GUkFNRVdPUktfUkVWSVNJT049YjI1MzA1YTg4Mw==,RkxVVFRFUl9FTkdJTkVfUkVWSVNJT049MTQyNWU1ZTllYw==,RkxVVFRFUl9EQVJUX1ZFUlNJT049My44LjE= DART_OBFUSCATION=false TRACK_WIDGET_CREATION=true TREE_SHAKE_ICONS=false PACKAGE_CONFIG=C:\Users\Administrator\AndroidStudioProjects\rufko\.dart_tool\package_config.json C:/flutter/packages/flutter_tools/bin/tool_backend.bat windows-x64 Debug
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\ADMINISTRATOR\ANDROIDSTUDIOPROJECTS\RUFKO\BUILD\WINDOWS\X64\CMAKEFILES\54FEB0C349BCDDCF74A8E7E619FF56C3\FLUTTER_ASSEMBLE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\USERS\ADMINISTRATOR\ANDROIDSTUDIOPROJECTS\RUFKO\WINDOWS\FLUTTER\CMAKELISTS.TXT
+setlocal
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SC:/Users/Administrator/AndroidStudioProjects/rufko/windows -BC:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64 --check-stamp-file C:/Users/Administrator/AndroidStudioProjects/rufko/build/windows/x64/flutter/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -11,6 +11,7 @@ import '../../../../core/mixins/ui/empty_state_mixin.dart';
 import '../controllers/product_dialog_manager.dart';
 import '../controllers/product_filter_controller.dart';
 import '../controllers/product_category_manager.dart';
+import '../../../../core/services/product/product_list_service.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -97,7 +98,7 @@ class _ProductsScreenState extends State<ProductsScreen>
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => context.read<AppStateProvider>().loadAllData(),
+            onPressed: () => ProductListService.refreshProductData(context.read<AppStateProvider>()),
           ),
         ],
         bottom: PreferredSize(
@@ -188,7 +189,7 @@ class _ProductsScreenState extends State<ProductsScreen>
     }
 
     return RefreshIndicator(
-      onRefresh: () => appState.loadAllData(),
+      onRefresh: () => ProductListService.refreshProductData(appState),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: productsToDisplay.length,

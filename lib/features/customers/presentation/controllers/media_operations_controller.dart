@@ -12,6 +12,8 @@ import '../../../../data/providers/state/app_state_provider.dart';
 import '../widgets/media_details_dialog.dart';
 import '../../../quotes/presentation/screens/pdf_preview_screen.dart';
 import '../widgets/full_screen_image_viewer.dart';
+import '../../../../core/services/media/media_processing_service.dart';
+import '../../../../core/services/media/media_file_service.dart';
 
 /// Controller for managing media operations and state
 /// Extracted from MediaTabController to separate business logic from UI
@@ -221,30 +223,36 @@ class MediaOperationsController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      int successCount = 0;
-
-      for (final file in files) {
-        try {
-          final mediaItem = await _createMediaItemFromFile(file, defaultType, selectedCategory);
-          if (mediaItem != null && context.mounted) {
-            await context.read<AppStateProvider>().addProjectMedia(mediaItem);
-            successCount++;
-          }
-        } catch (e) {
-          debugPrint('Error processing file ${file.path}: $e');
-        }
-      }
+      // Business logic extracted to service
+      final result = await MediaFileService.processBulkMedia(
+        files: files,
+        customerId: customer.id,
+        defaultType: defaultType,
+        selectedCategory: selectedCategory,
+        appState: context.read<AppStateProvider>(),
+        createMediaItem: (file, customerId, defaultType, category) => 
+          MediaProcessingService.createMediaItemFromFile(
+            file: file,
+            customerId: customerId,
+            defaultType: defaultType,
+            category: category,
+          ),
+      );
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Added $successCount of ${files.length} files'),
-            backgroundColor: successCount == files.length ? Colors.green : Colors.orange,
+            content: Text(result.isSuccess 
+              ? 'Added ${result.successCount} of ${files.length} files'
+              : result.errorMessage ?? 'Error processing files'),
+            backgroundColor: result.isSuccess && result.successCount == files.length 
+              ? Colors.green 
+              : Colors.orange,
           ),
         );
       }
 
-      debugPrint('✅ Processed $successCount of ${files.length} files');
+      debugPrint('✅ Processed ${result.successCount ?? 0} of ${files.length} files');
     } catch (e) {
       _error = 'Error processing files: $e';
       notifyListeners();
@@ -302,42 +310,17 @@ class MediaOperationsController extends ChangeNotifier {
     }
   }
 
-  /// Create ProjectMedia from file
-  Future<ProjectMedia?> _createMediaItemFromFile(File file, String defaultType, String category) async {
-    try {
-      final fileSize = await file.length();
-      final fileName = path.basename(file.path);
-      final fileType = _detectFileType(fileName, defaultType);
-
-      return ProjectMedia(
-        customerId: customer.id,
-        filePath: file.path,
-        fileName: fileName,
-        fileType: fileType,
-        category: category,
-        fileSizeBytes: fileSize,
-      );
-    } catch (e) {
-      debugPrint('Error creating media item: $e');
-      return null;
-    }
-  }
 
   /// Detect file type from extension
   String _detectFileType(String fileName, String defaultType) {
-    final fileExtension = path.extension(fileName).toLowerCase();
-
-    if (fileExtension == '.pdf') {
-      return 'pdf';
-    } else if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].contains(fileExtension)) {
-      return 'image';
-    }
-    return defaultType;
+    // Business logic extracted to service
+    return MediaProcessingService.detectFileType(fileName, defaultType);
   }
 
   /// Show bulk category selection dialog
   Future<String?> _showBulkCategoryDialog(int fileCount, String defaultType) async {
-    String selectedCategory = defaultType == 'image' ? 'before_photos' : 'general';
+    // Business logic extracted to service
+    String selectedCategory = MediaProcessingService.getDefaultCategory(defaultType);
 
     return await showDialog<String>(
       context: context,
@@ -355,10 +338,10 @@ class MediaOperationsController extends ChangeNotifier {
                   border: OutlineInputBorder(),
                   labelText: 'Category',
                 ),
-                items: _getCategories().map((category) {
+                items: MediaProcessingService.getCategories().map((category) {
                   return DropdownMenuItem(
                     value: category,
-                    child: Text(getFormattedCategoryName(category)),
+                    child: Text(MediaProcessingService.getFormattedCategoryName(category)),
                   );
                 }).toList(),
                 onChanged: (value) {
@@ -384,55 +367,10 @@ class MediaOperationsController extends ChangeNotifier {
     );
   }
 
-  /// Get available categories
-  List<String> _getCategories() {
-    return [
-      'before_photos',
-      'after_photos',
-      'inspection_photos',
-      'progress_photos',
-      'damage_report',
-      'other_photos',
-      'roofscope_reports',
-      'contracts',
-      'invoices',
-      'permits',
-      'insurance_docs',
-      'general',
-    ];
-  }
-
   /// Get formatted category name with emoji
   String getFormattedCategoryName(String category) {
-    switch (category) {
-      case 'before_photos':
-        return '📷 Before Photos';
-      case 'after_photos':
-        return '📸 After Photos';
-      case 'inspection_photos':
-        return '🔍 Inspection Photos';
-      case 'progress_photos':
-        return '📊 Progress Photos';
-      case 'damage_report':
-        return '⚠️ Damage Photos';
-      case 'other_photos':
-        return '📱 Other Photos';
-      case 'contracts':
-        return '📋 Contracts';
-      case 'invoices':
-        return '💰 Invoices';
-      case 'permits':
-        return '🏛️ Permits';
-      case 'insurance_docs':
-        return '🛡️ Insurance Documents';
-      case 'general':
-        return '📁 General';
-      default:
-        return category
-            .split('_')
-            .map((word) => word[0].toUpperCase() + word.substring(1))
-            .join(' ');
-    }
+    // Business logic extracted to service
+    return MediaProcessingService.getFormattedCategoryName(category);
   }
 
   /// View media with appropriate viewer
@@ -485,12 +423,19 @@ class MediaOperationsController extends ChangeNotifier {
       builder: (context) => MediaDetailsDialog.edit(
         mediaItem: mediaItem,
         onSave: (updatedMedia) async {
+          // Business logic extracted to service
+          final result = await MediaFileService.updateMedia(
+            updatedMedia: updatedMedia,
+            appState: context.read<AppStateProvider>(),
+          );
+          
           final messenger = ScaffoldMessenger.of(context);
-          await context.read<AppStateProvider>().updateProjectMedia(updatedMedia);
           messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Media details updated'),
-              backgroundColor: Colors.green,
+            SnackBar(
+              content: Text(result.isSuccess 
+                ? 'Media details updated'
+                : result.errorMessage ?? 'Error updating media'),
+              backgroundColor: result.isSuccess ? Colors.green : Colors.red,
             ),
           );
           debugPrint('✏️ Updated media: ${updatedMedia.fileName}');
@@ -522,28 +467,29 @@ class MediaOperationsController extends ChangeNotifier {
     );
 
     if (confirmed == true) {
-      try {
-        final file = File(mediaItem.filePath);
-        if (await file.exists()) {
-          await file.delete();
-        }
+      // Business logic extracted to service
+      final result = await MediaFileService.deleteMedia(
+        mediaItem: mediaItem,
+        appState: context.read<AppStateProvider>(),
+      );
 
-        if (!context.mounted) return;
-        await context.read<AppStateProvider>().deleteProjectMedia(mediaItem.id);
-
-        if (context.mounted) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('Deleted ${mediaItem.fileName}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        debugPrint('🗑️ Deleted media: ${mediaItem.fileName}');
-      } catch (e) {
-        _error = 'Error deleting media: $e';
+      if (context.mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(result.isSuccess 
+              ? 'Deleted ${mediaItem.fileName}'
+              : result.errorMessage ?? 'Error deleting media'),
+            backgroundColor: result.isSuccess ? Colors.red : Colors.orange,
+          ),
+        );
+      }
+      
+      if (!result.isSuccess) {
+        _error = result.errorMessage;
         notifyListeners();
       }
+      
+      debugPrint('🗑️ Deleted media: ${mediaItem.fileName}');
     }
   }
 

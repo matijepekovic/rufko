@@ -1,113 +1,303 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
 import '../../../../data/models/templates/pdf_template.dart';
-import '../../../../data/providers/state/app_state_provider.dart';
-import '../../../../core/services/pdf/pdf_field_mapping_service.dart';
-import '../widgets/editor/field_mapping_bottom_sheet.dart';
+import '../../../../data/models/business/product.dart';
+import 'template_field_mapping_ui_controller.dart';
+import '../widgets/template_mapping/template_mapping_handler.dart';
 import '../widgets/editor/field_selection_dialog.dart';
 
-/// Controller for PDF field mapping operations
-/// Handles field selection, mapping confirmation, and unmapping
+/// Refactored TemplateFieldMappingController using clean architecture
+/// Now acts as a coordinator between UI and business logic
 class TemplateFieldMappingController extends ChangeNotifier {
+  TemplateFieldMappingController(BuildContext context, {this.onTemplateUpdated})
+      : _uiController = TemplateFieldMappingUIController.fromContext(context),
+        _context = context;
+
+  final TemplateFieldMappingUIController _uiController;
   final BuildContext _context;
-  
-  PDFTemplate? _currentTemplate;
+  final VoidCallback? onTemplateUpdated;
 
-  TemplateFieldMappingController(this._context);
+  /// Get the UI controller for use in widgets
+  TemplateFieldMappingUIController get uiController => _uiController;
 
-  // Getters
-  PDFTemplate? get currentTemplate => _currentTemplate;
-  AppStateProvider get _appState => _context.read<AppStateProvider>();
-  ScaffoldMessengerState get _messenger => ScaffoldMessenger.of(_context);
-
-  /// Initialize with template
-  void initializeWithTemplate(PDFTemplate? template) {
-    _currentTemplate = template;
-    notifyListeners();
-  }
-
-  /// Update current template
-  void updateTemplate(PDFTemplate template) {
-    _currentTemplate = template;
-    notifyListeners();
-  }
-
-  /// Show field mapping bottom sheet for PDF field
-  void showFieldMappingDialog(Map<String, dynamic> pdfFieldInfo) {
-    if (_currentTemplate == null) return;
-    
-    final pdfFieldName = pdfFieldInfo['name'] as String? ?? 'Unknown Field';
-
-    // Find existing mapping for this PDF field if any
-    FieldMapping? currentMapping;
-    try {
-      currentMapping = _currentTemplate!.fieldMappings.firstWhere(
-        (m) => m.pdfFormFieldName == pdfFieldName,
-      );
-    } catch (e) {
-      currentMapping = null;
-    }
-
-    showModalBottomSheet(
-      context: _context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) {
-        return FieldMappingBottomSheet(
-          pdfFieldName: pdfFieldName,
-          currentMapping: currentMapping,
-          onUnlink: currentMapping != null
-              ? () {
-                  Navigator.pop(context);
-                  unlinkField(currentMapping!);
-                }
-              : null,
-          onChangeMapping: () {
-            Navigator.pop(context);
-            showFieldSelectionDialog(pdfFieldInfo);
-          },
-        );
-      },
+  /// Create a handler widget that manages UI concerns
+  Widget createTemplateMappingHandler({
+    required Widget child,
+  }) {
+    return TemplateMappingHandler(
+      controller: _uiController,
+      child: child,
     );
   }
 
-  /// Show field selection dialog
-  void showFieldSelectionDialog(Map<String, dynamic> pdfFieldInfo) {
-    if (_currentTemplate == null) return;
-    
-    final pdfFieldName = pdfFieldInfo['name'] as String? ?? "Unknown Field";
-    
+  // Legacy getters for backward compatibility
+  PDFTemplate? get currentTemplate => _uiController.currentTemplate;
+
+  /// Legacy methods for backward compatibility - now delegate to handler
+  void initializeWithTemplate(PDFTemplate? template) {
+    _uiController.initializeWithTemplate(template);
+  }
+
+  void updateTemplate(PDFTemplate template) {
+    _uiController.updateTemplate(template);
+  }
+
+  @Deprecated('Use TemplateMappingHandler.showFieldMappingDialog() in new architecture')
+  void showFieldMappingDialog(Map<String, dynamic> pdfFieldInfo) {
+    if (_uiController.currentTemplate == null) {
+      ScaffoldMessenger.of(_context).showSnackBar(
+        const SnackBar(
+          content: Text('No template loaded'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final pdfFieldName = pdfFieldInfo['name'] as String? ?? 'Unknown Field';
+    _uiController.selectPdfField(pdfFieldInfo);
+
+    // Get existing mapping
+    final currentMapping = _uiController.getExistingMapping(pdfFieldName);
+
+    // If there's an existing mapping, show quick action to unlink or change
+    if (currentMapping != null) {
+      _showQuickMappingActions(pdfFieldInfo, currentMapping);
+    } else {
+      // No existing mapping, go directly to field selection
+      showFieldSelectionDialog(pdfFieldInfo);
+    }
+  }
+
+  /// Show quick actions for existing mappings (unlink or change)
+  void _showQuickMappingActions(Map<String, dynamic> pdfFieldInfo, dynamic currentMapping) {
+    final pdfFieldName = pdfFieldInfo['name'] as String? ?? 'Unknown Field';
+
     showDialog(
       context: _context,
-      barrierDismissible: true,
-      builder: (_) => FieldSelectionDialog(
-        pdfFieldName: pdfFieldName,
-        template: _currentTemplate!,
-        products: _appState.products,
-        customFields: _appState.customAppDataFields,
-        onSelect: (field) {
-          confirmMapping(field, pdfFieldInfo, false);
+      builder: (context) => ListenableBuilder(
+        listenable: _uiController,
+        builder: (context, child) {
+          // Get fresh mapping data on each rebuild
+          final freshMapping = _uiController.getExistingMapping(pdfFieldName);
+          
+          // If mapping was removed, close dialog
+          if (freshMapping == null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            });
+            return const SizedBox.shrink();
+          }
+
+          final displayName = freshMapping.appDataType != null 
+              ? PDFTemplate.getFieldDisplayName(freshMapping.appDataType)
+              : 'Unknown Field';
+
+          return AlertDialog(
+            title: Text('Field: $pdfFieldName'),
+            content: Text('Currently linked to: $displayName'),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  await _unlinkField(freshMapping);
+                  // Dialog will auto-close due to ListenableBuilder detecting the change
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Unlink'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  showFieldSelectionDialog(pdfFieldInfo);
+                },
+                child: const Text('Change'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
         },
       ),
     );
   }
 
-  /// Confirm field mapping with optional replacement dialog
-  void confirmMapping(
-      String appDataType, Map<String, dynamic> pdfFieldInfo, bool isReplacing) {
+  @Deprecated('Use TemplateMappingHandler.showFieldSelectionDialog() in new architecture')
+  void showFieldSelectionDialog(Map<String, dynamic> pdfFieldInfo) {
+    if (_uiController.currentTemplate == null) return;
+
+    final pdfFieldName = pdfFieldInfo['name'] as String? ?? "Unknown Field";
+
+    showDialog(
+      context: _context,
+      barrierDismissible: true,
+      builder: (_) => ListenableBuilder(
+        listenable: _uiController,
+        builder: (context, child) {
+          // Check if template still exists
+          if (_uiController.currentTemplate == null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            });
+            return const SizedBox.shrink();
+          }
+
+          return FieldSelectionDialog(
+            pdfFieldName: pdfFieldName,
+            template: _uiController.currentTemplate!,
+            products: _uiController.products.cast<Product>(),
+            customFields: _uiController.customFields,
+            onSelect: (field) {
+              Navigator.pop(context); // Close dialog immediately
+              _handleFieldSelection(field, pdfFieldInfo);
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _unlinkField(dynamic mapping) async {
+    try {
+      // Clear any existing messages to prevent conflicts
+      _uiController.clearMessages();
+      
+      await _uiController.removeFieldMapping(mapping);
+      
+      // Clear the success message from UI controller to prevent handler conflicts
+      _uiController.clearMessages();
+      
+      // Force UI update to reflect changes immediately
+      notifyListeners();
+      
+      // Notify parent that template was updated (for PDF viewer refresh)
+      onTemplateUpdated?.call();
+      
+      // Show success feedback without causing navigation
+      if (_context.mounted) {
+        ScaffoldMessenger.of(_context).showSnackBar(
+          SnackBar(
+            content: Text('Field mapping removed successfully'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      // Show error feedback
+      if (_context.mounted) {
+        ScaffoldMessenger.of(_context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing field mapping: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Handle field selection from dialog
+  void _handleFieldSelection(String appDataType, Map<String, dynamic> pdfFieldInfo) {
+    // Check if this field is already mapped and needs replacement confirmation
+    if (_uiController.needsReplacementConfirmation(appDataType)) {
+      _showReplacementConfirmationDialog(appDataType, pdfFieldInfo);
+    } else {
+      // Direct mapping without confirmation
+      _createFieldMappingWithFeedback(
+        appDataType: appDataType,
+        pdfFieldInfo: pdfFieldInfo,
+        replaceExisting: false,
+      );
+    }
+  }
+
+  /// Create field mapping with user feedback
+  Future<void> _createFieldMappingWithFeedback({
+    required String appDataType,
+    required Map<String, dynamic> pdfFieldInfo,
+    required bool replaceExisting,
+  }) async {
+    try {
+      // Clear any existing messages to prevent conflicts
+      _uiController.clearMessages();
+      
+      await _uiController.createFieldMapping(
+        appDataType: appDataType,
+        pdfFieldInfo: pdfFieldInfo,
+        replaceExisting: replaceExisting,
+      );
+      
+      // Clear the success message from UI controller to prevent handler conflicts
+      _uiController.clearMessages();
+      
+      // Force UI update to reflect changes immediately
+      notifyListeners();
+      
+      // Notify parent that template was updated (for PDF viewer refresh)
+      onTemplateUpdated?.call();
+      
+      final pdfFieldName = pdfFieldInfo['name'] as String? ?? 'Unknown Field';
+      final displayName = PDFTemplate.getFieldDisplayName(appDataType);
+      
+      if (_context.mounted) {
+        ScaffoldMessenger.of(_context).showSnackBar(
+          SnackBar(
+            content: Text('Linked "$displayName" to "$pdfFieldName"'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (_context.mounted) {
+        ScaffoldMessenger.of(_context).showSnackBar(
+          SnackBar(
+            content: Text('Error creating field mapping: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Show replacement confirmation dialog
+  void _showReplacementConfirmationDialog(
+    String appDataType,
+    Map<String, dynamic> pdfFieldInfo,
+  ) {
     final pdfFieldName = pdfFieldInfo['name'] as String;
 
-    if (isReplacing) {
-      // Show confirmation dialog for replacing existing mapping
-      showDialog(
-        context: _context,
-        builder: (BuildContext context) {
+    showDialog(
+      context: _context,
+      builder: (context) => ListenableBuilder(
+        listenable: _uiController,
+        builder: (context, child) {
+          final displayName = _uiController.getFieldDisplayName(appDataType);
+          
+          // Check if we still need replacement confirmation
+          if (!_uiController.needsReplacementConfirmation(appDataType)) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            });
+            return const SizedBox.shrink();
+          }
+
           return AlertDialog(
             title: const Text('Replace Existing Mapping?'),
             content: Text(
-              'This will unlink "$appDataType" from its current PDF field and link it to "$pdfFieldName" instead.',
+              'This will unlink "$displayName" from its current PDF field and link it to "$pdfFieldName" instead.',
             ),
             actions: [
               TextButton(
@@ -117,54 +307,40 @@ class TemplateFieldMappingController extends ChangeNotifier {
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  performMapping(appDataType, pdfFieldInfo);
+                  _createFieldMappingWithFeedback(
+                    appDataType: appDataType,
+                    pdfFieldInfo: pdfFieldInfo,
+                    replaceExisting: true,
+                  );
                 },
                 child: const Text('Replace'),
               ),
             ],
           );
         },
-      );
-    } else {
-      performMapping(appDataType, pdfFieldInfo);
-    }
-  }
-
-  /// Perform the actual field mapping
-  void performMapping(String appDataType, Map<String, dynamic> pdfFieldInfo) {
-    if (_currentTemplate == null) return;
-
-    PdfFieldMappingService.instance
-        .performMapping(_currentTemplate!, appDataType, pdfFieldInfo);
-
-    _currentTemplate!.updatedAt = DateTime.now();
-    notifyListeners();
-
-    if (_context.mounted) {
-      _messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Linked "${PDFTemplate.getFieldDisplayName(appDataType)}" to "${pdfFieldInfo['name']}"',
-          ),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-  }
-
-  /// Unlink a field mapping
-  void unlinkField(FieldMapping mapping) {
-    if (!_context.mounted || _currentTemplate == null) return;
-
-    PdfFieldMappingService.instance.unlinkField(_currentTemplate!, mapping);
-    notifyListeners();
-
-    _messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Field mapping removed.'),
-        backgroundColor: Colors.orange,
       ),
     );
   }
 
+  @Deprecated('Use TemplateFieldMappingUIController.createFieldMapping() in new architecture')
+  void confirmMapping(String appDataType, Map<String, dynamic> pdfFieldInfo, bool isReplacing) {
+    print('confirmMapping() called - use TemplateFieldMappingUIController.createFieldMapping() in new architecture');
+  }
+
+  @Deprecated('Use TemplateFieldMappingUIController.createFieldMapping() in new architecture')
+  void performMapping(String appDataType, Map<String, dynamic> pdfFieldInfo) {
+    print('performMapping() called - use TemplateFieldMappingUIController.createFieldMapping() in new architecture');
+  }
+
+  @Deprecated('Use TemplateFieldMappingUIController.removeFieldMapping() in new architecture')
+  void unlinkField(dynamic mapping) {
+    print('unlinkField() called - use TemplateFieldMappingUIController.removeFieldMapping() in new architecture');
+  }
+
+  /// Clean up resources
+  @override
+  void dispose() {
+    _uiController.dispose();
+    super.dispose();
+  }
 }

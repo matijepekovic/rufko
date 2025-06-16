@@ -1,130 +1,79 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
 import '../../../../data/models/business/simplified_quote.dart';
 import '../../../../data/models/business/customer.dart';
-import '../../../../data/providers/state/app_state_provider.dart';
+import 'quote_detail_ui_controller.dart';
+import '../widgets/quote_detail/quote_detail_handler.dart';
 import 'pdf_generation_controller.dart';
 
+/// Refactored QuoteDetailController using clean architecture
+/// Now acts as a coordinator between UI and business logic
 class QuoteDetailController extends ChangeNotifier {
-  QuoteDetailController({required this.quote, required this.customer}) {
-    selectedLevelId = quote.levels.isNotEmpty ? quote.levels.first.id : null;
-  }
+  QuoteDetailController({
+    required this.quote,
+    required this.customer,
+    required BuildContext context,
+  }) : _uiController = QuoteDetailUIController.fromContext(
+          context: context,
+          quote: quote,
+          customer: customer,
+        );
 
   final SimplifiedMultiLevelQuote quote;
   final Customer customer;
-  String? selectedLevelId;
+  final QuoteDetailUIController _uiController;
 
+  /// Get the UI controller for use in widgets
+  QuoteDetailUIController get uiController => _uiController;
+
+  /// Create a handler widget that manages UI concerns
+  Widget createQuoteDetailHandler({
+    required Widget child,
+  }) {
+    return QuoteDetailHandler(
+      controller: _uiController,
+      child: child,
+    );
+  }
+
+  // Legacy getters for backward compatibility
+  String? get selectedLevelId => _uiController.selectedLevelId;
+  Color getStatusColor() => _uiController.getStatusColor();
+  String getStatusButtonText() => _uiController.getStatusButtonText();
+
+  /// Legacy methods for backward compatibility - now delegate to handler
   void selectLevel(String levelId) {
-    selectedLevelId = levelId;
-    notifyListeners();
+    _uiController.selectLevel(levelId);
   }
 
-  void addDiscount(BuildContext context, QuoteDiscount discount) {
-    quote.addDiscount(discount);
-    context.read<AppStateProvider>().updateSimplifiedQuote(quote);
-    notifyListeners();
+  @Deprecated('Use QuoteDetailUIController.addDiscount() in new architecture')
+  void addDiscount(BuildContext context, dynamic discount) {
+    _uiController.addDiscount(discount);
   }
 
+  @Deprecated('Use QuoteDetailUIController.removeDiscount() in new architecture')
   void removeDiscount(BuildContext context, String discountId) {
-    quote.removeDiscount(discountId);
-    context.read<AppStateProvider>().updateSimplifiedQuote(quote);
-    notifyListeners();
+    _uiController.removeDiscount(discountId);
   }
 
-  Color getStatusColor() {
-    switch (quote.status.toLowerCase()) {
-      case 'draft':
-        return Colors.grey;
-      case 'sent':
-        return Colors.blue;
-      case 'accepted':
-        return Colors.green;
-      case 'declined':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String getStatusButtonText() {
-    switch (quote.status.toLowerCase()) {
-      case 'draft':
-        return 'Send Quote';
-      case 'sent':
-        return 'Mark Accepted';
-      case 'accepted':
-        return 'Mark Complete';
-      default:
-        return 'Update Status';
-    }
-  }
-
+  @Deprecated('Use QuoteDetailHandler.updateQuoteStatus() in new architecture')
   void updateQuoteStatus(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Update Quote Status'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ['draft', 'sent', 'accepted', 'declined']
-              .map(
-                (status) => ListTile(
-                  title: Text(status.toUpperCase()),
-                  onTap: () {
-                    quote.status = status;
-                    quote.updatedAt = DateTime.now();
-                    context.read<AppStateProvider>().updateSimplifiedQuote(quote);
-                    Navigator.pop(context);
-                    notifyListeners();
-                  },
-                ),
-              )
-              .toList(),
-        ),
-      ),
-    );
+    print('updateQuoteStatus() called - use QuoteDetailHandler.updateQuoteStatus() in new architecture');
   }
 
+  @Deprecated('Use QuoteDetailHandler.deleteQuote() in new architecture')
   void deleteQuote(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Quote'),
-        content: Text('Are you sure you want to delete quote ${quote.quoteNumber}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              context.read<AppStateProvider>().deleteSimplifiedQuote(quote.id);
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+    print('deleteQuote() called - use QuoteDetailHandler.deleteQuote() in new architecture');
   }
 
+  @Deprecated('Use QuoteDetailHandler.handleMenuAction() in new architecture')
   void handleMenuAction(BuildContext context, String action, PDFGenerationController pdfController) {
-    switch (action) {
-      case 'generate_pdf':
-        pdfController.generatePdf();
-        break;
-      case 'rename':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Rename not implemented')), 
-        );
-        break;
-      case 'delete':
-        deleteQuote(context);
-        break;
-      default:
-        break;
-    }
+    print('handleMenuAction() called - use QuoteDetailHandler.handleMenuAction() in new architecture');
+  }
+
+  /// Clean up resources
+  @override
+  void dispose() {
+    _uiController.dispose();
+    super.dispose();
   }
 }

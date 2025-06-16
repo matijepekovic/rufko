@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../../../data/models/business/customer.dart';
 import '../../../../data/models/business/product.dart';
-import '../../../../data/models/business/quote.dart';
 import '../../../../data/models/business/roof_scope_data.dart';
 import '../../../../data/models/business/simplified_quote.dart';
+import '../../../../data/models/business/quote.dart';
 import '../../../../data/models/business/quote_extras.dart';
 import '../../../media/presentation/widgets/inspection_floating_button.dart';
 import '../../../../app/theme/rufko_theme.dart';
-import '../widgets/form/main_product_section.dart';
 import '../widgets/form/quote_products_section.dart';
 import '../widgets/form/quote_generation_section.dart';
+import '../widgets/quote_type_selector.dart';
+import '../widgets/main_product_selection.dart';
 import '../widgets/sections/permits_section.dart';
 import '../widgets/sections/custom_line_items_section.dart';
 import '../widgets/quote_levels_preview.dart';
@@ -121,10 +122,18 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildMainProductSelection(),
-          SizedBox(height: spacingXL(context)),
-          _buildAddedProductsList(),
+          // Always show quote type selector (unless in edit mode)
+          if (!_isEditMode) ...[
+            _buildQuoteTypeSelector(),
+            SizedBox(height: spacingXL(context)),
+          ],
+          // Step 1: Main product selection - only for multi-level quotes
           if (_quoteType == 'multi-level') ...[
+            _buildMainProductSelection(),
+            SizedBox(height: spacingXL(context)),
+          ],
+          _buildAddedProductsList(),
+          if (_quoteType == 'multi-level' && !_isEditMode) ...[
             SizedBox(height: spacingXL(context)),
             QuoteLevelsPreview(
               quoteLevels: _quoteLevels,
@@ -142,7 +151,11 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
             onNoPermitsRequiredChanged: (value) {
               _controller.noPermitsRequired = value;
               if (value) {
-                _permits.clear();
+                // Clear permits through controller, not direct list manipulation
+                final permitsToRemove = List.from(_permits);
+                for (final permit in permitsToRemove) {
+                  _controller.removePermit(permit);
+                }
               }
             },
           ),
@@ -165,12 +178,18 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
     );
   }
 
-  Widget _buildMainProductSelection() {
-    return MainProductSection(
+  Widget _buildQuoteTypeSelector() {
+    return QuoteTypeSelector(
       quoteType: _quoteType,
+      onQuoteTypeChanged: _switchQuoteType,
+    );
+  }
+
+  Widget _buildMainProductSelection() {
+    return MainProductSelection(
       mainProduct: _mainProduct,
       mainQuantity: _mainQuantity,
-      onQuoteTypeChanged: _switchQuoteType,
+      quoteType: _quoteType,
       onProductChanged: _handleProductChanged,
       onQuantityChanged: _handleQuantityChanged,
     );
@@ -189,8 +208,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
       permits: _permits,
       customLineItems: _customLineItems,
       onTaxRateChanged: _handleTaxRateChanged,
-      onAutoDetectPressed: () =>
-          _autoDetectTaxRate(),
+      onAutoDetectPressed: _autoDetectTaxRate,
       customer: widget.customer,
     );
   }

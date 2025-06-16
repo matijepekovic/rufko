@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../data/models/settings/app_settings.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
+import '../../../../core/services/settings/discount_settings_service.dart';
 import '../screens/discount_settings_dialog.dart';
 
 /// Controller for showing and saving discount settings.
@@ -23,8 +24,13 @@ class DiscountSettingsController {
         discountTypes: List.from(settings.discountTypes),
         defaultDiscountLimit: settings.defaultDiscountLimit,
         onSave: (types, limit) {
-          settings.updateDiscountSettings(types: types, discountLimit: limit);
-          appState.updateAppSettings(settings);
+          // Business logic extracted to service
+          DiscountSettingsService.updateDiscountSettings(
+            appState: appState,
+            settings: settings,
+            types: types,
+            discountLimit: limit,
+          );
           Navigator.pop(c);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Discount settings updated!')),

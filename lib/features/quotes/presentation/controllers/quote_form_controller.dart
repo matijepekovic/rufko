@@ -10,6 +10,10 @@ import '../../../../data/providers/state/app_state_provider.dart';
 import '../screens/simplified_quote_detail_screen.dart';
 import '../widgets/dialogs/tax_rate_dialogs.dart';
 import '../../../../app/constants/quote_form_constants.dart';
+import '../../../../core/services/quote/quote_calculation_service.dart';
+import '../../../../core/services/quote/tax_detection_service.dart';
+import '../../../../core/services/quote/quote_validation_service.dart';
+import '../../../../core/services/quote/quote_generation_service.dart';
 
 class QuoteFormController extends ChangeNotifier {
   QuoteFormController({
@@ -17,7 +21,12 @@ class QuoteFormController extends ChangeNotifier {
     required this.customer,
     this.roofScopeData,
     this.existingQuote,
-  }) : appState = context.read<AppStateProvider>();
+  }) : appState = context.read<AppStateProvider>() {
+    // Load existing quote data if in edit mode
+    if (existingQuote != null) {
+      loadExistingQuoteData();
+    }
+  }
 
   final BuildContext context;
   final Customer customer;
@@ -42,18 +51,23 @@ class QuoteFormController extends ChangeNotifier {
   double get taxRate => _taxRate;
   set taxRate(double value) {
     _taxRate = value;
+    updateQuoteLevelsQuantity();
     notifyListeners();
   }
 
   Product? get mainProduct => _mainProduct;
   set mainProduct(Product? value) {
     _mainProduct = value;
+    if (value != null) {
+      createQuoteLevels();
+    }
     notifyListeners();
   }
 
   double get mainQuantity => _mainQuantity;
   set mainQuantity(double value) {
     _mainQuantity = value;
+    updateQuoteLevelsQuantity();
     notifyListeners();
   }
 
@@ -74,37 +88,17 @@ class QuoteFormController extends ChangeNotifier {
       _noPermitsRequired || _permits.isNotEmpty;
 
   void createQuoteLevels() {
-    if (_mainProduct == null) return;
-
     _quoteLevels.clear();
-
-    if (_quoteType == 'multi-level') {
-      final mainLevels = _mainProduct!.availableMainLevels;
-      for (var i = 0; i < mainLevels.length; i++) {
-        final mainLevel = mainLevels[i];
-        final quoteLevel = QuoteLevel(
-          id: mainLevel.levelId,
-          name: mainLevel.levelName,
-          levelNumber: i + 1,
-          basePrice: mainLevel.price,
-          baseQuantity: _mainQuantity,
-          includedItems: List.from(_addedProducts),
-        );
-        quoteLevel.calculateSubtotal();
-        _quoteLevels.add(quoteLevel);
-      }
-    } else {
-      final quoteLevel = QuoteLevel(
-        id: 'single-tier-${DateTime.now().millisecondsSinceEpoch}',
-        name: 'Quote',
-        levelNumber: 1,
-        basePrice: _mainProduct!.unitPrice,
-        baseQuantity: _mainQuantity,
-        includedItems: List.from(_addedProducts),
-      );
-      quoteLevel.calculateSubtotal();
-      _quoteLevels.add(quoteLevel);
-    }
+    
+    // Business logic extracted to service
+    final levels = QuoteCalculationService.createQuoteLevels(
+      quoteType: _quoteType,
+      mainProduct: _mainProduct,
+      mainQuantity: _mainQuantity,
+      addedProducts: _addedProducts,
+    );
+    
+    _quoteLevels.addAll(levels);
     notifyListeners();
   }
 
@@ -112,30 +106,36 @@ class QuoteFormController extends ChangeNotifier {
     if (_quoteType == newType) return;
 
     _quoteType = newType;
+    
+    // Reset ALL fields when switching quote types
     _mainProduct = null;
+    _mainQuantity = QuoteFormConstants.defaultMainQuantity;
+    _taxRate = QuoteFormConstants.defaultTaxRate;
     _quoteLevels.clear();
     _addedProducts.clear();
-    _mainQuantity = QuoteFormConstants.defaultMainQuantity;
     _permits.clear();
     _noPermitsRequired = false;
     _customLineItems.clear();
+    
     notifyListeners();
   }
 
   void updateQuoteLevelsQuantity() {
-    for (final level in _quoteLevels) {
-      level.baseQuantity = _mainQuantity;
-      level.calculateSubtotal();
-    }
+    // Business logic extracted to service
+    QuoteCalculationService.updateQuoteLevelsQuantity(
+      quoteLevels: _quoteLevels,
+      mainQuantity: _mainQuantity,
+    );
     notifyListeners();
   }
 
   void removeProduct(QuoteItem product) {
     _addedProducts.remove(product);
-    for (final level in _quoteLevels) {
-      level.includedItems.remove(product);
-      level.calculateSubtotal();
-    }
+    // Business logic extracted to service
+    QuoteCalculationService.removeProductFromLevels(
+      quoteLevels: _quoteLevels,
+      product: product,
+    );
     notifyListeners();
   }
 
@@ -161,58 +161,57 @@ class QuoteFormController extends ChangeNotifier {
 
   void addProduct(QuoteItem item) {
     _addedProducts.add(item);
-    for (final level in _quoteLevels) {
-      level.includedItems.add(item);
-      level.calculateSubtotal();
-    }
+    
+    // Business logic extracted to service
+    final updatedLevels = QuoteCalculationService.addProductToLevels(
+      quoteLevels: _quoteLevels,
+      item: item,
+      quoteType: _quoteType,
+      mainProduct: _mainProduct,
+      mainQuantity: _mainQuantity,
+      addedProducts: _addedProducts,
+    );
+    
+    _quoteLevels.clear();
+    _quoteLevels.addAll(updatedLevels);
     notifyListeners();
   }
 
   void autoDetectTaxRate() {
-    final c = customer;
-    final detectedRate = appState.detectTaxRate(
-      city: c.city,
-      stateAbbreviation: c.stateAbbreviation,
-      zipCode: c.zipCode,
+    // Business logic extracted to service
+    final result = TaxDetectionService.autoDetectTaxRate(
+      customer: customer,
+      appState: appState,
     );
 
-    if (detectedRate != null && detectedRate > 0) {
-      _taxRate = detectedRate;
+    if (result.detectedRate != null) {
+      _taxRate = result.detectedRate!;
       updateQuoteLevelsQuantity();
-      String source = '';
-      if (c.zipCode != null && c.zipCode!.isNotEmpty) {
-        source = 'ZIP ${c.zipCode}';
-      } else if (c.stateAbbreviation != null) {
-        source = 'state ${c.stateAbbreviation}';
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text('Tax rate set to ${detectedRate.toStringAsFixed(2)}% from $source'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } else {
-      final fallbackRate =
-          appState.appSettings?.taxRate ?? QuoteFormConstants.defaultTaxRate;
-      if (fallbackRate > 0) {
-        _taxRate = fallbackRate;
-        updateQuoteLevelsQuantity();
+      
+      if (result.usesFallback) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Using default tax rate: ${fallbackRate.toStringAsFixed(2)}%'),
+            content: Text('Using default tax rate: ${result.detectedRate!.toStringAsFixed(2)}%'),
             backgroundColor: Colors.orange,
             duration: const Duration(seconds: 3),
           ),
         );
       } else {
-        TaxRateDialogs.showManualTaxRateDialog(
-          context,
-          customer,
-          this,
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text('Tax rate set to ${result.detectedRate!.toStringAsFixed(2)}% from ${result.source}'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
+    } else if (result.requiresManualEntry) {
+      TaxRateDialogs.showManualTaxRateDialog(
+        context,
+        customer,
+        this,
+      );
     }
     notifyListeners();
   }
@@ -268,10 +267,19 @@ class QuoteFormController extends ChangeNotifier {
       return;
     }
 
-    if (_mainProduct == null || _quoteLevels.isEmpty) {
+    // Business logic extracted to validation service
+    final validation = QuoteValidationService.validateQuoteData(
+      quoteType: _quoteType,
+      mainProduct: _mainProduct,
+      quoteLevels: _quoteLevels,
+      addedProducts: _addedProducts,
+      isEditMode: isEditMode,
+    );
+
+    if (!validation.isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a main product first'),
+        SnackBar(
+          content: Text(validation.errorMessage!),
           backgroundColor: Colors.red,
         ),
       );
@@ -282,29 +290,47 @@ class QuoteFormController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final QuoteGenerationResult result;
+      
       if (isEditMode) {
-        final updatedQuote = editingQuote!;
-        updatedQuote.levels = _quoteLevels.map((level) {
-          level.calculateSubtotal();
-          return level;
-        }).toList();
-        updatedQuote.taxRate = _taxRate;
-        updatedQuote.baseProductId = _mainProduct!.id;
-        updatedQuote.baseProductName = _mainProduct!.name;
-        updatedQuote.baseProductUnit = _mainProduct!.unit;
-        updatedQuote.roofScopeDataId = roofScopeData?.id;
-        updatedQuote.permits = List.from(_permits);
-        updatedQuote.noPermitsRequired = _noPermitsRequired;
-        updatedQuote.customLineItems = List.from(_customLineItems);
-        updatedQuote.updatedAt = DateTime.now();
+        // Business logic extracted to generation service
+        result = await QuoteGenerationService.updateExistingQuote(
+          appState: appState,
+          existingQuote: editingQuote!,
+          roofScopeData: roofScopeData,
+          quoteLevels: _quoteLevels,
+          taxRate: _taxRate,
+          quoteType: _quoteType,
+          mainProduct: _mainProduct,
+          permits: _permits,
+          noPermitsRequired: _noPermitsRequired,
+          customLineItems: _customLineItems,
+        );
+      } else {
+        // Business logic extracted to generation service
+        result = await QuoteGenerationService.generateNewQuote(
+          appState: appState,
+          customer: customer,
+          roofScopeData: roofScopeData,
+          quoteLevels: _quoteLevels,
+          taxRate: _taxRate,
+          quoteType: _quoteType,
+          mainProduct: _mainProduct,
+          permits: _permits,
+          noPermitsRequired: _noPermitsRequired,
+          customLineItems: _customLineItems,
+        );
+      }
 
-        await appState.updateSimplifiedQuote(updatedQuote);
+      if (!context.mounted) return;
 
-        if (!context.mounted) return;
+      if (result.isSuccess) {
+        final quote = result.quote!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                '${_quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${updatedQuote.quoteNumber} updated with ${_taxRate.toStringAsFixed(2)}% tax!'),
+            content: Text(isEditMode
+                ? '${_quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${quote.quoteNumber} updated with ${_taxRate.toStringAsFixed(2)}% tax!'
+                : '${_quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${quote.quoteNumber} generated with ${_taxRate.toStringAsFixed(2)}% tax!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -314,61 +340,19 @@ class QuoteFormController extends ChangeNotifier {
           context,
           MaterialPageRoute(
             builder: (_) => SimplifiedQuoteDetailScreen(
-              quote: updatedQuote,
+              quote: quote,
               customer: customer,
             ),
           ),
         );
       } else {
-        final newQuote = SimplifiedMultiLevelQuote(
-          customerId: customer.id,
-          roofScopeDataId: roofScopeData?.id,
-          levels: _quoteLevels.map((level) {
-            level.calculateSubtotal();
-            return level;
-          }).toList(),
-          addons: [],
-          taxRate: _taxRate,
-          baseProductId: _mainProduct!.id,
-          baseProductName: _mainProduct!.name,
-          baseProductUnit: _mainProduct!.unit,
-          permits: List.from(_permits),
-          noPermitsRequired: _noPermitsRequired,
-          customLineItems: List.from(_customLineItems),
-        );
-
-        await appState.addSimplifiedQuote(newQuote);
-
-        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                '${_quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${newQuote.quoteNumber} generated with ${_taxRate.toStringAsFixed(2)}% tax!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        if (!context.mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SimplifiedQuoteDetailScreen(
-              quote: newQuote,
-              customer: customer,
-            ),
+            content: Text(result.errorMessage!),
+            backgroundColor: Colors.red,
           ),
         );
       }
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isEditMode
-              ? 'Error updating ${_quoteType == 'single-tier' ? 'single-tier' : 'multi-level'} quote: $e'
-              : 'Error generating ${_quoteType == 'single-tier' ? 'single-tier' : 'multi-level'} quote: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     } finally {
       _isLoading = false;
       notifyListeners();

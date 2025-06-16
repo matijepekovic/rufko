@@ -16,6 +16,7 @@ class MainProductSection extends StatelessWidget
   final ValueChanged<Product?> onProductChanged;
   final ValueChanged<double> onQuantityChanged;
   final ValueChanged<String> onQuoteTypeChanged;
+  final bool isEditMode;
 
   const MainProductSection({
     super.key,
@@ -25,17 +26,21 @@ class MainProductSection extends StatelessWidget
     required this.onProductChanged,
     required this.onQuantityChanged,
     required this.onQuoteTypeChanged,
+    this.isEditMode = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        QuoteTypeSelector(
-          quoteType: quoteType,
-          onQuoteTypeChanged: onQuoteTypeChanged,
-        ),
-        SizedBox(height: spacingXL(context)),
+        // Hide quote type selector in edit mode - quote type is already determined
+        if (!isEditMode) ...[
+          QuoteTypeSelector(
+            quoteType: quoteType,
+            onQuoteTypeChanged: onQuoteTypeChanged,
+          ),
+          SizedBox(height: spacingXL(context)),
+        ],
         MainProductSelection(
           mainProduct: mainProduct,
           mainQuantity: mainQuantity,

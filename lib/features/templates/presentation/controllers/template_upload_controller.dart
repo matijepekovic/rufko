@@ -1,139 +1,128 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
-
 import '../../../../data/models/templates/pdf_template.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
-import '../../../../core/services/template_management_service.dart';
+import '../../../../core/services/template_upload/template_upload_service.dart';
+import 'template_upload_ui_controller.dart';
+import '../widgets/template_upload/template_upload_handler.dart';
 
-/// Controller for template file upload operations
-/// Handles PDF file selection, processing, and template creation
+/// Refactored TemplateUploadController using clean architecture
+/// Now acts as a coordinator between UI and business logic
 class TemplateUploadController extends ChangeNotifier {
+  TemplateUploadController(BuildContext context)
+      : _uiController = TemplateUploadUIController.fromContext(context),
+        _context = context,
+        _uploadService = TemplateUploadService();
+
+  final TemplateUploadUIController _uiController;
   final BuildContext _context;
-  
-  bool _isUploading = false;
-  String _uploadMessage = '';
+  final TemplateUploadService _uploadService;
 
-  TemplateUploadController(this._context);
+  /// Get the UI controller for use in widgets
+  TemplateUploadUIController get uiController => _uiController;
 
-  // Getters
-  bool get isUploading => _isUploading;
-  String get uploadMessage => _uploadMessage;
-
-  AppStateProvider get _appState => _context.read<AppStateProvider>();
-  ScaffoldMessengerState get _messenger => ScaffoldMessenger.of(_context);
-
-  /// Set upload loading state
-  void setUploading(bool isUploading, [String message = '']) {
-    if (!_context.mounted) return;
-    _isUploading = isUploading;
-    _uploadMessage = message;
-    notifyListeners();
+  /// Create a handler widget that manages UI concerns
+  Widget createTemplateUploadHandler({
+    required Widget child,
+  }) {
+    return TemplateUploadHandler(
+      controller: _uiController,
+      child: child,
+    );
   }
 
-  /// Upload PDF file and create template
+  // Legacy getters for backward compatibility
+  bool get isUploading => _uiController.isUploading;
+  String get uploadMessage => _uiController.uploadMessage ?? '';
+
+  /// Legacy methods for backward compatibility - now delegate to service
+  @Deprecated('Use TemplateUploadHandler.uploadAndCreateTemplate() in new architecture')
   Future<PDFTemplate?> uploadAndCreateTemplate({
     required Future<String?> Function(String) onTemplateNameRequired,
   }) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
-      );
-
-      if (result != null && result.files.single.path != null) {
-        setUploading(true, 'Processing PDF & Detecting Fields...');
-
-        final filePath = result.files.single.path!;
-        final originalFileName = result.files.single.name;
-
-        // Get template name from callback
-        final templateName = await onTemplateNameRequired(
-            originalFileName.replaceAll('.pdf', ''));
-        if (templateName == null || templateName.trim().isEmpty) {
-          setUploading(false);
-          return null;
-        }
-
-        // Create template using service
-        final template = await TemplateManagementService.instance
-            .uploadAndCreateTemplate(filePath, templateName.trim(), _appState);
-        setUploading(false);
-
-        if (!_context.mounted) return template;
-        
-        if (template != null) {
-          _messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Template created!'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
-          return template;
-        } else {
-          _messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Failed to create template.'),
+      // Pick PDF file first
+      final fileResult = await _uploadService.pickPdfFile();
+      if (!fileResult.isSuccess) {
+        if (fileResult.errorMessage != null) {
+          ScaffoldMessenger.of(_context).showSnackBar(
+            SnackBar(
+              content: Text(fileResult.errorMessage!),
               backgroundColor: Colors.red,
             ),
           );
-          return null;
         }
+        return null;
       }
-      return null;
-    } catch (e) {
-      setUploading(false);
-      if (!_context.mounted) return null;
-      
-      _messenger.showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      
-      if (kDebugMode) debugPrint('Error uploading/creating template: $e');
-      return null;
-    }
-  }
 
-  /// Pick PDF file only (without creating template)
-  Future<String?> pickPdfFile() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf'],
+      // Get template name from caller
+      final templateName = await onTemplateNameRequired(fileResult.filePath!);
+      if (templateName == null || templateName.trim().isEmpty) {
+        return null;
+      }
+
+      // Create template
+      final appState = _context.read<AppStateProvider>();
+      final createResult = await _uploadService.createTemplateFromFile(
+        filePath: fileResult.filePath!,
+        templateName: templateName.trim(),
+        appState: appState,
       );
 
-      if (result != null && result.files.single.path != null) {
-        return result.files.single.path!;
-      }
-      return null;
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error picking PDF file: $e');
-      if (_context.mounted) {
-        _messenger.showSnackBar(
+      if (createResult.isSuccess) {
+        ScaffoldMessenger.of(_context).showSnackBar(
           SnackBar(
-            content: Text('Error selecting file: $e'),
+            content: Text('Template "${templateName.trim()}" created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        return createResult.template;
+      } else {
+        ScaffoldMessenger.of(_context).showSnackBar(
+          SnackBar(
+            content: Text(createResult.errorMessage!),
             backgroundColor: Colors.red,
           ),
         );
+        return null;
       }
+    } catch (e) {
+      ScaffoldMessenger.of(_context).showSnackBar(
+        SnackBar(
+          content: Text('Error uploading template: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return null;
     }
   }
 
-  /// Validate PDF file
-  bool validatePdfFile(String filePath) {
+  @Deprecated('Use TemplateUploadHandler.pickPdfFile() in new architecture')
+  Future<String?> pickPdfFile() async {
     try {
-      // Basic validation - check if file exists and has .pdf extension
-      return filePath.toLowerCase().endsWith('.pdf');
+      final result = await _uploadService.pickPdfFile();
+      return result.isSuccess ? result.filePath : null;
     } catch (e) {
-      if (kDebugMode) debugPrint('Error validating PDF file: $e');
-      return false;
+      return null;
     }
   }
 
+  @Deprecated('Use TemplateUploadService validation in new architecture')
+  bool validatePdfFile(String filePath) {
+    // Legacy implementation - validation now handled by service layer
+    return filePath.toLowerCase().endsWith('.pdf');
+  }
+
+  @Deprecated('Use TemplateUploadUIController state management in new architecture')
+  void setUploading(bool isUploading, [String message = '']) {
+    // Legacy method - state management now handled by UI controller
+    print('setUploading() called - state management handled by TemplateUploadUIController in new architecture');
+  }
+
+  /// Clean up resources
+  @override
+  void dispose() {
+    _uiController.dispose();
+    super.dispose();
+  }
 }

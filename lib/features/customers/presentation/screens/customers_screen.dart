@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
 import '../../../../data/models/business/customer.dart';
+import '../../../../core/services/customer/customer_list_service.dart';
 import '../widgets/customer_card.dart'; // Assuming this will be adapted
 import 'customer_detail_screen.dart';
 import '../../../../core/mixins/ui/search_mixin.dart';
@@ -99,7 +100,7 @@ class _CustomersScreenState extends State<CustomersScreen>
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () => context.read<AppStateProvider>().loadAllData(),
+            onPressed: () => CustomerListService.refreshCustomerData(context.read<AppStateProvider>()),
           ),
         ],
         bottom: PreferredSize(
@@ -199,14 +200,16 @@ class _CustomersScreenState extends State<CustomersScreen>
     if (customers.isEmpty) return _buildEmptyState(filter);
 
     return RefreshIndicator(
-      onRefresh: () => appState.loadAllData(),
+      onRefresh: () => CustomerListService.refreshCustomerData(appState),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: customers.length,
         itemBuilder: (context, index) {
           final customer = customers[index];
-          final quoteCount =
-              appState.getSimplifiedQuotesForCustomer(customer.id).length;
+          final quoteCount = CustomerListService.getCustomerQuoteCount(
+            appState: appState,
+            customerId: customer.id,
+          );
           return CustomerCard(
             customer: customer,
             quoteCount: quoteCount,

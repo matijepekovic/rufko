@@ -61,6 +61,7 @@ class _SimplifiedQuoteDetailScreenState
     _controller = QuoteDetailController(
       quote: widget.quote,
       customer: widget.customer,
+      context: context,
     );
     _totalsController = QuoteTotalsController(
       quote: widget.quote,

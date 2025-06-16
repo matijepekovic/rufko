@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../data/models/settings/app_settings.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
+import '../../../../core/services/settings/product_configuration_service.dart';
 import '../screens/category_manager_dialog.dart';
 import '../screens/quote_levels_manager_dialog.dart';
 import '../screens/units_manager_dialog.dart';
@@ -21,10 +22,11 @@ class ProductConfigurationController {
       context: context,
       builder: (context) => CategoryManagerDialog(
         categories: List.from(settings.productCategories),
-        onSave: (updated) {
-          settings.updateProductCategories(updated);
-          appState.updateAppSettings(settings);
-        },
+        onSave: (updated) => ProductConfigurationService.updateProductCategories(
+          appState: appState,
+          settings: settings,
+          updatedCategories: updated,
+        ),
       ),
     );
   }
@@ -35,11 +37,12 @@ class ProductConfigurationController {
       builder: (context) => UnitsManagerDialog(
         units: List.from(settings.productUnits),
         defaultUnit: settings.defaultUnit,
-        onSave: (units, def) {
-          settings.updateProductUnits(units);
-          settings.updateDefaultUnit(def);
-          appState.updateAppSettings(settings);
-        },
+        onSave: (units, def) => ProductConfigurationService.updateProductUnits(
+          appState: appState,
+          settings: settings,
+          units: units,
+          defaultUnit: def,
+        ),
       ),
     );
   }
@@ -49,10 +52,11 @@ class ProductConfigurationController {
       context: context,
       builder: (context) => QuoteLevelsManagerDialog(
         levelNames: List.from(settings.defaultQuoteLevelNames),
-        onSave: (levels) {
-          settings.updateDefaultQuoteLevelNames(levels);
-          appState.updateAppSettings(settings);
-        },
+        onSave: (levels) => ProductConfigurationService.updateQuoteLevels(
+          appState: appState,
+          settings: settings,
+          levels: levels,
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../../data/models/business/customer.dart';
 import '../../../../data/models/media/inspection_document.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
+import '../../../../core/services/media/inspection_viewer_service.dart';
 
 /// Controller for the inspection viewer screen to load documents and handle navigation.
 class InspectionViewerController extends ChangeNotifier {
@@ -28,8 +29,10 @@ class InspectionViewerController extends ChangeNotifier {
 
   void _loadDocuments() {
     final appState = context.read<AppStateProvider>();
-    _documents = appState.getInspectionDocumentsForCustomer(customer.id)
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    _documents = InspectionViewerService.loadInspectionDocuments(
+      appState: appState,
+      customerId: customer.id,
+    );
   }
 
   void updateCurrentPage(int index) {

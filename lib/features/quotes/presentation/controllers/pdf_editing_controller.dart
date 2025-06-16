@@ -56,4 +56,30 @@ class PdfEditingController extends ChangeNotifier {
     _currentHistoryIndex = -1;
     notifyListeners();
   }
+
+  // Additional methods for PDF preview controller compatibility
+  String getFieldValue(String fieldKey) {
+    return editedValues[fieldKey] ?? '';
+  }
+
+  Map<String, String> getCurrentEdits() {
+    return Map.from(editedValues);
+  }
+
+  void clearEdits() {
+    clearAll();
+  }
+
+  void updateField(String fieldName, String value) {
+    final oldValue = editedValues[fieldName] ?? '';
+    addEdit(fieldName, oldValue, value);
+  }
+
+  bool canUndo() {
+    return _currentHistoryIndex >= 0;
+  }
+
+  bool canRedo() {
+    return _currentHistoryIndex < _editHistory.length - 1;
+  }
 }

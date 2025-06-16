@@ -17,6 +17,7 @@ import '../../../../data/models/business/customer.dart';
 import '../../../../app/theme/rufko_theme.dart';
 import '../../../../core/mixins/business/file_sharing_mixin.dart';
 import '../../../../core/services/pdf/pdf_field_mapping_service.dart';
+import '../../../../core/services/pdf/pdf_form_fields_service.dart';
 
 class PdfPreviewScreen extends StatefulWidget {
   final String pdfPath;
@@ -80,7 +81,18 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
     _currentPdfPath = widget.pdfPath;
     _fileOpsController = PdfFileOperationsController(context);
     _dialogManager = TemplateFieldDialogManager(context, _editingController);
-    _previewController = PdfPreviewController(context);
+    _previewController = PdfPreviewController(
+      context: context,
+      pdfPath: widget.pdfPath,
+      suggestedFileName: widget.suggestedFileName,
+      quote: widget.quote,
+      customer: widget.customer,
+      templateId: widget.templateId,
+      selectedLevelId: widget.selectedLevelId,
+      originalCustomData: widget.originalCustomData,
+      title: widget.title,
+      isPreview: widget.isPreview,
+    );
     _uiBuilder = PdfViewerUIBuilder(
       context,
       pdfViewerKey: _pdfViewerKey,
@@ -110,8 +122,8 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
     if (_isLoadingFields) return;
     setState(() => _isLoadingFields = true);
     try {
-      final controller = PdfDocumentController(_currentPdfPath);
-      final fields = await controller.loadFormFields();
+      // Business logic extracted to service
+      final fields = await PdfFormFieldsService.loadFormFields(_currentPdfPath);
       setState(() => _formFields = fields);
     } catch (e) {
       debugPrint('❌ Error loading form fields: $e');
@@ -134,8 +146,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
   // Load information about which fields can be edited from templates
   void _loadEditableFields() {
     if (widget.templateId != null) {
-      _editableFields =
-          _previewController.loadEditableFields(widget.templateId!);
+      _editableFields = _previewController.editableFields;
       debugPrint('🔍 Found ${_editableFields.length} editable template fields');
     }
   }
@@ -234,7 +245,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
+                    color: Colors.black.withOpacity(0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -414,16 +425,16 @@ class FormFieldOverlayPainter extends CustomPainter {
       Color borderColor;
 
       if (isSelected) {
-        overlayColor = Colors.blue.withValues(alpha: 0.3);
+        overlayColor = Colors.blue.withOpacity(0.3);
         borderColor = Colors.blue;
       } else if (hasEdit) {
-        overlayColor = Colors.green.withValues(alpha: 0.2);
+        overlayColor = Colors.green.withOpacity(0.2);
         borderColor = Colors.green;
       } else if (field.isRequired) {
-        overlayColor = Colors.red.withValues(alpha: 0.2);
+        overlayColor = Colors.red.withOpacity(0.2);
         borderColor = Colors.red;
       } else {
-        overlayColor = Colors.purple.withValues(alpha: 0.15);
+        overlayColor = Colors.purple.withOpacity(0.15);
         borderColor = Colors.purple;
       }
 
@@ -446,7 +457,7 @@ class FormFieldOverlayPainter extends CustomPainter {
       final textSpan = TextSpan(
         text: field.type.toUpperCase(),
         style: TextStyle(
-          color: borderColor.withValues(alpha: 0.8),
+          color: borderColor.withOpacity(0.8),
           fontSize: 8,
           fontWeight: FontWeight.bold,
         ),
@@ -504,5 +515,5 @@ class FormFieldOverlayPainter extends CustomPainter {
     return oldDelegate.formFields != formFields ||
         oldDelegate.selectedField != selectedField ||
         oldDelegate.editedValues != editedValues;
-  }
+    }
 }

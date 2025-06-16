@@ -42,7 +42,10 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     // Initialize controllers
     _pdfController = TemplatePdfController();
     _operationsController = TemplateOperationsController(context);
-    _fieldMappingController = TemplateFieldMappingController(context);
+    _fieldMappingController = TemplateFieldMappingController(
+      context,
+      onTemplateUpdated: _onFieldMappingTemplateUpdate,
+    );
     _uploadController = TemplateUploadController(context);
 
     // Initialize with existing template or preselected category
@@ -78,37 +81,52 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     }
   }
 
+  /// Handle template updates from field mapping controller
+  void _onFieldMappingTemplateUpdate() {
+    final template = _fieldMappingController.uiController.currentTemplate;
+    if (template != null) {
+      // Update operations controller with the modified template
+      _operationsController.updateTemplate(template);
+      // PDF controller will be updated via _onTemplateChanged callback
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[200],
-      appBar: TemplateEditorAppBar(
-        currentTemplate: _operationsController.currentTemplate,
-        onSave: _operationsController.saveTemplate,
-        onPreview: _operationsController.previewTemplate,
-      ),
-      body: ListenableBuilder(
-        listenable: Listenable.merge([
-          _operationsController,
-          _uploadController,
-        ]),
-        builder: (context, child) {
-          // Show loading overlay if either controller is loading
-          if (_operationsController.isLoading || _uploadController.isUploading) {
-            final message = _operationsController.isLoading
-                ? _operationsController.loadingMessage
-                : _uploadController.uploadMessage;
-            return LoadingOverlay(message: message);
-          }
+    // Wrap with handlers to make legacy controller methods work
+    return _uploadController.createTemplateUploadHandler(
+      child: _fieldMappingController.createTemplateMappingHandler(
+        child: Scaffold(
+          backgroundColor: Colors.grey[200],
+          appBar: TemplateEditorAppBar(
+            currentTemplate: _operationsController.currentTemplate,
+            onSave: _operationsController.saveTemplate,
+            onPreview: _operationsController.previewTemplate,
+          ),
+          body: ListenableBuilder(
+            listenable: Listenable.merge([
+              _operationsController,
+              _uploadController,
+            ]),
+            builder: (context, child) {
+              // Show loading overlay if either controller is loading
+              if (_operationsController.isLoading || _uploadController.isUploading) {
+                final message = _operationsController.isLoading
+                    ? _operationsController.loadingMessage
+                    : _uploadController.uploadMessage;
+                return LoadingOverlay(message: message);
+              }
 
-          // Show upload widget if no template is loaded
-          if (_operationsController.currentTemplate == null) {
-            return TemplateUploadWidget(onUpload: _handleTemplateUpload);
-          }
+              // Show upload widget if no template is loaded
+              if (_operationsController.currentTemplate == null) {
+                return TemplateUploadWidget(onUpload: _handleTemplateUpload);
+              }
 
-          // Show PDF viewer with template
-          return _buildPdfViewer();
-        },
+              // Show PDF viewer with template
+              return _buildPdfViewer();
+            },
+          ),
+        ),
       ),
     );
   }

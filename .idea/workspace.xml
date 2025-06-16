@@ -1,10 +1,65 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AndroidLayouts">
+    <shared>
+      <config />
+    </shared>
+  </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4c3309cd-bdb1-439d-a48e-b3bca6e549df" name="Changes" comment="" />
+    <list default="true" id="4c3309cd-bdb1-439d-a48e-b3bca6e549df" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.dart_tool/package_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.dart_tool/package_config_subset" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/package_config_subset" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.dart_tool/version" beforeDir="false" afterPath="$PROJECT_DIR$/.dart_tool/version" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.flutter-plugins-dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/.flutter-plugins-dependencies" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/ZERO_CHECK.vcxproj" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/ZERO_CHECK.vcxproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/Debug/file_selector_windows_plugin.dll" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/Debug/file_selector_windows_plugin.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/Debug/permission_handler_windows_plugin.dll" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/Debug/permission_handler_windows_plugin.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/Debug/rufko.exe" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/Debug/rufko.exe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/Debug/rufko.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/Debug/rufko.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/Debug/share_plus_plugin.dll" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/Debug/share_plus_plugin.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/Debug/syncfusion_pdfviewer_windows_plugin.dll" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/Debug/syncfusion_pdfviewer_windows_plugin.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/Debug/url_launcher_windows_plugin.dll" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/Debug/url_launcher_windows_plugin.dll" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/rufko.dir/Debug/flutter_window.obj" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/rufko.dir/Debug/flutter_window.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/rufko.dir/Debug/generated_plugin_registrant.obj" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/rufko.dir/Debug/generated_plugin_registrant.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/rufko.dir/Debug/rufko.ilk" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/rufko.dir/Debug/rufko.ilk" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/rufko.dir/Debug/rufko.tlog/link.read.1.tlog" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/rufko.dir/Debug/rufko.tlog/link.read.1.tlog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/runner/rufko.dir/Debug/vc142.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/runner/rufko.dir/Debug/vc142.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/x64/Debug/ALL_BUILD/ALL_BUILD.tlog/CustomBuild.read.1.tlog" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/x64/Debug/ALL_BUILD/ALL_BUILD.tlog/CustomBuild.read.1.tlog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/windows/x64/x64/Debug/ZERO_CHECK/ZERO_CHECK.tlog/CustomBuild.read.1.tlog" beforeDir="false" afterPath="$PROJECT_DIR$/build/windows/x64/x64/Debug/ZERO_CHECK/ZERO_CHECK.tlog/CustomBuild.read.1.tlog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/customers/presentation/controllers/communication_entry_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/customers/presentation/controllers/communication_entry_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/customers/presentation/controllers/customer_actions_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/customers/presentation/controllers/customer_actions_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/customers/presentation/controllers/media_operations_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/customers/presentation/controllers/media_operations_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/customers/presentation/screens/customer_detail_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/customers/presentation/screens/customer_detail_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/customers/presentation/screens/customers_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/customers/presentation/screens/customers_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/media/presentation/controllers/inspection_viewer_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/media/presentation/controllers/inspection_viewer_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/media/presentation/screens/inspection_viewer_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/media/presentation/screens/inspection_viewer_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/products/presentation/controllers/product_form_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/products/presentation/controllers/product_form_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/products/presentation/screens/products_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/products/presentation/screens/products_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/pdf_editing_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/pdf_editing_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/pdf_file_operations_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/pdf_file_operations_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/pdf_generation_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/pdf_generation_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/pdf_preview_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/pdf_preview_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/quote_detail_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/quote_detail_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/quote_form_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/quotes/presentation/controllers/quote_form_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/quotes/presentation/screens/pdf_preview_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/quotes/presentation/screens/pdf_preview_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/quotes/presentation/screens/simplified_quote_detail_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/quotes/presentation/screens/simplified_quote_detail_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/quotes/presentation/screens/simplified_quote_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/quotes/presentation/screens/simplified_quote_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/quotes/presentation/widgets/form/main_product_section.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/quotes/presentation/widgets/form/main_product_section.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/settings/presentation/controllers/company_info_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/settings/presentation/controllers/company_info_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/settings/presentation/controllers/data_management_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/settings/presentation/controllers/data_management_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/settings/presentation/controllers/discount_settings_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/settings/presentation/controllers/discount_settings_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/settings/presentation/controllers/product_configuration_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/settings/presentation/controllers/product_configuration_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/settings/presentation/screens/category_manager_dialog.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/settings/presentation/screens/category_manager_dialog.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/templates/presentation/controllers/template_field_mapping_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/templates/presentation/controllers/template_field_mapping_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/templates/presentation/controllers/template_upload_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/templates/presentation/controllers/template_upload_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/templates/presentation/controllers/templates_screen_controller.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/templates/presentation/controllers/templates_screen_controller.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/templates/presentation/screens/template_editor_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/templates/presentation/screens/template_editor_screen.dart" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

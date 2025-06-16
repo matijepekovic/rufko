@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../../../data/models/business/product.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
+import '../../../../core/services/products/product_form_service.dart';
+import '../../../../core/services/products/product_validation_service.dart';
+import '../../../../core/services/products/product_persistence_service.dart';
 
 /// Controller for managing product form state and operations
 /// Extracted from ProductFormDialog to separate business logic from UI
@@ -170,8 +173,8 @@ class ProductFormController extends ChangeNotifier {
 
   /// Initialize main differentiator levels from app settings
   void _initializeMainDifferentiatorLevels(AppStateProvider appState) {
-    final defaultLevels = appState.appSettings?.defaultQuoteLevelNames ?? 
-                         ['Builder', 'Standard', 'Premium'];
+    // Business logic extracted to service
+    final defaultLevels = ProductFormService.initializeMainDifferentiatorLevels(appState);
     
     for (int i = 0; i < defaultLevels.length; i++) {
       final levelKey = 'level_$i';
@@ -185,7 +188,8 @@ class ProductFormController extends ChangeNotifier {
 
   /// Initialize sub-leveled levels with defaults
   void _initializeSubLeveledLevels() {
-    const defaultSubLevels = ['Basic', 'Premium'];
+    // Business logic extracted to service
+    final defaultSubLevels = ProductFormService.initializeSubLeveledLevels();
     
     for (int i = 0; i < defaultSubLevels.length; i++) {
       final levelKey = 'level_$i';
@@ -249,26 +253,14 @@ class ProductFormController extends ChangeNotifier {
 
   /// Check if level can be removed
   bool canRemoveLevel() {
-    switch (_pricingType) {
-      case ProductPricingType.mainDifferentiator:
-        return _currentLevelKeys.length > 2;
-      case ProductPricingType.subLeveled:
-        return _currentLevelKeys.length > 2;
-      case ProductPricingType.simple:
-        return false;
-    }
+    // Business logic extracted to service
+    return ProductFormService.canRemoveLevel(_pricingType, _currentLevelKeys.length);
   }
 
   /// Check if level can be added
   bool canAddLevel() {
-    switch (_pricingType) {
-      case ProductPricingType.mainDifferentiator:
-        return _currentLevelKeys.length < 6;
-      case ProductPricingType.subLeveled:
-        return _currentLevelKeys.length < 4;
-      case ProductPricingType.simple:
-        return false;
-    }
+    // Business logic extracted to service
+    return ProductFormService.canAddLevel(_pricingType, _currentLevelKeys.length);
   }
 
   /// Validate form
@@ -287,13 +279,16 @@ class ProductFormController extends ChangeNotifier {
 
   /// Validate levels
   bool validateLevels() {
-    for (final levelKey in _currentLevelKeys) {
-      final nameController = _levelNameControllers[levelKey];
-      if (nameController?.text.trim().isEmpty ?? true) {
-        return false;
-      }
-    }
-    return true;
+    // Business logic extracted to service
+    final levelNames = Map<String, String>.fromEntries(
+      _levelNameControllers.entries.map((e) => MapEntry(e.key, e.value.text))
+    );
+    
+    return ProductValidationService.validateLevels(
+      pricingType: _pricingType,
+      levelNames: levelNames,
+      currentLevelKeys: _currentLevelKeys,
+    );
   }
 
   /// Save product
@@ -305,94 +300,67 @@ class ProductFormController extends ChangeNotifier {
     try {
       final appState = context.read<AppStateProvider>();
       
+      // Prepare data for service layer
+      final levelNames = Map<String, String>.fromEntries(
+        _levelNameControllers.entries.map((e) => MapEntry(e.key, e.value.text))
+      );
+      final levelDescriptions = Map<String, String>.fromEntries(
+        _levelDescriptionControllers.entries.map((e) => MapEntry(e.key, e.value.text))
+      );
+      final levelPrices = Map<String, String>.fromEntries(
+        _levelPriceControllers.entries.map((e) => MapEntry(e.key, e.value.text))
+      );
+      
+      final ProductPersistenceResult result;
+      
       if (isEditing) {
-        await _updateExistingProduct(appState);
+        // Business logic extracted to service
+        result = await ProductPersistenceService.updateExistingProduct(
+          existingProduct: initialProduct!,
+          appState: appState,
+          name: nameController.text,
+          description: descriptionController.text,
+          unitPrice: double.parse(basePriceController.text),
+          category: _selectedCategory,
+          unit: _selectedUnit,
+          isActive: _isActive,
+          isDiscountable: _isDiscountable,
+          pricingType: _pricingType,
+          levelNames: levelNames,
+          levelDescriptions: levelDescriptions,
+          levelPrices: levelPrices,
+          currentLevelKeys: _currentLevelKeys,
+        );
       } else {
-        await _createNewProduct(appState);
+        // Business logic extracted to service
+        result = await ProductPersistenceService.createNewProduct(
+          appState: appState,
+          name: nameController.text,
+          description: descriptionController.text,
+          unitPrice: double.parse(basePriceController.text),
+          category: _selectedCategory,
+          unit: _selectedUnit,
+          isActive: _isActive,
+          isDiscountable: _isDiscountable,
+          pricingType: _pricingType,
+          levelNames: levelNames,
+          levelDescriptions: levelDescriptions,
+          levelPrices: levelPrices,
+          currentLevelKeys: _currentLevelKeys,
+        );
       }
       
-      return true;
+      return result.isSuccess;
     } catch (e) {
       return false;
     }
   }
 
-  /// Update existing product
-  Future<void> _updateExistingProduct(AppStateProvider appState) async {
-    final product = initialProduct!;
-    
-    product.updateInfo(
-      name: nameController.text.trim(),
-      description: descriptionController.text.trim().isEmpty ? null : descriptionController.text.trim(),
-      unitPrice: double.parse(basePriceController.text),
-      category: _selectedCategory,
-      unit: _selectedUnit,
-      isActive: _isActive,
-      isDiscountable: _isDiscountable,
-      isMainDifferentiator: _pricingType == ProductPricingType.mainDifferentiator,
-      enableLevelPricing: _pricingType != ProductPricingType.simple,
-    );
-
-    // Update level prices
-    _updateProductLevels(product);
-    
-    await appState.updateProduct(product);
-  }
-
-  /// Create new product
-  Future<void> _createNewProduct(AppStateProvider appState) async {
-    final product = Product(
-      name: nameController.text.trim(),
-      description: descriptionController.text.trim().isEmpty ? null : descriptionController.text.trim(),
-      unitPrice: double.parse(basePriceController.text),
-      category: _selectedCategory,
-      unit: _selectedUnit,
-      isActive: _isActive,
-      isDiscountable: _isDiscountable,
-      isMainDifferentiator: _pricingType == ProductPricingType.mainDifferentiator,
-      enableLevelPricing: _pricingType != ProductPricingType.simple,
-      pricingType: _pricingType,
-    );
-
-    // Add level prices
-    _updateProductLevels(product);
-    
-    await appState.addProduct(product);
-  }
-
-  /// Update product levels
-  void _updateProductLevels(Product product) {
-    product.enhancedLevelPrices.clear();
-    
-    if (_pricingType != ProductPricingType.simple) {
-      for (final levelKey in _currentLevelKeys) {
-        final nameController = _levelNameControllers[levelKey];
-        final descriptionController = _levelDescriptionControllers[levelKey];
-        final priceController = _levelPriceControllers[levelKey];
-        
-        if (nameController?.text.trim().isNotEmpty == true) {
-          final levelPrice = ProductLevelPrice(
-            levelId: levelKey,
-            levelName: nameController!.text.trim(),
-            description: descriptionController?.text.trim().isEmpty == true ? null : descriptionController?.text.trim(),
-            price: priceController?.text.trim().isEmpty == true ? 0.0 : double.tryParse(priceController!.text) ?? 0.0,
-          );
-          product.enhancedLevelPrices.add(levelPrice);
-        }
-      }
-    }
-  }
 
   /// Get pricing type description
   String getPricingTypeDescription() {
-    switch (_pricingType) {
-      case ProductPricingType.mainDifferentiator:
-        return 'Sets quote column headers (Builder/Standard/Premium)';
-      case ProductPricingType.subLeveled:
-        return 'Independent customer choices (Basic vs Mesh Gutters)';
-      case ProductPricingType.simple:
-        return 'Same price everywhere';
-    }
+    // Business logic extracted to service
+    return ProductFormService.getPricingTypeDescription(_pricingType);
   }
 
   @override
