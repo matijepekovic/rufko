@@ -36,6 +36,8 @@ class ProductPersistenceService {
     required bool isActive,
     required bool isDiscountable,
     required ProductPricingType pricingType,
+    required bool hasInventory, // NEW
+    required String? photoPath, // NEW
     required Map<String, String> levelNames,
     required Map<String, String> levelDescriptions,
     required Map<String, String> levelPrices,
@@ -52,6 +54,8 @@ class ProductPersistenceService {
         isDiscountable: isDiscountable,
         isMainDifferentiator: pricingType == ProductPricingType.mainDifferentiator,
         enableLevelPricing: pricingType != ProductPricingType.simple,
+        hasInventory: hasInventory, // NEW
+        photoPath: photoPath, // NEW
       );
 
       // Update level prices
@@ -83,6 +87,8 @@ class ProductPersistenceService {
     required bool isActive,
     required bool isDiscountable,
     required ProductPricingType pricingType,
+    required bool hasInventory, // NEW
+    required String? photoPath, // NEW
     required Map<String, String> levelNames,
     required Map<String, String> levelDescriptions,
     required Map<String, String> levelPrices,
@@ -100,6 +106,8 @@ class ProductPersistenceService {
         isMainDifferentiator: pricingType == ProductPricingType.mainDifferentiator,
         enableLevelPricing: pricingType != ProductPricingType.simple,
         pricingType: pricingType,
+        hasInventory: hasInventory, // NEW
+        photoPath: photoPath, // NEW
       );
 
       // Add level prices

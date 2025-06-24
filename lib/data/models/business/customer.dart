@@ -1,55 +1,23 @@
 // lib/models/customer.dart
 
-import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part '../../generated/customer.g.dart'; // This will need to be regenerated
-
-@HiveType(typeId: 0)
-class Customer extends HiveObject {
-  @HiveField(0)
+class Customer {
   late String id;
-
-  @HiveField(1)
   late String name;
-
-  @HiveField(2)
   String? phone;
-
-  @HiveField(3)
   String? email;
-
-  // OLD @HiveField(4) String? address; // INTENTIONALLY REMOVED for a clean break
-
-  @HiveField(5) // Original index for notes
   String? notes;
-
-  @HiveField(6) // Original index for communicationHistory
   List<String> communicationHistory;
-
-  @HiveField(7) // Original index for createdAt
   DateTime createdAt;
-
-  @HiveField(8) // Original index for updatedAt
   DateTime updatedAt;
 
-  // --- NEW STRUCTURED ADDRESS FIELDS ---
-  // Start new fields with the next available indices after the original highest index (8)
-  @HiveField(9)
+  // Structured address fields
   String? streetAddress;
-
-  @HiveField(10)
   String? city;
-
-  @HiveField(11)
   String? stateAbbreviation; // e.g., "WA", "CA"
-
-  @HiveField(12)
   String? zipCode;
-
-  @HiveField(13) // Next available field number
   Map<String, dynamic> inspectionData;
-  // --- END NEW STRUCTURED ADDRESS FIELDS ---
 
   Customer({
     String? id,
@@ -91,7 +59,6 @@ class Customer extends HiveObject {
     final typePrefix = _getTypePrefix(type);
     communicationHistory.add('$timestamp: $typePrefix$entry');
     updatedAt = DateTime.now();
-    if (isInBox) { save(); }
   }
 
   void addStructuredCommunication({
@@ -106,7 +73,6 @@ class Customer extends HiveObject {
     final subjectPart = subject != null ? '[$subject] ' : '';
     communicationHistory.add('$timestamp: $typePrefix$urgentFlag$subjectPart$content');
     updatedAt = DateTime.now();
-    if (isInBox) { save(); }
   }
 
   void addFollowUp({
@@ -119,7 +85,6 @@ class Customer extends HiveObject {
     final priorityFlag = priority == 'high' ? '[HIGH PRIORITY] ' : '';
     communicationHistory.add('$timestamp: 📅 FOLLOW-UP ($followUpFormatted): $priorityFlag$content');
     updatedAt = DateTime.now();
-    if (isInBox) { save(); }
   }
 
   void addQuickNote(String templateType, {Map<String, String>? params}) {
@@ -251,7 +216,6 @@ class Customer extends HiveObject {
     if (zipCode != null) this.zipCode = zipCode.trim().isEmpty ? null : zipCode.trim();
 
     updatedAt = DateTime.now();
-    if (isInBox) { save(); }
   }
 
   Map<String, dynamic> toMap() {
@@ -299,7 +263,6 @@ class Customer extends HiveObject {
   void setInspectionValue(String fieldName, dynamic value) {
     inspectionData[fieldName] = value;
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   dynamic getInspectionValue(String fieldName) {

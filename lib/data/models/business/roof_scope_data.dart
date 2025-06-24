@@ -1,65 +1,28 @@
-// lib/models/roof_scope_data.dart
+// lib/models/roof_scope_data.dart (HIVE ANNOTATIONS REMOVED)
 
-import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part '../../generated/roof_scope_data.g.dart'; // Will be generated
-
-@HiveType(typeId: 2) // Unique Type ID
-class RoofScopeData extends HiveObject {
-  @HiveField(0)
+class RoofScopeData {
   late String id;
-
-  @HiveField(1)
   String customerId; // Link to a customer
-
-  @HiveField(2)
   String? sourceFileName; // e.g., name of the PDF it was extracted from
 
   // Roof measurements
-  @HiveField(3)
   double roofArea; // total square footage
-
-  @HiveField(4)
   double numberOfSquares; // roofing squares (1 sq = 100 sq ft)
-
-  @HiveField(5)
   double pitch; // roof pitch/slope (e.g., 6 for 6/12)
-
-  @HiveField(6)
   double valleyLength; // linear feet
-
-  @HiveField(7)
   double hipLength; // linear feet
-
-  @HiveField(8)
   double ridgeLength; // linear feet
-
-  @HiveField(9)
   double perimeterLength; // linear feet (total edge)
 
-  @HiveField(10)
   double eaveLength; // linear feet
-
-  @HiveField(11)
   double gutterLength; // linear feet
-
-  @HiveField(12)
   int chimneyCount;
-
-  @HiveField(13)
   int skylightCount;
-
-  @HiveField(14)
   double flashingLength; // linear feet (for step, counter, etc.)
-
-  @HiveField(15)
   Map<String, dynamic> additionalMeasurements; // For any other custom fields
-
-  @HiveField(16)
   DateTime createdAt;
-
-  @HiveField(17)
   DateTime updatedAt;
 
   RoofScopeData({
@@ -106,13 +69,11 @@ class RoofScopeData extends HiveObject {
     if (pitch != null) this.pitch = pitch;
     // ... update other fields ...
     updatedAt = DateTime.now();
-    if (isInBox) { save(); }
   }
 
   void addMeasurement(String key, dynamic value) {
     additionalMeasurements[key] = value;
     updatedAt = DateTime.now();
-    if (isInBox) { save(); }
   }
 
   Map<String, dynamic> toMap() {

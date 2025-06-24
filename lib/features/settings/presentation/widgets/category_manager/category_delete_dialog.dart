@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/buttons/rufko_dialog_actions.dart';
 
 /// Dialog for confirming category deletion
 class CategoryDeleteDialog extends StatelessWidget {
@@ -26,20 +27,14 @@ class CategoryDeleteDialog extends StatelessWidget {
         'Are you sure you want to delete "$categoryName"?\n\nProducts in this category will need to be reassigned.',
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () {
+        RufkoDialogActions(
+          onCancel: () => Navigator.pop(context),
+          onConfirm: () {
             Navigator.pop(context);
             onConfirm();
           },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red.shade600,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Delete'),
+          confirmText: 'Delete',
+          isDangerousAction: true,
         ),
       ],
     );

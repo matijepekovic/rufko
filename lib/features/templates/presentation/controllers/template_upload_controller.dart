@@ -44,10 +44,10 @@ class TemplateUploadController extends ChangeNotifier {
       // Pick PDF file first
       final fileResult = await _uploadService.pickPdfFile();
       if (!fileResult.isSuccess) {
-        if (fileResult.errorMessage != null) {
+        if (_context.mounted) {
           ScaffoldMessenger.of(_context).showSnackBar(
             SnackBar(
-              content: Text(fileResult.errorMessage!),
+              content: Text(fileResult.errorMessage),
               backgroundColor: Colors.red,
             ),
           );
@@ -62,6 +62,7 @@ class TemplateUploadController extends ChangeNotifier {
       }
 
       // Create template
+      if (!_context.mounted) return null;
       final appState = _context.read<AppStateProvider>();
       final createResult = await _uploadService.createTemplateFromFile(
         filePath: fileResult.filePath!,
@@ -69,6 +70,8 @@ class TemplateUploadController extends ChangeNotifier {
         appState: appState,
       );
 
+      if (!_context.mounted) return null;
+      
       if (createResult.isSuccess) {
         ScaffoldMessenger.of(_context).showSnackBar(
           SnackBar(
@@ -80,19 +83,21 @@ class TemplateUploadController extends ChangeNotifier {
       } else {
         ScaffoldMessenger.of(_context).showSnackBar(
           SnackBar(
-            content: Text(createResult.errorMessage!),
+            content: Text(createResult.errorMessage),
             backgroundColor: Colors.red,
           ),
         );
         return null;
       }
     } catch (e) {
-      ScaffoldMessenger.of(_context).showSnackBar(
-        SnackBar(
-          content: Text('Error uploading template: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (_context.mounted) {
+        ScaffoldMessenger.of(_context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading template: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return null;
     }
   }
@@ -116,7 +121,7 @@ class TemplateUploadController extends ChangeNotifier {
   @Deprecated('Use TemplateUploadUIController state management in new architecture')
   void setUploading(bool isUploading, [String message = '']) {
     // Legacy method - state management now handled by UI controller
-    print('setUploading() called - state management handled by TemplateUploadUIController in new architecture');
+    debugPrint('setUploading() called - state management handled by TemplateUploadUIController in new architecture');
   }
 
   /// Clean up resources

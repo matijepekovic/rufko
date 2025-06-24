@@ -29,17 +29,17 @@ class DataManagementController {
   /// Legacy methods for backward compatibility - now delegate to handler
   Future<void> exportData() async {
     // Legacy implementation - in new architecture this would be handled by DataManagementHandler
-    print('exportData() called - use DataManagementHandler.exportData() in new architecture');
+    debugPrint('exportData() called - use DataManagementHandler.exportData() in new architecture');
   }
 
   Future<void> importData() async {
     // Legacy implementation - in new architecture this would be handled by DataManagementHandler
-    print('importData() called - use DataManagementHandler.importData() in new architecture');
+    debugPrint('importData() called - use DataManagementHandler.importData() in new architecture');
   }
 
   Future<void> clearAllData() async {
     // Legacy implementation - in new architecture this would be handled by DataManagementHandler
-    print('clearAllData() called - use DataManagementHandler.clearAllData() in new architecture');
+    debugPrint('clearAllData() called - use DataManagementHandler.clearAllData() in new architecture');
   }
 
   /// Clean up resources

@@ -7,12 +7,13 @@ import '../../../../../data/models/business/quote_extras.dart';
 import '../../services/quote_calculation_service.dart';
 import 'permit_items_section.dart';
 import 'custom_line_items_section.dart';
+import '../../../../../core/utils/helpers/common_utils.dart';
 
 /// Reusable quote level card widget for multi-level quotes
 /// Extracted from QuoteTotalsSection for better maintainability
 class QuoteLevelCard extends StatelessWidget {
   final QuoteLevel level;
-  final Product mainProduct;
+  final Product? mainProduct;
   final double mainQuantity;
   final double taxRate;
   final List<PermitItem> permits;
@@ -22,7 +23,7 @@ class QuoteLevelCard extends StatelessWidget {
   const QuoteLevelCard({
     super.key,
     required this.level,
-    required this.mainProduct,
+    this.mainProduct,
     required this.mainQuantity,
     required this.taxRate,
     required this.permits,
@@ -91,12 +92,16 @@ class QuoteLevelCard extends StatelessWidget {
 
   /// Build main product line
   Widget _buildMainProduct() {
+    if (mainProduct == null) {
+      return const SizedBox.shrink();
+    }
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Expanded(
           child: Text(
-            '${mainProduct.name} (${mainQuantity.toStringAsFixed(1)} ${mainProduct.unit})',
+            '${mainProduct!.name} (${formatQuantity(mainQuantity)} ${mainProduct!.unit})',
             style: const TextStyle(fontWeight: FontWeight.w500),
           ),
         ),
@@ -117,7 +122,7 @@ class QuoteLevelCard extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              '${product.productName} (${product.quantity.toStringAsFixed(1)} ${product.unit})',
+              '${product.productName} (${formatQuantity(product.quantity)} ${product.unit})',
             ),
           ),
           Text(currencyFormat.format(product.totalPrice)),

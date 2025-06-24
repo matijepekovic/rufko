@@ -69,15 +69,15 @@ class PDFViewerWidget extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           border: Border.all(
-            color: Colors.blue.withOpacity(0.5),
+            color: Colors.blue.withValues(alpha: 0.5),
             width: 2,
           ),
-          color: Colors.blue.withOpacity(0.1),
+          color: Colors.blue.withValues(alpha: 0.1),
         ),
         child: Center(
           child: Icon(
             Icons.edit,
-            color: Colors.blue.withOpacity(0.7),
+            color: Colors.blue.withValues(alpha: 0.7),
             size: 16,
           ),
         ),

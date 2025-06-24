@@ -12,6 +12,9 @@ import '../controllers/product_dialog_manager.dart';
 import '../controllers/product_filter_controller.dart';
 import '../controllers/product_category_manager.dart';
 import '../../../../core/services/product/product_list_service.dart';
+import '../../../../shared/widgets/buttons/rufko_buttons.dart';
+import '../../../../core/widgets/search_chip_ui_components.dart';
+import '../../../../app/theme/rufko_theme.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -21,14 +24,14 @@ class ProductsScreen extends StatefulWidget {
 }
 
 class _ProductsScreenState extends State<ProductsScreen>
-    with TickerProviderStateMixin, SearchMixin, SortMenuMixin, EmptyStateMixin {
-  late TabController _tabController;
-  // SearchMixin provides searchController, searchQuery and searchVisible
+    with SearchMixin, SortMenuMixin, EmptyStateMixin {
   late ProductDialogManager _dialogManager;
   String _sortBy = 'name';
   bool _sortAscending = true;
   List<String> _categoryTabs = ['All'];
   late ProductCategoryManager _categoryManager;
+  String _selectedCategory = 'All';
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -36,144 +39,142 @@ class _ProductsScreenState extends State<ProductsScreen>
     _dialogManager = ProductDialogManager(context);
     _categoryManager = ProductCategoryManager(context.read<AppStateProvider>());
     _categoryTabs = _categoryManager.getCategoryTabs();
-    _tabController = TabController(length: _categoryTabs.length, vsync: this);
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _searchController.dispose();
     disposeSearch();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        title: const Text('Products'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(searchVisible ? Icons.search_off : Icons.search),
-            onPressed: toggleSearch,
+    return Column(
+      children: [
+        // ALWAYS VISIBLE SEARCH BAR
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          decoration: const BoxDecoration(
+            color: Colors.white,
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.sort),
-            onSelected: (value) {
-              setState(() {
-                if (value == _sortBy) {
-                  _sortAscending = !_sortAscending;
-                } else {
-                  _sortBy = value;
-                  _sortAscending = true;
-                }
-              });
-            },
-            itemBuilder: (context) => [
-              buildSortMenuItem(
-                label: 'Name',
-                icon: Icons.sort_by_alpha,
-                value: 'name',
-                currentSortBy: _sortBy,
-                sortAscending: _sortAscending,
-              ),
-              buildSortMenuItem(
-                label: 'Category',
-                icon: Icons.category,
-                value: 'category',
-                currentSortBy: _sortBy,
-                sortAscending: _sortAscending,
-              ),
-              buildSortMenuItem(
-                label: 'Price',
-                icon: Icons.attach_money,
-                value: 'price',
-                currentSortBy: _sortBy,
-                sortAscending: _sortAscending,
-              ),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ProductListService.refreshProductData(context.read<AppStateProvider>()),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(searchVisible ? 120 : 60),
-          child: Column(
+          child: Row(
             children: [
-              if (searchVisible) _buildSearchBar(),
-              Container(
-                color: Colors.white,
-                child: TabBar(
-                  controller: _tabController,
-                  labelColor: Theme.of(context).primaryColor,
-                  unselectedLabelColor: Colors.grey[600],
-                  indicatorColor: Theme.of(context).primaryColor,
-                  isScrollable: true,
-                  tabs: _categoryTabs
-                      .map((category) => Tab(text: category))
-                      .toList(),
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search products...',
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: RufkoTheme.strokeColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: RufkoTheme.strokeColor),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      searchQuery = value;
+                    });
+                  },
                 ),
+              ),
+              const SizedBox(width: 12),
+              // Sort PopupMenu
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.sort),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.grey[100],
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onSelected: (value) {
+                  setState(() {
+                    if (value == _sortBy) {
+                      _sortAscending = !_sortAscending;
+                    } else {
+                      _sortBy = value;
+                      _sortAscending = true;
+                    }
+                  });
+                },
+                itemBuilder: (context) => [
+                  buildSortMenuItem(
+                    label: 'Name',
+                    icon: Icons.sort_by_alpha,
+                    value: 'name',
+                    currentSortBy: _sortBy,
+                    sortAscending: _sortAscending,
+                  ),
+                  buildSortMenuItem(
+                    label: 'Category',
+                    icon: Icons.category,
+                    value: 'category',
+                    currentSortBy: _sortBy,
+                    sortAscending: _sortAscending,
+                  ),
+                  buildSortMenuItem(
+                    label: 'Price',
+                    icon: Icons.attach_money,
+                    value: 'price',
+                    currentSortBy: _sortBy,
+                    sortAscending: _sortAscending,
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.grey[100],
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () => ProductListService.refreshProductData(context.read<AppStateProvider>()),
               ),
             ],
           ),
         ),
-      ),
-      body: Consumer<AppStateProvider>(
-        builder: (context, appState, child) {
-          if (appState.isLoading && appState.products.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return TabBarView(
-            controller: _tabController,
-            children: _categoryTabs
-                .map((category) => _buildProductsList(appState, category))
-                .toList(),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _dialogManager.showAddProductDialog,
-        child: const Icon(Icons.add),
-      ),
+        
+        // CHIP FILTERS ROW
+        Consumer<AppStateProvider>(
+          builder: (context, appState, child) {
+            // Update category tabs if products changed
+            final newCategoryTabs = _categoryManager.getCategoryTabs();
+            if (newCategoryTabs.length != _categoryTabs.length) {
+              _categoryTabs = newCategoryTabs;
+              if (!_categoryTabs.contains(_selectedCategory)) {
+                _selectedCategory = 'All';
+              }
+            }
+            return ChipFilterRow(
+              filterOptions: _categoryTabs,
+              selectedFilter: _selectedCategory,
+              onFilterSelected: (category) {
+                setState(() {
+                  _selectedCategory = category;
+                });
+              },
+            );
+          },
+        ),
+        
+        // PRODUCTS LIST
+        Expanded(
+          child: Consumer<AppStateProvider>(
+            builder: (context, appState, child) {
+              if (appState.isLoading && appState.products.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return _buildProductsList(appState, _selectedCategory);
+            },
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildSearchBar() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!),
-        ),
-        child: TextField(
-          controller: searchController,
-          decoration: InputDecoration(
-            hintText: 'Search products by name, category, SKU...',
-            hintStyle: TextStyle(color: Colors.grey[500]),
-            prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-            suffixIcon: searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: Icon(Icons.clear, color: Colors.grey[600]),
-                    onPressed: clearSearch,
-                  )
-                : null,
-            border: InputBorder.none,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-          onChanged: (value) => setState(() => searchQuery = value),
-        ),
-      ),
-    );
-  }
 
   Widget _buildProductsList(AppStateProvider appState, String categoryFilter) {
     final controller = ProductFilterController(appState);
@@ -233,16 +234,16 @@ class _ProductsScreenState extends State<ProductsScreen>
           buildEmptyState(icon: icon, title: title, subtitle: subtitle),
           const SizedBox(height: 32),
           if (searchQuery.isEmpty)
-            ElevatedButton.icon(
+            RufkoPrimaryButton(
               onPressed: _dialogManager.showAddProductDialog,
-              icon: const Icon(Icons.add),
-              label: const Text('Add First Product'),
+              icon: Icons.add,
+              child: const Text('Add First Product'),
             )
           else
-            OutlinedButton.icon(
+            RufkoSecondaryButton(
               onPressed: clearSearch,
-              icon: const Icon(Icons.clear),
-              label: const Text('Clear Search'),
+              icon: Icons.clear,
+              child: const Text('Clear Search'),
             ),
         ],
       ),

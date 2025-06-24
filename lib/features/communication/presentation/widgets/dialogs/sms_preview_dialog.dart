@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/communication_dialog_controller.dart';
+import '../../../../../shared/widgets/buttons/rufko_buttons.dart';
 
 class SmsPreviewDialog extends StatelessWidget {
   final CommunicationDialogController controller;
@@ -186,31 +187,27 @@ class SmsPreviewDialog extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  OutlinedButton(
+                  RufkoSecondaryButton(
                     onPressed: () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 12),
-                  OutlinedButton.icon(
+                  RufkoSecondaryButton(
                     onPressed: () {
                       Navigator.pop(context);
                       onEdit?.call();
                     },
-                    icon: const Icon(Icons.edit),
-                    label: const Text('Edit'),
+                    icon: Icons.edit,
+                    child: const Text('Edit'),
                   ),
                   const SizedBox(width: 12),
-                  ElevatedButton.icon(
+                  RufkoPrimaryButton(
                     onPressed: () {
                       Navigator.pop(context);
                       controller.sendSms();
                     },
-                    icon: const Icon(Icons.send),
-                    label: const Text('Send As-Is'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      foregroundColor: Colors.white,
-                    ),
+                    icon: Icons.send,
+                    child: const Text('Send As-Is'),
                   ),
                 ],
               ),

@@ -4,8 +4,8 @@ import '../../data/providers/state/app_state_provider.dart';
 import '../../app/theme/rufko_theme.dart';
 
 class UIStateController {
-  UIStateController({required TickerProvider vsync, required this.onUpdate})
-      : tabController = TabController(length: 4, vsync: vsync);
+  UIStateController({required TickerProvider vsync, required this.onUpdate, int initialIndex = 0})
+      : tabController = TabController(length: 5, vsync: vsync, initialIndex: initialIndex);
 
   final TabController tabController;
   final VoidCallback onUpdate;
@@ -64,13 +64,21 @@ class UIStateController {
         );
       case 1:
         return FloatingActionButton.extended(
+          heroTag: 'communications_fab',
+          onPressed: navigateToCreateQuoteScreen,
+          icon: const Icon(Icons.message),
+          label: const Text('New Message'),
+          backgroundColor: Colors.purple,
+        );
+      case 2:
+        return FloatingActionButton.extended(
           heroTag: 'quotes_fab',
           onPressed: navigateToCreateQuoteScreen,
           icon: const Icon(Icons.add),
           label: const Text('New Quote'),
           backgroundColor: Colors.blue,
         );
-      case 2:
+      case 3:
         return FloatingActionButton.extended(
           heroTag: 'inspection_fab',
           onPressed: navigateToCreateQuoteScreen,
@@ -78,7 +86,7 @@ class UIStateController {
           label: const Text('New Quote'),
           backgroundColor: Colors.green,
         );
-      case 3:
+      case 4:
         return FloatingActionButton.extended(
           heroTag: 'media_fab',
           onPressed: showMediaOptions,
@@ -129,80 +137,11 @@ class UIStateController {
         ),
       ),
       actions: [
-        if (tabController.index == 3 && !isSelectionMode)
-          IconButton(
-            icon: const Icon(Icons.select_all),
-            onPressed: enterSelectionMode,
-            tooltip: 'Select files',
-            color: Colors.white,
-          ),
         if (!isSelectionMode)
           IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: editCustomer,
-            color: Colors.white,
-          ),
-        if (!isSelectionMode)
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onSelected: (value) {
-              switch (value) {
-                case 'new_quote':
-                  navigateToCreateQuoteScreen();
-                  break;
-                case 'edit_customer':
-                  editCustomer();
-                  break;
-                case 'delete_customer':
-                  deleteCustomer();
-                  break;
-                case 'quick_actions':
-                  showQuickActions();
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'new_quote',
-                child: Row(
-                  children: [
-                    Icon(Icons.add_box, size: 18),
-                    SizedBox(width: 8),
-                    Text('New Quote'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'edit_customer',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, size: 18),
-                    SizedBox(width: 8),
-                    Text('Edit Customer'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete_customer',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete, size: 18, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Delete Customer', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'quick_actions',
-                child: Row(
-                  children: [
-                    Icon(Icons.more_horiz, size: 18),
-                    SizedBox(width: 8),
-                    Text('Quick Actions'),
-                  ],
-                ),
-              ),
-            ],
+            icon: const Icon(Icons.more_horiz, color: Colors.white),
+            onPressed: showQuickActions,
+            tooltip: 'Quick Actions',
           ),
       ],
       bottom: TabBar(
@@ -210,18 +149,17 @@ class UIStateController {
         labelColor: Colors.white,
         unselectedLabelColor: Colors.white70,
         indicatorColor: Colors.white,
+        isScrollable: true,
         tabs: [
           Tab(
-            icon: Icon(isSelectionMode && tabController.index == 3
-                ? Icons.checklist
-                : Icons.info_outline),
-            text: isSelectionMode && tabController.index == 3
+            text: isSelectionMode && tabController.index == 4
                 ? '${selectedMediaIds.length} selected'
                 : 'Info',
           ),
-          const Tab(icon: Icon(Icons.description), text: 'Quotes'),
-          const Tab(icon: Icon(Icons.assignment), text: 'Inspection'),
-          const Tab(icon: Icon(Icons.photo_library), text: 'Media'),
+          const Tab(text: 'Communications'),
+          const Tab(text: 'Quotes'),
+          const Tab(text: 'Inspection'),
+          const Tab(text: 'Media'),
         ],
       ),
     );

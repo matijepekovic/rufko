@@ -17,7 +17,7 @@ class InspectionTabController extends ChangeNotifier {
   // State variables
   bool _isLoading = false;
   String? _error;
-  Map<String, dynamic> _fieldValues = {};
+  final Map<String, dynamic> _fieldValues = {};
 
   InspectionTabController({
     required this.context,
@@ -246,6 +246,7 @@ class InspectionTabController extends ChangeNotifier {
           throw Exception('File path is null');
         }
 
+        if (!context.mounted) return;
         final appState = context.read<AppStateProvider>();
         final inspectionDoc = InspectionDocument(
           customerId: customer.id,

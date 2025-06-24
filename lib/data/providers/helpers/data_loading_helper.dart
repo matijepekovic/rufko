@@ -132,7 +132,7 @@ class DataLoadingHelper {
   static Future<List<TemplateCategory>> loadTemplateCategories(
       DatabaseService db) async {
     try {
-      final categories = db.getRawCategoriesBoxValues();
+      final categories = await db.getRawCategoriesBoxValues();
       if (kDebugMode) {
         debugPrint("📚 Loaded ${categories.length} template categories");
       }

@@ -1,39 +1,19 @@
-// lib/models/simplified_quote.dart - FIXED ID INITIALIZATION
+// lib/models/simplified_quote.dart - MIGRATED TO SQLITE
 
-import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 import 'quote.dart'; // For QuoteItem
 import 'quote_extras.dart';
-part '../../generated/simplified_quote.g.dart';
 
 // NEW: Discount/Voucher model
-@HiveType(typeId: 8) // New type ID for discounts
-class QuoteDiscount extends HiveObject {
-  @HiveField(0)
-  late String id; // FIXED: Added 'late' keyword
-
-  @HiveField(1)
+class QuoteDiscount {
+  late String id;
   String type; // 'percentage', 'fixed_amount', 'voucher'
-
-  @HiveField(2)
   double value; // Percentage (0-100) or fixed amount
-
-  @HiveField(3)
   String? code; // Voucher code if applicable
-
-  @HiveField(4)
   String? description; // Description of the discount
-
-  @HiveField(5)
   bool applyToAddons; // Whether discount applies to add-ons
-
-  @HiveField(6)
   List<String> excludedProductIds; // Products excluded from this discount
-
-  @HiveField(7)
   DateTime? expiryDate; // When this discount expires
-
-  @HiveField(8)
   bool isActive;
 
   QuoteDiscount({
@@ -104,27 +84,13 @@ class QuoteDiscount extends HiveObject {
 
 
 
-@HiveType(typeId: 9) // Keep existing type ID
-class QuoteLevel extends HiveObject {
-  @HiveField(0)
+class QuoteLevel {
   String id;
-
-  @HiveField(1)
   String name;
-
-  @HiveField(2)
   int levelNumber;
-
-  @HiveField(3)
   double basePrice;
-
-  @HiveField(4)
   List<QuoteItem> includedItems;
-
-  @HiveField(5)
   double subtotal;
-
-  @HiveField(6)
   double baseQuantity;
 
   QuoteLevel({
@@ -200,72 +166,31 @@ class QuoteLevel extends HiveObject {
   }
 }
 
-@HiveType(typeId: 10) // Keep existing type ID
-class SimplifiedMultiLevelQuote extends HiveObject {
-  @HiveField(0)
+class SimplifiedMultiLevelQuote {
   late String id;
-
-  @HiveField(1)
   String customerId;
-
-  @HiveField(2)
   String? roofScopeDataId;
-
-  @HiveField(3)
   late String quoteNumber;
-
-  @HiveField(4)
   List<QuoteLevel> levels;
-
-  @HiveField(5)
   List<QuoteItem> addons;
-
-  @HiveField(6)
   double taxRate;
-
-  @HiveField(7)
   double discount; // DEPRECATED - use discounts list instead
-
-  @HiveField(8)
   String status;
-
-  @HiveField(9)
   String? notes;
-
-  @HiveField(10)
   late DateTime validUntil;
-
-  @HiveField(11)
   DateTime createdAt;
-
-  @HiveField(12)
   DateTime updatedAt;
-
-  @HiveField(13)
   String? baseProductId;
-
-  @HiveField(14)
   String? baseProductName;
-
-  @HiveField(15)
   String? baseProductUnit;
-
   // NEW FIELDS for enhanced discount system
-  @HiveField(16)
   List<QuoteDiscount> discounts; // Multiple discounts/vouchers
-
-  @HiveField(17)
   List<String> nonDiscountableProductIds; // Products excluded from discounts
-
   // NEW: Store generated PDF path
-  @HiveField(18)
   String? pdfPath; // Path to the last generated PDF
-
-  @HiveField(19)
   String? pdfTemplateId; // ID of template used for last PDF generation
-
-  @HiveField(20)
   DateTime? pdfGeneratedAt; // When the PDF was last generated
+  String? selectedLevelId; // Currently selected level ID
 
   List<PermitItem> permits = [];
   bool noPermitsRequired = false;
@@ -296,6 +221,7 @@ class SimplifiedMultiLevelQuote extends HiveObject {
     List<PermitItem>? permits, // NEW
     this.noPermitsRequired = false, // NEW
     List<CustomLineItem>? customLineItems, // NEW
+    this.selectedLevelId, // NEW
   })  : levels = levels ?? [],
         addons = addons ?? [],
         discounts = discounts ?? [], // NEW
@@ -309,18 +235,24 @@ class SimplifiedMultiLevelQuote extends HiveObject {
     this.validUntil = validUntil ?? DateTime.now().add(const Duration(days: 30));
   }
 
+  // Get the effective selected level ID (stored selection or first level as fallback)
+  String? get effectiveSelectedLevelId {
+    if (selectedLevelId != null && levels.any((level) => level.id == selectedLevelId)) {
+      return selectedLevelId;
+    }
+    return levels.isNotEmpty ? levels.first.id : null;
+  }
+
   // Add a discount/voucher
   void addDiscount(QuoteDiscount discount) {
     discounts.add(discount);
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   // Remove a discount
   void removeDiscount(String discountId) {
     discounts.removeWhere((d) => d.id == discountId);
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   // Get total discount amount for a level
@@ -336,7 +268,6 @@ class SimplifiedMultiLevelQuote extends HiveObject {
       level.calculateSubtotal();
     }
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   // UPDATED: Get display total with new discount system

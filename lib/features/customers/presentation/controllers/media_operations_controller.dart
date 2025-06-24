@@ -13,6 +13,7 @@ import '../widgets/media_details_dialog.dart';
 import '../../../quotes/presentation/screens/pdf_preview_screen.dart';
 import '../widgets/full_screen_image_viewer.dart';
 import '../../../../core/services/media/media_processing_service.dart';
+import '../widgets/media/camera_capture_screen.dart';
 import '../../../../core/services/media/media_file_service.dart';
 
 /// Controller for managing media operations and state
@@ -47,59 +48,23 @@ class MediaOperationsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Take multiple photos sequentially
+  /// Take multiple photos with embedded camera preview
   Future<List<File>> takeMultiplePhotos() async {
-    final List<File> photos = [];
-
-    while (true) {
-      try {
-        final XFile? image = await imagePicker.pickImage(
-          source: ImageSource.camera,
-          maxWidth: 1920,
-          maxHeight: 1080,
-          imageQuality: 85,
-        );
-
-        if (!context.mounted) break;
-
-        if (image != null) {
-          photos.add(File(image.path));
-
-          final bool takeAnother = await _showTakeAnotherDialog(photos.length) ?? false;
-          if (!takeAnother) break;
-        } else {
-          break;
-        }
-      } catch (e) {
-        _error = 'Error taking photo: $e';
-        notifyListeners();
-        break;
-      }
-    }
-
-    debugPrint('📸 Took ${photos.length} photos');
-    return photos;
-  }
-
-  /// Show dialog asking if user wants to take another photo
-  Future<bool?> _showTakeAnotherDialog(int photoCount) async {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Photo $photoCount taken'),
-        content: const Text('Take another photo?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Done'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Take Another'),
-          ),
-        ],
+    // Navigate directly to camera capture screen
+    final List<File>? photos = await Navigator.push<List<File>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CameraCaptureScreen(),
+        fullscreenDialog: true,
       ),
     );
+
+    if (photos != null && photos.isNotEmpty) {
+      debugPrint('📸 Captured ${photos.length} photos');
+      return photos;
+    }
+
+    return [];
   }
 
   /// Pick multiple images from gallery
@@ -223,6 +188,7 @@ class MediaOperationsController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      if (!context.mounted) return;
       // Business logic extracted to service
       final result = await MediaFileService.processBulkMedia(
         files: files,
@@ -338,7 +304,7 @@ class MediaOperationsController extends ChangeNotifier {
                   border: OutlineInputBorder(),
                   labelText: 'Category',
                 ),
-                items: MediaProcessingService.getCategories().map((category) {
+                items: MediaProcessingService.getValidCategoriesForFileType(defaultType).map((category) {
                   return DropdownMenuItem(
                     value: category,
                     child: Text(MediaProcessingService.getFormattedCategoryName(category)),
@@ -429,6 +395,7 @@ class MediaOperationsController extends ChangeNotifier {
             appState: context.read<AppStateProvider>(),
           );
           
+          if (!context.mounted) return;
           final messenger = ScaffoldMessenger.of(context);
           messenger.showSnackBar(
             SnackBar(
@@ -466,7 +433,7 @@ class MediaOperationsController extends ChangeNotifier {
       ),
     );
 
-    if (confirmed == true) {
+    if (confirmed == true && context.mounted) {
       // Business logic extracted to service
       final result = await MediaFileService.deleteMedia(
         mediaItem: mediaItem,

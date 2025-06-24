@@ -102,4 +102,58 @@ class MediaProcessingService {
   static String getDefaultCategory(String fileType) {
     return fileType == 'image' ? 'before_photos' : 'general';
   }
+  
+  /// Get photo-specific categories only
+  static List<String> getPhotoCategories() {
+    return [
+      'before_photos',
+      'after_photos',
+      'inspection_photos',
+      'progress_photos',
+      'damage_report',
+      'other_photos',
+    ];
+  }
+  
+  /// Get document-specific categories only
+  static List<String> getDocumentCategories() {
+    return [
+      'roofscope_reports',
+      'contracts',
+      'invoices',
+      'permits',
+      'insurance_docs',
+      'general',
+    ];
+  }
+  
+  /// Check if category is for photos
+  static bool isPhotoCategory(String category) {
+    return getPhotoCategories().contains(category);
+  }
+  
+  /// Check if category is for documents
+  static bool isDocumentCategory(String category) {
+    return getDocumentCategories().contains(category);
+  }
+  
+  /// Get categories filtered by type
+  static List<String> getCategoriesByType({bool? photosOnly, bool? documentsOnly}) {
+    if (photosOnly == true) {
+      return getPhotoCategories();
+    } else if (documentsOnly == true) {
+      return getDocumentCategories();
+    } else {
+      return getCategories();
+    }
+  }
+  
+  /// Get valid categories for specific file type
+  static List<String> getValidCategoriesForFileType(String fileType) {
+    if (fileType == 'image') {
+      return getPhotoCategories();
+    } else {
+      return getDocumentCategories();
+    }
+  }
 }

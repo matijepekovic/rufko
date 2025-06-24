@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/utils/settings_constants.dart';
+import '../buttons/rufko_buttons.dart';
 
 /// Generic dialog to present information about premium features.
 class PremiumFeatureDialog extends StatelessWidget {
@@ -35,7 +36,7 @@ class PremiumFeatureDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        TextButton(
+        RufkoTextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Close'),
         ),

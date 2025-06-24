@@ -4,6 +4,7 @@ import '../../../../data/models/business/customer.dart';
 import '../controllers/communication_history_controller.dart';
 import '../utils/communication_utils.dart';
 import 'dialogs/edit_response_dialog.dart';
+import 'dialogs/edit_outbound_dialog.dart';
 
 /// Chat bubble widget for displaying individual communication messages
 /// Extracted from InfoTab to create reusable component
@@ -111,7 +112,7 @@ class ChatBubbleWidget extends StatelessWidget {
             ),
           ),
         ),
-        if (_isCustomerResponse() && !isOutgoing) ...[
+        if ((_isCustomerResponse() && !isOutgoing) || (_isEditableOutbound() && isOutgoing)) ...[
           const SizedBox(width: 8),
           _buildEditButton(context),
         ],
@@ -125,13 +126,15 @@ class ChatBubbleWidget extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
+          color: isOutgoing 
+              ? Colors.white.withValues(alpha: 0.3)
+              : Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
           Icons.edit,
           size: 14,
-          color: Colors.grey[700],
+          color: isOutgoing ? Colors.white : Colors.grey[700],
         ),
       ),
     );
@@ -150,16 +153,37 @@ class ChatBubbleWidget extends StatelessWidget {
   bool _isCustomerResponse() {
     return controller.isCustomerResponse(message);
   }
+  
+  bool _isEditableOutbound() {
+    // Check if this is an outbound SMS or call that can be edited
+    final lowerMessage = message.toLowerCase();
+    return lowerMessage.contains('quick sms sent:') || 
+           lowerMessage.contains('outbound call to');
+  }
 
   void _showEditResponseDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => EditResponseDialog(
-        originalMessage: message,
-        timestamp: timestamp,
-        customer: customer,
-        controller: controller,
-      ),
-    );
+    if (isOutgoing) {
+      // For outbound messages, show EditOutboundDialog
+      showDialog(
+        context: context,
+        builder: (context) => EditOutboundDialog(
+          originalMessage: message,
+          timestamp: timestamp,
+          customer: customer,
+          controller: controller,
+        ),
+      );
+    } else {
+      // For customer responses, show EditResponseDialog
+      showDialog(
+        context: context,
+        builder: (context) => EditResponseDialog(
+          originalMessage: message,
+          timestamp: timestamp,
+          customer: customer,
+          controller: controller,
+        ),
+      );
+    }
   }
 }

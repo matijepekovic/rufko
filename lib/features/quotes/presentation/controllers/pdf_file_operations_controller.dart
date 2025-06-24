@@ -38,7 +38,7 @@ class PdfFileOperationsController {
     SimplifiedMultiLevelQuote? quote,
     String? templateId,
   }) async {
-    print('savePdf() called - use PdfFileOperationsHandler.savePdf() in new architecture');
+    debugPrint('savePdf() called - use PdfFileOperationsHandler.savePdf() in new architecture');
   }
 
   @Deprecated('Use PdfFileOperationsHandler.sharePdf() in new architecture')
@@ -54,7 +54,7 @@ class PdfFileOperationsController {
       Customer? customer,
     })? shareFile,
   }) async {
-    print('sharePdf() called - use PdfFileOperationsHandler.sharePdf() in new architecture');
+    debugPrint('sharePdf() called - use PdfFileOperationsHandler.sharePdf() in new architecture');
   }
 
   /// Clean up resources

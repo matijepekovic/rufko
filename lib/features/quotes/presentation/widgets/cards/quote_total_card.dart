@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../controllers/quote_totals_controller.dart';
+import '../../../../../app/theme/rufko_theme.dart';
 
 class QuoteTotalCard extends StatelessWidget {
   final QuoteTotalsController controller;
@@ -24,59 +25,99 @@ class QuoteTotalCard extends StatelessWidget {
     final finalTotal = controller.finalTotal;
 
     return Card(
-      color: Theme.of(context).primaryColor.withAlpha(20),
+      elevation: 0,
+      color: RufkoTheme.primaryColor.withValues(alpha: 0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Subtotal:', style: TextStyle(fontSize: 16)),
-                Text(currencyFormat.format(combinedSubtotal),
-                    style: const TextStyle(fontSize: 16)),
+                Text(
+                  'Subtotal:',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: RufkoTheme.primaryColor,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  currencyFormat.format(combinedSubtotal),
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: RufkoTheme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
             if (totalDiscount > 0) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Discount:',
-                      style: TextStyle(color: Colors.green, fontSize: 16)),
-                  Text('-${currencyFormat.format(totalDiscount)}',
-                      style:
-                          const TextStyle(color: Colors.green, fontSize: 16)),
+                  Text(
+                    'Discount:',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: RufkoTheme.statusGreen,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    '-${currencyFormat.format(totalDiscount)}',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: RufkoTheme.statusGreen,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ],
             if (taxRate > 0) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Tax (${taxRate.toStringAsFixed(1)}%):',
-                      style: const TextStyle(fontSize: 16)),
-                  Text(currencyFormat.format(taxAmount),
-                      style: const TextStyle(fontSize: 16)),
+                  Text(
+                    'Tax (${taxRate.toStringAsFixed(1)}%):',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: RufkoTheme.primaryColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    currencyFormat.format(taxAmount),
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: RufkoTheme.primaryColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ],
-            const SizedBox(height: 12),
-            const Divider(thickness: 1.5),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            Divider(
+              thickness: 2,
+              color: RufkoTheme.primaryColor.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Total:',
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                Text(currencyFormat.format(finalTotal),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).primaryColor)),
+                Text(
+                  'Total:',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: RufkoTheme.primaryColor,
+                  ),
+                ),
+                Text(
+                  currencyFormat.format(finalTotal),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: RufkoTheme.primaryColor,
+                  ),
+                ),
               ],
             ),
           ],

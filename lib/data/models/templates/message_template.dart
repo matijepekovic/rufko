@@ -1,43 +1,18 @@
-// lib/models/message_template.dart
+// lib/models/message_template.dart (HIVE ANNOTATIONS REMOVED)
 
-import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part '../../generated/message_template.g.dart';
-
-@HiveType(typeId: 25) // Choose a unique typeId that's not used by other models
-class MessageTemplate extends HiveObject {
-  @HiveField(0)
+class MessageTemplate {
   final String id;
-
-  @HiveField(1)
   final String templateName;
-
-  @HiveField(2)
   final String description;
-
-  @HiveField(3)
   final String category;
-
-  @HiveField(4)
   final String messageContent;
-
-  @HiveField(5)
   final List<String> placeholders;
-
-  @HiveField(6)
   final bool isActive;
-
-  @HiveField(7)
   final int sortOrder;
-
-  @HiveField(8)
   final DateTime createdAt;
-
-  @HiveField(9)
   final DateTime updatedAt;
-
-  @HiveField(10)
   String? userCategoryKey;
 
   MessageTemplate({

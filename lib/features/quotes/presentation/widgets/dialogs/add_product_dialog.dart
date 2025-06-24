@@ -4,11 +4,18 @@ import "package:provider/provider.dart";
 import "../../../../../data/models/business/product.dart";
 import "../../../../../data/models/business/quote.dart";
 import "../../../../../data/providers/state/app_state_provider.dart";
+import "../../../../../shared/widgets/buttons/rufko_buttons.dart";
+import "../calculator/calculator_text_field.dart";
 
 class AddProductDialog extends StatefulWidget {
   final Function(QuoteItem) onProductAdded;
+  final QuoteItem? editingProduct;
 
-  const AddProductDialog({super.key, required this.onProductAdded});
+  const AddProductDialog({
+    super.key, 
+    required this.onProductAdded,
+    this.editingProduct,
+  });
 
   @override
   State<AddProductDialog> createState() => AddProductDialogState();
@@ -16,11 +23,59 @@ class AddProductDialog extends StatefulWidget {
 
 class AddProductDialogState extends State<AddProductDialog> {
   final _formKey = GlobalKey<FormState>();
-  final _quantityController = TextEditingController(text: '1.0');
+  final _quantityController = TextEditingController(text: '1');
 
   Product? _selectedProduct;
   ProductLevelPrice? _selectedLevel;
   String _expandedCategory = '';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.editingProduct != null) {
+      _initializeForEdit();
+    }
+  }
+
+  void _initializeForEdit() {
+    final editingProduct = widget.editingProduct!;
+    _quantityController.text = editingProduct.quantity.toString();
+    
+    // We'll need to find the matching product in the next step
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _findAndSelectProduct(editingProduct);
+    });
+  }
+
+  void _findAndSelectProduct(QuoteItem editingProduct) {
+    final appState = Provider.of<AppStateProvider>(context, listen: false);
+    
+    // Find product by ID
+    final product = appState.products.firstWhere(
+      (p) => p.id == editingProduct.productId,
+      orElse: () => appState.products.first, // Fallback to prevent errors
+    );
+    
+    setState(() {
+      _selectedProduct = product;
+      
+      // Try to find matching level if product has enhanced levels
+      if (product.enhancedLevelPrices.isNotEmpty) {
+        // Extract level name from product name if it exists (format: "ProductName (LevelName)")
+        final levelMatch = RegExp(r'\(([^)]+)\)$').firstMatch(editingProduct.productName);
+        if (levelMatch != null) {
+          final levelName = levelMatch.group(1)!;
+          _selectedLevel = product.enhancedLevelPrices.firstWhere(
+            (level) => level.levelName == levelName,
+            orElse: () => product.enhancedLevelPrices.first,
+          );
+        }
+      }
+      
+      // Expand the category containing this product
+      _expandedCategory = product.category;
+    });
+  }
 
   @override
   void dispose() {
@@ -43,10 +98,10 @@ class AddProductDialogState extends State<AddProductDialog> {
               children: [
                 Icon(Icons.add_shopping_cart, color: Theme.of(context).primaryColor),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Add Product to Quote',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    widget.editingProduct != null ? 'Edit Product' : 'Add Product to Quote',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
                 IconButton(
@@ -82,6 +137,8 @@ class AddProductDialogState extends State<AddProductDialog> {
                               final products = entry.value;
 
                               return Card(
+                                elevation: 0,
+                                color: Theme.of(context).colorScheme.surfaceContainerLow,
                                 margin: const EdgeInsets.only(bottom: 8),
                                 child: Theme(
                                   data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -168,15 +225,11 @@ class AddProductDialogState extends State<AddProductDialog> {
                     ],
 
                     // Quantity Input
-                    TextFormField(
+                    CalculatorTextField(
                       controller: _quantityController,
-                      decoration: InputDecoration(
-                        labelText: 'Quantity',
-                        border: const OutlineInputBorder(),
-                        prefixIcon: const Icon(Icons.calculate),
-                        suffixText: _selectedProduct?.unit ?? '',
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      labelText: 'Quantity',
+                      unit: _selectedProduct?.unit ?? '',
+                      prefixIcon: const Icon(Icons.calculate),
                       validator: (value) {
                         if (value == null || value.isEmpty) return 'Please enter quantity';
                         final qty = double.tryParse(value);
@@ -194,16 +247,18 @@ class AddProductDialogState extends State<AddProductDialog> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
+                  child: RufkoSecondaryButton(
                     onPressed: () => Navigator.pop(context),
+                    isFullWidth: true,
                     child: const Text('Cancel'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton(
+                  child: RufkoPrimaryButton(
                     onPressed: _addProduct,
-                    child: const Text('Add to Quote'),
+                    isFullWidth: true,
+                    child: Text(widget.editingProduct != null ? 'Update Product' : 'Add to Quote'),
                   ),
                 ),
               ],
@@ -295,7 +350,9 @@ class AddProductDialogState extends State<AddProductDialog> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Added $productName to all quote levels'),
+        content: Text(widget.editingProduct != null 
+          ? 'Updated $productName in all quote levels'
+          : 'Added $productName to all quote levels'),
         backgroundColor: Colors.green,
       ),
     );

@@ -1,49 +1,20 @@
-// lib/models/email_template.dart
+// lib/models/email_template.dart (HIVE ANNOTATIONS REMOVED)
 
-import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part '../../generated/email_template.g.dart';
-
-@HiveType(typeId: 26) // Different typeId from message templates
-class EmailTemplate extends HiveObject {
-  @HiveField(0)
+class EmailTemplate {
   final String id;
-
-  @HiveField(1)
   final String templateName;
-
-  @HiveField(2)
   final String description;
-
-  @HiveField(3)
   final String category;
-
-  @HiveField(4)
   final String subject;
-
-  @HiveField(5)
   final String emailContent;
-
-  @HiveField(6)
   final List<String> placeholders;
-
-  @HiveField(7)
   final bool isActive;
-
-  @HiveField(8)
   final int sortOrder;
-
-  @HiveField(9)
   final DateTime createdAt;
-
-  @HiveField(10)
   final DateTime updatedAt;
-
-  @HiveField(11)
   final bool isHtml;
-
-  @HiveField(12)
   String? userCategoryKey;
 
 

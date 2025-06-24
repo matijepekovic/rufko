@@ -1,28 +1,11 @@
-// lib/models/quote.dart
+// lib/models/quote.dart - MIGRATED TO SQLITE
 
-import 'package:hive/hive.dart';
-// No Uuid needed here if not used by QuoteItem directly
-
-part '../../generated/quote.g.dart'; // Will be generated
-
-@HiveType(typeId: 3) // Unique Type ID for QuoteItem
-class QuoteItem extends HiveObject {
-  @HiveField(0)
+class QuoteItem {
   String productId;
-
-  @HiveField(1)
   String productName;
-
-  @HiveField(2)
   double quantity;
-
-  @HiveField(3)
   double unitPrice;
-
-  @HiveField(4)
   String unit;
-
-  @HiveField(5)
   String? description;
 
   QuoteItem({
@@ -65,16 +48,4 @@ class QuoteItem extends HiveObject {
 }
 
 
-// If you had an old "Quote" class here:
-/*
-@HiveType(typeId: 4) // Ensure this typeId is different and unique
-class Quote extends HiveObject {
-  // ... your old Quote class fields and methods ...
-  // This class will eventually be removed or fully migrated.
-  // For now, ensure its typeId doesn't clash.
-}
-*/
-// For now, to reduce errors, if you are NOT immediately migrating data from an old "Quote" class,
-// I recommend commenting out or removing the old "Quote" class definition from this file
-// to focus on getting "QuoteItem" and the new "SimplifiedMultiLevelQuote" system working.
-// If you keep it, make sure its typeId (e.g., 4) is unique and you register its adapter in main.dart.
+// Old Quote class has been completely removed - migration to SQLite complete

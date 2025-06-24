@@ -24,7 +24,7 @@ class PdfPreviewController extends ChangeNotifier {
   final PdfViewerController pdfController = PdfViewerController();
   final GlobalKey pdfViewerContainerKey = GlobalKey();
 
-  String _currentPdfPath = '';
+  final String _currentPdfPath;
   bool _isSaving = false;
   bool _hasEdits = false;
   bool _showEditingTools = false;
@@ -153,7 +153,7 @@ class PdfPreviewController extends ChangeNotifier {
     _setSaving(true);
     
     try {
-      await _fileOpsController.savePdf(
+      final success = await _fileOpsController.uiController.savePdf(
         currentPdfPath: _currentPdfPath,
         editedValues: _editingController.getCurrentEdits(),
         formFields: _formFields,
@@ -163,9 +163,10 @@ class PdfPreviewController extends ChangeNotifier {
         templateId: templateId,
       );
       
-      // Reset edit state after successful save
-      _editingController.clearEdits();
-      _hasEdits = false;
+      if (success) {
+        _editingController.clearEdits();
+        _hasEdits = false;
+      }
     } finally {
       _setSaving(false);
     }
@@ -173,9 +174,35 @@ class PdfPreviewController extends ChangeNotifier {
 
   /// Share PDF
   Future<void> sharePdf() async {
-    // For now, just create a simple share implementation
-    // This would use the existing file sharing functionality
-    print('Sharing PDF: $_currentPdfPath with name: $suggestedFileName');
+    _setSharing(true);
+    
+    try {
+      await _fileOpsController.uiController.sharePdf(
+        currentPdfPath: _currentPdfPath,
+        editedValues: _editingController.getCurrentEdits(),
+        formFields: _formFields,
+        suggestedFileName: suggestedFileName,
+        customer: customer,
+        shareFileCallback: ({
+          required String filePath,
+          required String fileName,
+          Customer? customer,
+        }) async {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('PDF prepared for sharing: $fileName')),
+            );
+          }
+        },
+      );
+    } finally {
+      _setSharing(false);
+    }
+  }
+  
+  void _setSharing(bool sharing) {
+    // Add sharing state if not already present
+    notifyListeners();
   }
 
   /// Handle back navigation with unsaved changes check

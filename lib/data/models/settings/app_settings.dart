@@ -1,56 +1,25 @@
-// lib/models/app_settings.dart - ENHANCED VERSION
+// lib/models/app_settings.dart - ENHANCED VERSION (HIVE ANNOTATIONS REMOVED)
 
-import 'package:hive/hive.dart';
 
-part '../../generated/app_settings.g.dart';
-
-@HiveType(typeId: 6)
-class AppSettings extends HiveObject {
-  @HiveField(0)
+class AppSettings {
   late String id;
-
-  @HiveField(1)
   late List<String> productCategories;
-
-  @HiveField(2)
   late List<String> productUnits;
-
-  @HiveField(3)
   late String defaultUnit;
-
-  @HiveField(4)
   late DateTime updatedAt;
-
-  @HiveField(5)
   late List<String> defaultQuoteLevelNames;
-
-  @HiveField(6)
   double taxRate;
-
-  @HiveField(7)
   String? companyName;
-
-  @HiveField(8)
   String? companyAddress;
-
-  @HiveField(9)
   String? companyPhone;
-
-  @HiveField(10)
   String? companyEmail;
-
-  @HiveField(11)
   String? companyLogoPath;
 
-  // NEW FIELDS for enhanced settings
-  @HiveField(12)
+  // Enhanced settings fields
   late List<String> discountTypes; // 'percentage', 'fixed_amount', 'voucher'
-
-  @HiveField(13)
   bool allowProductDiscountToggle; // Whether products can be marked as non-discountable
-
-  @HiveField(14)
   double defaultDiscountLimit; // Maximum discount percentage allowed
+  bool showCalculatorQuickChips; // Whether to show quick formula chips in calculator
 
   AppSettings({
     String? id,
@@ -67,6 +36,7 @@ class AppSettings extends HiveObject {
     List<String>? discountTypes,
     this.allowProductDiscountToggle = true,
     this.defaultDiscountLimit = 25.0,
+    this.showCalculatorQuickChips = true,
     DateTime? updatedAt,
   })  : productCategories = productCategories ?? ['Materials', 'Roofing', 'Gutters', 'Labor', 'Other'],
         productUnits = productUnits ?? ['sq ft', 'lin ft', 'each', 'hour', 'day', 'bundle', 'roll', 'sheet'],
@@ -82,27 +52,23 @@ class AppSettings extends HiveObject {
     if (!productCategories.contains(category)) {
       productCategories.add(category);
       updatedAt = DateTime.now();
-      if (isInBox) save();
     }
   }
 
   void updateCompanyLogo(String? logoPath) {
     companyLogoPath = logoPath;
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   void removeProductCategory(String category) {
     if (productCategories.remove(category)) {
       updatedAt = DateTime.now();
-      if (isInBox) save();
     }
   }
 
   void updateProductCategories(List<String> categories) {
     productCategories = categories;
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   // Enhanced methods for managing units
@@ -110,7 +76,6 @@ class AppSettings extends HiveObject {
     if (!productUnits.contains(unit)) {
       productUnits.add(unit);
       updatedAt = DateTime.now();
-      if (isInBox) save();
     }
   }
 
@@ -121,7 +86,6 @@ class AppSettings extends HiveObject {
         defaultUnit = productUnits.first;
       }
       updatedAt = DateTime.now();
-      if (isInBox) save();
     }
   }
 
@@ -132,27 +96,23 @@ class AppSettings extends HiveObject {
       defaultUnit = units.first;
     }
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   void updateDefaultUnit(String unit) {
     if (productUnits.contains(unit)) {
       defaultUnit = unit;
       updatedAt = DateTime.now();
-      if (isInBox) save();
     }
   }
 
   void updateDefaultQuoteLevelNames(List<String> levels) {
     defaultQuoteLevelNames = levels;
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   void updateTaxRate(double newTaxRate) {
     taxRate = newTaxRate;
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   void updateCompanyInfo({
@@ -168,7 +128,6 @@ class AppSettings extends HiveObject {
     if (email != null) companyEmail = email;
     if (logoPath != null) companyLogoPath = logoPath;
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   // NEW: Discount settings
@@ -181,7 +140,14 @@ class AppSettings extends HiveObject {
     if (allowToggle != null) allowProductDiscountToggle = allowToggle;
     if (discountLimit != null) defaultDiscountLimit = discountLimit;
     updatedAt = DateTime.now();
-    if (isInBox) save();
+  }
+
+  // Calculator settings
+  void updateCalculatorSettings({
+    bool? showQuickChips,
+  }) {
+    if (showQuickChips != null) showCalculatorQuickChips = showQuickChips;
+    updatedAt = DateTime.now();
   }
 
   Map<String, dynamic> toMap() {
@@ -200,6 +166,7 @@ class AppSettings extends HiveObject {
       'discountTypes': discountTypes,
       'allowProductDiscountToggle': allowProductDiscountToggle,
       'defaultDiscountLimit': defaultDiscountLimit,
+      'showCalculatorQuickChips': showCalculatorQuickChips,
       'updatedAt': updatedAt.toIso8601String(),
     };
   }
@@ -220,6 +187,7 @@ class AppSettings extends HiveObject {
       discountTypes: List<String>.from(map['discountTypes'] ?? ['percentage', 'fixed_amount', 'voucher']),
       allowProductDiscountToggle: map['allowProductDiscountToggle'] ?? true,
       defaultDiscountLimit: map['defaultDiscountLimit']?.toDouble() ?? 25.0,
+      showCalculatorQuickChips: map['showCalculatorQuickChips'] ?? true,
       updatedAt: map['updatedAt'] != null ? DateTime.parse(map['updatedAt']) : DateTime.now(),
     );
   }

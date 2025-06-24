@@ -19,6 +19,7 @@ class QuoteProductsSection extends StatelessWidget
   final String quoteType;
   final VoidCallback onAddProductPressed;
   final Function(QuoteItem) onRemoveProduct;
+  final Function(QuoteItem) onEditProduct;
   final List<QuoteLevel> quoteLevels;
   final Product? mainProduct;
   final double mainQuantity;
@@ -35,6 +36,7 @@ class QuoteProductsSection extends StatelessWidget
     required this.quoteType,
     required this.onAddProductPressed,
     required this.onRemoveProduct,
+    required this.onEditProduct,
     required this.quoteLevels,
     required this.mainProduct,
     required this.mainQuantity,
@@ -55,6 +57,7 @@ class QuoteProductsSection extends StatelessWidget
           quoteType: quoteType,
           onAddProductPressed: onAddProductPressed,
           onRemoveProduct: onRemoveProduct,
+          onEditProduct: onEditProduct,
         ),
         if (quoteLevels.isNotEmpty) ...[
           SizedBox(height: spacingXL(context)),

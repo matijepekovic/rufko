@@ -80,7 +80,7 @@ class QuoteTotalsSection extends StatelessWidget {
       children: quoteLevels.map((level) {
         return QuoteLevelCard(
           level: level,
-          mainProduct: mainProduct!,
+          mainProduct: mainProduct,
           mainQuantity: mainQuantity,
           taxRate: taxRate,
           permits: permits,
@@ -97,7 +97,7 @@ class QuoteTotalsSection extends StatelessWidget {
     
     return SingleTierQuoteCard(
       level: level,
-      mainProduct: mainProduct!,
+      mainProduct: mainProduct,
       mainQuantity: mainQuantity,
       taxRate: taxRate,
       permits: permits,

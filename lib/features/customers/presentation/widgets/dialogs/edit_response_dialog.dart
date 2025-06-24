@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../data/models/business/customer.dart';
+import '../../../../../shared/widgets/buttons/rufko_footer_action_bar.dart';
+import '../../../../../shared/widgets/buttons/rufko_buttons.dart';
 import '../../controllers/communication_history_controller.dart';
 
 /// Dialog for editing existing customer responses
@@ -207,34 +209,19 @@ class _EditResponseDialogState extends State<EditResponseDialog> {
   }
 
   Widget _buildFooter() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(16),
-          bottomRight: Radius.circular(16),
+    return RufkoFooterActionBar(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        RufkoSecondaryButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton.icon(
-            onPressed: _handleUpdateResponse,
-            icon: const Icon(Icons.save),
-            label: const Text('Update Response'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
+        RufkoPrimaryButton(
+          onPressed: _handleUpdateResponse,
+          icon: Icons.save,
+          child: const Text('Update Response'),
+        ),
+      ],
     );
   }
 

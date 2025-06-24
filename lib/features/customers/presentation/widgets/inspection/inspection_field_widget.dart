@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../data/models/settings/custom_app_data.dart';
+import '../../../../../core/mixins/ui/responsive_spacing_mixin.dart';
+import '../../../../../core/mixins/ui/responsive_dimensions_mixin.dart';
+import '../../../../../core/mixins/ui/responsive_breakpoints_mixin.dart';
 
 /// Reusable widget for rendering different types of inspection fields
 /// Extracted from InspectionTab for better maintainability
-class InspectionFieldWidget extends StatelessWidget {
+class InspectionFieldWidget extends StatelessWidget 
+    with ResponsiveBreakpointsMixin, ResponsiveSpacingMixin, ResponsiveDimensionsMixin {
   final CustomAppDataField field;
+  final int index;
   final dynamic value;
   final Function(String fieldName, dynamic value) onValueChanged;
   final VoidCallback? onDateTap;
@@ -13,6 +18,7 @@ class InspectionFieldWidget extends StatelessWidget {
   const InspectionFieldWidget({
     super.key,
     required this.field,
+    required this.index,
     required this.value,
     required this.onValueChanged,
     this.onDateTap,
@@ -20,11 +26,32 @@ class InspectionFieldWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Wrap in Row to add drag handle on the right
+    return Row(
+      children: [
+        Expanded(
+          child: _buildFieldContent(context),
+        ),
+        ReorderableDragStartListener(
+          index: index,
+          child: Container(
+            padding: EdgeInsets.all(spacingSM(context)),
+            child: Icon(
+              Icons.drag_handle,
+              color: Colors.grey[600],
+              size: isCompact(context) ? 20 : 24,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFieldContent(BuildContext context) {
     // Special layout for checkbox - no header needed since CheckboxListTile has its own title
     if (field.fieldType.toLowerCase() == 'checkbox') {
       return Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
+        padding: responsivePadding(context, all: 3),
         decoration: BoxDecoration(
           color: Colors.grey[50],
           borderRadius: BorderRadius.circular(12),
@@ -36,8 +63,7 @@ class InspectionFieldWidget extends StatelessWidget {
 
     // Standard layout for other field types
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: responsivePadding(context, all: 3),
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(12),
@@ -47,10 +73,10 @@ class InspectionFieldWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildFieldHeader(),
-          const SizedBox(height: 12),
+          SizedBox(height: spacingSM(context)),
           _buildFieldInput(context),
           if (field.description?.isNotEmpty == true) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: spacingXS(context)),
             _buildFieldDescription(),
           ],
         ],
@@ -95,11 +121,11 @@ class InspectionFieldWidget extends StatelessWidget {
     switch (field.fieldType.toLowerCase()) {
       case 'text':
       case 'string':
-        return _buildTextInput();
+        return _buildTextInput(context);
       case 'number':
       case 'int':
       case 'double':
-        return _buildNumberInput();
+        return _buildNumberInput(context);
       case 'bool':
       case 'boolean':
         return _buildBooleanInput();
@@ -112,34 +138,40 @@ class InspectionFieldWidget extends StatelessWidget {
         return _buildDropdownInput();
       case 'textarea':
       case 'multiline':
-        return _buildTextAreaInput();
+        return _buildTextAreaInput(context);
       default:
-        return _buildTextInput();
+        return _buildTextInput(context);
     }
   }
 
-  Widget _buildTextInput() {
+  Widget _buildTextInput(BuildContext context) {
     return TextFormField(
       initialValue: value?.toString() ?? '',
       decoration: InputDecoration(
         hintText: (field.placeholder?.isNotEmpty == true) ? field.placeholder! : 'Enter ${field.displayName.toLowerCase()}',
         border: const OutlineInputBorder(),
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: spacingSM(context) * 2, 
+          vertical: spacingSM(context),
+        ),
       ),
       style: const TextStyle(fontSize: 14),
       onChanged: (newValue) => onValueChanged(field.fieldName, newValue),
     );
   }
 
-  Widget _buildNumberInput() {
+  Widget _buildNumberInput(BuildContext context) {
     return TextFormField(
       initialValue: value?.toString() ?? '',
       decoration: InputDecoration(
         hintText: (field.placeholder?.isNotEmpty == true) ? field.placeholder! : 'Enter number',
         border: const OutlineInputBorder(),
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: spacingSM(context) * 2, 
+          vertical: spacingSM(context),
+        ),
         suffixIcon: const Icon(Icons.numbers, size: 18),
       ),
       style: const TextStyle(fontSize: 14),
@@ -260,7 +292,7 @@ class InspectionFieldWidget extends StatelessWidget {
       onTap: onDateTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: EdgeInsets.all(spacingMD(context)),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey[400]!),
           borderRadius: BorderRadius.circular(8),
@@ -311,14 +343,14 @@ class InspectionFieldWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildTextAreaInput() {
+  Widget _buildTextAreaInput(BuildContext context) {
     return TextFormField(
       initialValue: value?.toString() ?? '',
       decoration: InputDecoration(
         hintText: (field.placeholder?.isNotEmpty == true) ? field.placeholder! : 'Enter details...',
         border: const OutlineInputBorder(),
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: EdgeInsets.all(spacingMD(context)),
       ),
       style: const TextStyle(fontSize: 14),
       maxLines: 4,

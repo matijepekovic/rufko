@@ -45,17 +45,17 @@ class CustomerActionsController {
   /// Legacy methods for backward compatibility - simplified implementation
   void editCustomer() {
     // Legacy implementation - in new architecture this would be handled by UI layer
-    print('editCustomer() called - use CustomerActionsHandler in new architecture');
+    debugPrint('editCustomer() called - use CustomerActionsHandler in new architecture');
   }
 
   void showDeleteCustomerConfirmation() {
     // Legacy implementation - in new architecture this would be handled by UI layer
-    print('showDeleteCustomerConfirmation() called - use CustomerActionsHandler in new architecture');
+    debugPrint('showDeleteCustomerConfirmation() called - use CustomerActionsHandler in new architecture');
   }
 
   void showQuickActions() {
     // Legacy implementation - in new architecture this would be handled by UI layer
-    print('showQuickActions() called - use CustomerActionsHandler in new architecture');
+    debugPrint('showQuickActions() called - use CustomerActionsHandler in new architecture');
   }
 
   /// Clean up resources

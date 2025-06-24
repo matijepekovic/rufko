@@ -74,6 +74,37 @@ mixin CommunicationActionsMixin<T extends StatefulWidget> on State<T> {
     }
   }
 
+  Future<void> openMaps(String address) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      // Try Google Maps first, then fallback to generic geo scheme
+      final encodedAddress = Uri.encodeComponent(address);
+      final Uri mapsUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$encodedAddress');
+      
+      if (await canLaunchUrl(mapsUri)) {
+        await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
+        if (!mounted) return;
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Maps app opened'), backgroundColor: Colors.green),
+        );
+      } else {
+        // Fallback to geo scheme
+        final Uri geoUri = Uri.parse('geo:0,0?q=$encodedAddress');
+        if (await canLaunchUrl(geoUri)) {
+          await launchUrl(geoUri);
+          if (!mounted) return;
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Maps app opened'), backgroundColor: Colors.green),
+          );
+        } else {
+          showErrorSnackBar('Cannot open maps on this device');
+        }
+      }
+    } catch (e) {
+      showErrorSnackBar('Error opening maps: $e');
+    }
+  }
+
   String _buildEmailQuery({String? subject, String? body}) {
     final params = <String, String>{};
     if (subject != null) params['subject'] = subject;

@@ -1,30 +1,14 @@
-// lib/models/template_category.dart
+// lib/models/template_category.dart (HIVE ANNOTATIONS REMOVED)
 
 import 'package:flutter/foundation.dart';
-import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part '../../generated/template_category.g.dart';
-
-@HiveType(typeId: 27)
-class TemplateCategory extends HiveObject {
-  @HiveField(0)
+class TemplateCategory {
   final String id;
-
-  @override
-  @HiveField(1)
   final String key;
-
-  @HiveField(2)
   final String name;
-
-  @HiveField(3)
   final String templateType;
-
-  @HiveField(4)
   final DateTime createdAt;
-
-  @HiveField(5)
   final DateTime updatedAt;
 
   TemplateCategory({

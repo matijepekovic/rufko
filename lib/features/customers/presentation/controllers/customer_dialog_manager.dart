@@ -13,16 +13,20 @@ class CustomerDialogManager {
   final CustomerImportController importController;
 
   void showAddCustomerDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => const CustomerFormDialog(),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const CustomerFormDialog(),
+        fullscreenDialog: true,
+      ),
     );
   }
 
   void showEditCustomerDialog(Customer customer) {
-    showDialog(
-      context: context,
-      builder: (context) => CustomerFormDialog(customer: customer),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CustomerFormDialog(customer: customer),
+        fullscreenDialog: true,
+      ),
     );
   }
 

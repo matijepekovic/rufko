@@ -329,8 +329,8 @@ class QuoteFormController extends ChangeNotifier {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(isEditMode
-                ? '${_quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${quote.quoteNumber} updated with ${_taxRate.toStringAsFixed(2)}% tax!'
-                : '${_quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${quote.quoteNumber} generated with ${_taxRate.toStringAsFixed(2)}% tax!'),
+                ? '${_quoteType == 'single-tier' ? 'Single' : 'Tiered'} quote ${quote.quoteNumber} updated with ${_taxRate.toStringAsFixed(2)}% tax!'
+                : '${_quoteType == 'single-tier' ? 'Single' : 'Tiered'} quote ${quote.quoteNumber} generated with ${_taxRate.toStringAsFixed(2)}% tax!'),
             backgroundColor: Colors.green,
           ),
         );

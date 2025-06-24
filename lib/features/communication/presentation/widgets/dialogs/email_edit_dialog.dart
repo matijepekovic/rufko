@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../controllers/communication_dialog_controller.dart';
 import 'email_preview_dialog.dart';
+import '../../../../../shared/widgets/buttons/rufko_buttons.dart';
 
 class EmailEditDialog extends StatefulWidget {
   final CommunicationDialogController controller;
@@ -172,12 +173,12 @@ class _EmailEditDialogState extends State<EmailEditDialog> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  OutlinedButton(
+                  RufkoSecondaryButton(
                     onPressed: () => Navigator.pop(context),
                     child: const Text('Cancel'),
                   ),
                   const SizedBox(width: 12),
-                  OutlinedButton.icon(
+                  RufkoSecondaryButton(
                     onPressed: () {
                       widget.controller
                           .updateEmailSubject(subjectController.text.trim());
@@ -190,11 +191,11 @@ class _EmailEditDialogState extends State<EmailEditDialog> {
                             EmailPreviewDialog(controller: widget.controller),
                       );
                     },
-                    icon: const Icon(Icons.preview),
-                    label: const Text('Preview'),
+                    icon: Icons.preview,
+                    child: const Text('Preview'),
                   ),
                   const SizedBox(width: 12),
-                  ElevatedButton.icon(
+                  RufkoPrimaryButton(
                     onPressed: () {
                       final subj = subjectController.text.trim();
                       final cont = contentController.text.trim();
@@ -213,12 +214,8 @@ class _EmailEditDialogState extends State<EmailEditDialog> {
                       Navigator.pop(context);
                       widget.controller.sendEmail();
                     },
-                    icon: const Icon(Icons.send),
-                    label: const Text('Send Email'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
+                    icon: Icons.send,
+                    child: const Text('Send Email'),
                   ),
                 ],
               ),

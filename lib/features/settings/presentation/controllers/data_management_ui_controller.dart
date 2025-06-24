@@ -6,10 +6,9 @@ import '../../../../data/providers/state/app_state_provider.dart';
 /// UI Controller for data management operations
 /// Handles state management and event emission without UI concerns
 class DataManagementUIController extends ChangeNotifier {
-  DataManagementUIController(this._appState)
-      : _service = DataManagementService(_appState);
+  DataManagementUIController(AppStateProvider appState)
+      : _service = DataManagementService(appState);
 
-  final AppStateProvider _appState;
   final DataManagementService _service;
 
   bool _isProcessing = false;

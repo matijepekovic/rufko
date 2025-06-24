@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../../data/models/business/customer.dart';
 import '../../../../../data/models/business/simplified_quote.dart';
 import '../../../../../data/providers/state/app_state_provider.dart';
+import '../../../../../shared/widgets/buttons/rufko_buttons.dart';
 
 class QuotesTab extends StatelessWidget {
   final Customer customer;
@@ -49,50 +50,65 @@ class QuotesTab extends StatelessWidget {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: quotes.length,
-          itemBuilder: (context, index) {
-            final quote = quotes[index];
-            double representativeTotal = 0;
-            String levelSummary = '${quote.levels.length} level${quote.levels.length == 1 ? '' : 's'}';
+        return Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: quotes.length,
+                itemBuilder: (context, index) {
+                  final quote = quotes[index];
+                  double representativeTotal = 0;
+                  String levelSummary = '${quote.levels.length} level${quote.levels.length == 1 ? '' : 's'}';
 
-            if (quote.levels.isNotEmpty) {
-              representativeTotal = quote.getDisplayTotalForLevel(quote.levels.first.id);
-            }
+                  if (quote.levels.isNotEmpty) {
+                    representativeTotal = quote.getDisplayTotalForLevel(quote.levels.first.id);
+                  }
 
-            return Card(
-              elevation: 1.5,
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme.of(context).primaryColor.withAlpha(25),
-                  child: Icon(
-                    Icons.description_outlined,
-                    color: Theme.of(context).primaryColor,
-                  ),
-                ),
-                title: Text(
-                  'Quote #: ${quote.quoteNumber}',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
-                subtitle: Text(
-                  'Status: ${quote.status.toUpperCase()} - $levelSummary\nCreated: ${DateFormat('MMM dd, yyyy').format(quote.createdAt)}',
-                ),
-                trailing: Text(
-                  NumberFormat.currency(symbol: '\$').format(representativeTotal),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Theme.of(context).primaryColorDark,
-                  ),
-                ),
-                onTap: () => onOpenQuote(quote),
-                isThreeLine: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                  return Card(
+                    elevation: 2,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Theme.of(context).primaryColor.withAlpha(25),
+                        child: Icon(
+                          Icons.description_outlined,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                      title: Text(
+                        'Quote #: ${quote.quoteNumber}',
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      subtitle: Text(
+                        'Status: ${quote.status.toUpperCase()} - $levelSummary\nCreated: ${DateFormat('MMM dd, yyyy').format(quote.createdAt)}',
+                      ),
+                      trailing: Text(
+                        NumberFormat.currency(symbol: '\$').format(representativeTotal),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          color: Theme.of(context).primaryColorDark,
+                        ),
+                      ),
+                      onTap: () => onOpenQuote(quote),
+                      isThreeLine: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                    ),
+                  );
+                },
               ),
-            );
-          },
+            ),
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: RufkoPrimaryButton(
+                onPressed: onCreateQuote,
+                icon: Icons.add,
+                isFullWidth: true,
+                child: const Text('Create New Quote'),
+              ),
+            ),
+          ],
         );
       },
     );

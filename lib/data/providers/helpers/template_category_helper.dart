@@ -5,7 +5,25 @@ import '../../../core/services/database/database_service.dart';
 class TemplateCategoryHelper {
   static Future<Map<String, List<Map<String, dynamic>>>> fetchAll(
       DatabaseService db) async {
-    return await db.getAllTemplateCategories();
+    final categories = await db.getAllTemplateCategories();
+    final Map<String, List<Map<String, dynamic>>> result = {};
+    
+    for (final category in categories) {
+      final templateType = category.templateType;
+      if (!result.containsKey(templateType)) {
+        result[templateType] = [];
+      }
+      result[templateType]!.add({
+        'id': category.id,
+        'key': category.key,
+        'name': category.name,
+        'templateType': category.templateType,
+        'createdAt': category.createdAt.toIso8601String(),
+        'updatedAt': category.updatedAt.toIso8601String(),
+      });
+    }
+    
+    return result;
   }
 
   static Future<TemplateCategory> addCategory({
@@ -20,7 +38,7 @@ class TemplateCategoryHelper {
       name: categoryDisplayName,
       templateType: templateTypeKey,
     );
-    await db.saveTemplateCategory(newCategory);
+    await db.addTemplateCategory(newCategory);
     categories.add(newCategory);
     return newCategory;
   }
@@ -36,9 +54,9 @@ class TemplateCategoryHelper {
         (c) => c.templateType == templateTypeKey && c.key == categoryUserKey);
     if (index == -1) return null;
     final category = categories[index];
-    await db.updateTemplateCategory(category.id, newDisplayName);
-    categories[index] =
-        category.copyWith(name: newDisplayName, updatedAt: DateTime.now());
+    final updatedCategory = category.copyWith(name: newDisplayName, updatedAt: DateTime.now());
+    await db.updateTemplateCategory(updatedCategory);
+    categories[index] = updatedCategory;
     return categories[index];
   }
 
@@ -59,6 +77,6 @@ class TemplateCategoryHelper {
 
   static Future<int> usageCount(
       DatabaseService db, String templateType, String categoryKey) async {
-    return await db.getCategoryUsageCount(templateType, categoryKey);
+    return await db.getCategoryUsageCount(categoryKey);
   }
 }

@@ -1,10 +1,11 @@
 // lib/screens/layouts/home_layout_small.dart
 
 import 'package:flutter/material.dart';
+import 'custom_bottom_navigation.dart';
 
 class HomeSmallLayout extends StatelessWidget {
   final int selectedIndex;
-  final List<BottomNavigationBarItem> navItems;
+  // navItems no longer needed with custom navigation
   final ValueChanged<int> onItemSelected;
   final ValueChanged<int> onPageChanged;
   final PageController pageController;
@@ -14,7 +15,6 @@ class HomeSmallLayout extends StatelessWidget {
   const HomeSmallLayout({
     super.key,
     required this.selectedIndex,
-    required this.navItems,
     required this.onItemSelected,
     required this.pageController,
     required this.pages,
@@ -31,27 +31,9 @@ class HomeSmallLayout extends StatelessWidget {
         onPageChanged: onPageChanged,
         children: pages,
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1A000000),
-              blurRadius: 10,
-              offset: Offset(0, -2),
-            ),
-          ],
-        ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          currentIndex: selectedIndex,
-          onTap: onItemSelected,
-          items: navItems,
-          selectedItemColor: Theme.of(context).colorScheme.primary,
-          unselectedItemColor: Colors.grey[600],
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-        ),
+      bottomNavigationBar: CustomBottomNavigation(
+        currentIndex: selectedIndex,
+        onTap: onItemSelected,
       ),
       floatingActionButton: floatingActionButton,
     );

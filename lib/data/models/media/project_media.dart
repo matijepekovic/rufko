@@ -1,46 +1,19 @@
-// lib/models/project_media.dart
+// lib/models/project_media.dart (HIVE ANNOTATIONS REMOVED)
 
-import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part '../../generated/project_media.g.dart'; // Will be generated
-
-@HiveType(typeId: 5) // Unique Type ID
-class ProjectMedia extends HiveObject {
-  @HiveField(0)
+class ProjectMedia {
   late String id;
-
-  @HiveField(1)
   String customerId; // Link to a customer
-
-  @HiveField(2)
   String? quoteId; // Optional: link to a specific quote (SimplifiedMultiLevelQuote ID)
-
-  @HiveField(3)
   String filePath; // Path to the media file on the device
-
-  @HiveField(4)
   String fileName;
-
-  @HiveField(5)
   String fileType; // e.g., "image", "pdf", "document" or MIME type
-
-  @HiveField(6)
   String? description;
-
-  @HiveField(7)
   List<String> tags; // For categorizing or searching
-
-  @HiveField(8)
   String category; // e.g., "before_photos", "after_photos", "damage_report", "contract"
-
-  @HiveField(9)
   int? fileSizeBytes; // Optional: size of the file
-
-  @HiveField(10)
   DateTime createdAt;
-
-  @HiveField(11)
   DateTime updatedAt;
 
   ProjectMedia({
@@ -66,14 +39,12 @@ class ProjectMedia extends HiveObject {
     if (!tags.contains(tag)) {
       tags.add(tag);
       updatedAt = DateTime.now();
-      if (isInBox) { save(); }
     }
   }
 
   void removeTag(String tag) {
     if (tags.remove(tag)) {
       updatedAt = DateTime.now();
-      if (isInBox) { save(); }
     }
   }
 
@@ -86,7 +57,6 @@ class ProjectMedia extends HiveObject {
     if (category != null) this.category = category;
     if (tags != null) this.tags = tags;
     updatedAt = DateTime.now();
-    if (isInBox) { save(); }
   }
 
   bool get isImage {

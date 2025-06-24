@@ -1,59 +1,33 @@
-// lib/models/pdf_template.dart
+// lib/models/pdf_template.dart (HIVE ANNOTATIONS REMOVED)
 
-import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
-import '../business/product.dart'; // 🔧 ADDED IMPORT FOR PRODUCT
+import '../business/product.dart';
 import '../ui/field_definition.dart';
 
-part '../../generated/pdf_template.g.dart'; // This will be regenerated
-
-// @HiveType(typeId: 22) // Keep this commented out if using manual adapter
 enum PdfFormFieldType {
-  @HiveField(0)
-   unknown,
-  @HiveField(1)
+  unknown,
   textBox,
-  @HiveField(2)
   checkBox,
-  @HiveField(3)
   radioButtonGroup,
-  @HiveField(4)
   comboBox,
-  @HiveField(5)
   listBox,
-  @HiveField(6)
   signatureField,
 }
 
-@HiveType(typeId: 21)
-class PDFTemplate extends HiveObject {
-  @HiveField(0)
+class PDFTemplate {
   late String id;
-  @HiveField(1)
   late String templateName;
-  @HiveField(2)
   late String description;
-  @HiveField(3)
   late String pdfFilePath;
-  @HiveField(4)
   late String templateType;
-  @HiveField(5)
   late double pageWidth;
-  @HiveField(6)
   late double pageHeight;
-  @HiveField(7)
   late int totalPages;
-  @HiveField(8)
   late List<FieldMapping> fieldMappings;
-  @HiveField(9)
   late bool isActive;
-  @HiveField(10)
   late DateTime createdAt;
-  @HiveField(11)
   late DateTime updatedAt;
-  @HiveField(12)
   late Map<String, dynamic> metadata;
-  @HiveField(13)
   String? userCategoryKey; // Stores the key of the TemplateCategory
 
   PDFTemplate({
@@ -82,13 +56,11 @@ class PDFTemplate extends HiveObject {
   void addField(FieldMapping field) {
     fieldMappings.add(field);
     updatedAt = DateTime.now();
-    if(isInBox) save();
   }
 
   void removeField(String fieldId) {
     fieldMappings.removeWhere((f) => f.fieldId == fieldId);
     updatedAt = DateTime.now();
-    if(isInBox) save();
   }
 
   void updateField(FieldMapping field) {
@@ -96,7 +68,6 @@ class PDFTemplate extends HiveObject {
     if (index != -1) {
       fieldMappings[index] = field;
       updatedAt = DateTime.now();
-      if(isInBox) save();
     }
   }
 
@@ -297,40 +268,21 @@ class PDFTemplate extends HiveObject {
   }
 }
 
-@HiveType(typeId: 20)
-class FieldMapping extends HiveObject {
-  @HiveField(0)
+class FieldMapping {
   late String fieldId;
-  @HiveField(1)
   late String appDataType;
-  @HiveField(2)
   late String pdfFormFieldName;
-  @HiveField(3)
   late PdfFormFieldType detectedPdfFieldType;
-  @HiveField(4)
   double? visualX;
-  @HiveField(5)
   double? visualY;
-  @HiveField(6)
   double? visualWidth;
-  @HiveField(7)
   double? visualHeight;
-  @HiveField(8)
   late int pageNumber;
-  @HiveField(9)
   String? fontFamilyOverride;
-  @HiveField(10)
   double? fontSizeOverride;
-  @HiveField(11)
   String? fontColorOverride;
-  @HiveField(12)
   String? alignmentOverride;
-  //@HiveField(13)
-  //String? defaultValue; // This will store the "override value"
-  @HiveField(14)
   late Map<String, dynamic> additionalProperties;
-  //@HiveField(15) // New field for the override toggle
-  //late bool overrideValueEnabled;
 
   FieldMapping({
     String? fieldId,
@@ -409,21 +361,4 @@ class FieldMapping extends HiveObject {
   }
 }
 
-class PdfFormFieldTypeAdapter extends TypeAdapter<PdfFormFieldType> {
-  @override
-  final int typeId = 22;
-
-  @override
-  PdfFormFieldType read(BinaryReader reader) {
-    final index = reader.readByte();
-    if (index >= 0 && index < PdfFormFieldType.values.length) {
-      return PdfFormFieldType.values[index];
-    }
-    return PdfFormFieldType. unknown;
-  }
-
-  @override
-  void write(BinaryWriter writer, PdfFormFieldType obj) {
-    writer.writeByte(obj.index);
-  }
-}
+// Removed PdfFormFieldTypeAdapter - no longer needed without Hive

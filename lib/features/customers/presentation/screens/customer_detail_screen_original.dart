@@ -159,10 +159,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                   InfoTab(
                     customer: widget.customer,
                     formatDate: formatCommunicationDate,
-                    onTemplateEmail: showTemplateEmailPicker,
-                    onTemplateSMS: showTemplateSMSPicker,
-                    onQuickCommunication: showQuickCommunicationOptions,
-                    onAddCommunication: addCommunication,
                   ),
                   QuotesTab(
                     customer: widget.customer,
@@ -171,25 +167,27 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
                     onOpenQuote:
                         _navigationController.navigateToSimplifiedQuoteDetail,
                   ),
-                  InspectionTab(customer: widget.customer), // NEW
+                  InspectionTab(customer: widget.customer),
                   MediaTab(
                     customer: widget.customer,
-                    isProcessing: _uiController.isProcessingMedia,
-                    isSelectionMode: _selectionController.isSelectionMode,
-                    selectedMediaIds: _selectionController.selectedMediaIds,
-                    onEnterSelection: _selectionController.enterSelectionMode,
-                    onExitSelection: _selectionController.exitSelectionMode,
-                    onSelectAll: _selectionController.selectAllMedia,
-                    onToggleSelection:
-                        _selectionController.toggleMediaSelection,
-                    onDeleteSelected: _selectionController.deleteSelectedMedia,
-                    onPickImageFromCamera: _mediaController.pickImageFromCamera,
-                    onPickImageFromGallery:
-                        _mediaController.pickImageFromGallery,
-                    onPickDocument: _mediaController.pickDocument,
-                    onViewMedia: _mediaController.viewMedia,
-                    onShowContextMenu: _mediaController.showMediaContextMenu,
-                    onShowMediaOptions: _mediaController.showMediaOptions,
+                    onPickImageFromCamera: () => _mediaController.pickImageFromCamera(),
+                    onPickImageFromGallery: () => _mediaController.pickImageFromGallery(),
+                    onPickDocument: () => _mediaController.pickDocument(),
+                    onViewMedia: (media) => _mediaController.viewMedia(media),
+                    onShowContextMenu: (media) => _mediaController.showMediaContextMenu(media),
+                    onSelectionModeChanged: (bool isSelectionMode) {
+                      // Handle selection mode changes
+                    },
+                    onSelectionStateChanged: (
+                      int selectedCount,
+                      VoidCallback onSelectAll,
+                      VoidCallback onDeleteSelected,
+                      VoidCallback onCancelSelection,
+                      bool isDeleteEnabled,
+                    ) {
+                      // Handle selection state changes
+                    },
+                    mediaController: _mediaController,
                   ),
                 ],
               ),

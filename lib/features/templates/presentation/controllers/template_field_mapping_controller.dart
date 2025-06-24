@@ -324,17 +324,17 @@ class TemplateFieldMappingController extends ChangeNotifier {
 
   @Deprecated('Use TemplateFieldMappingUIController.createFieldMapping() in new architecture')
   void confirmMapping(String appDataType, Map<String, dynamic> pdfFieldInfo, bool isReplacing) {
-    print('confirmMapping() called - use TemplateFieldMappingUIController.createFieldMapping() in new architecture');
+    debugPrint('confirmMapping() called - use TemplateFieldMappingUIController.createFieldMapping() in new architecture');
   }
 
   @Deprecated('Use TemplateFieldMappingUIController.createFieldMapping() in new architecture')
   void performMapping(String appDataType, Map<String, dynamic> pdfFieldInfo) {
-    print('performMapping() called - use TemplateFieldMappingUIController.createFieldMapping() in new architecture');
+    debugPrint('performMapping() called - use TemplateFieldMappingUIController.createFieldMapping() in new architecture');
   }
 
   @Deprecated('Use TemplateFieldMappingUIController.removeFieldMapping() in new architecture')
   void unlinkField(dynamic mapping) {
-    print('unlinkField() called - use TemplateFieldMappingUIController.removeFieldMapping() in new architecture');
+    debugPrint('unlinkField() called - use TemplateFieldMappingUIController.removeFieldMapping() in new architecture');
   }
 
   /// Clean up resources

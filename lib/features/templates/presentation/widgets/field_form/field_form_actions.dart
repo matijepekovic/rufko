@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/buttons/rufko_buttons.dart';
 import '../../controllers/field_dialog_controller.dart';
 
 /// Reusable action buttons for field dialog
@@ -25,7 +26,7 @@ class FieldFormActions extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          TextButton(
+          RufkoSecondaryButton(
             onPressed: controller.isLoading ? null : onCancel,
             child: const Text('Cancel'),
           ),
@@ -33,13 +34,8 @@ class FieldFormActions extends StatelessWidget {
           ListenableBuilder(
             listenable: controller,
             builder: (context, child) {
-              return ElevatedButton(
+              return RufkoPrimaryButton(
                 onPressed: controller.isLoading ? null : onSave,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2196F3), // RufkoTheme.primaryColor
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                ),
                 child: controller.isLoading
                     ? const SizedBox(
                         width: 16,

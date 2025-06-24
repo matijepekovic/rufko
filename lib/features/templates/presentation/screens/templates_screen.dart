@@ -78,8 +78,9 @@ class _TemplatesScreenState extends State<TemplatesScreen>
               onCreatePdf: () async {
                 try {
                   await _creationService.createNewPDFTemplate(context);
+                  if (!context.mounted) return;
                 } catch (e) {
-                  if (mounted) {
+                  if (context.mounted) {
                     showErrorSnackBar(context, '$e');
                   }
                 }

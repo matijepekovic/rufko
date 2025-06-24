@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../../data/models/business/product.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
@@ -25,6 +26,10 @@ class ProductFormController extends ChangeNotifier {
   bool _isActive = true;
   bool _isDiscountable = true;
   bool _settingsExpanded = false;
+  
+  // NEW: Photo and inventory state
+  bool _hasInventory = false;
+  String? _photoPath;
 
   // Pricing type state
   ProductPricingType _pricingType = ProductPricingType.simple;
@@ -58,6 +63,10 @@ class ProductFormController extends ChangeNotifier {
   Map<String, TextEditingController> get levelPriceControllers => _levelPriceControllers;
   Map<String, TextEditingController> get levelNameControllers => _levelNameControllers;
   Map<String, TextEditingController> get levelDescriptionControllers => _levelDescriptionControllers;
+  
+  // NEW: Photo and inventory getters
+  bool get hasInventory => _hasInventory;
+  String? get photoPath => _photoPath;
 
   // Setters with notification
   set selectedCategory(String value) {
@@ -91,6 +100,17 @@ class ProductFormController extends ChangeNotifier {
     _initializeLevelsForPricingType();
     notifyListeners();
   }
+  
+  // NEW: Photo and inventory setters
+  set hasInventory(bool value) {
+    _hasInventory = value;
+    notifyListeners();
+  }
+  
+  set photoPath(String? value) {
+    _photoPath = value;
+    notifyListeners();
+  }
 
   /// Initialize form data from existing product or defaults
   void _initializeFormData() {
@@ -117,6 +137,10 @@ class ProductFormController extends ChangeNotifier {
     _isDiscountable = product.isDiscountable;
     _pricingType = product.pricingType;
     _isMainDifferentiator = product.pricingType == ProductPricingType.mainDifferentiator;
+    
+    // NEW: Initialize photo and inventory state
+    _hasInventory = product.hasInventory;
+    _photoPath = product.photoPath;
 
     // Initialize level controllers from existing product
     _initializeLevelControllersFromProduct(product);
@@ -326,6 +350,8 @@ class ProductFormController extends ChangeNotifier {
           isActive: _isActive,
           isDiscountable: _isDiscountable,
           pricingType: _pricingType,
+          hasInventory: _hasInventory,
+          photoPath: _photoPath,
           levelNames: levelNames,
           levelDescriptions: levelDescriptions,
           levelPrices: levelPrices,
@@ -343,6 +369,8 @@ class ProductFormController extends ChangeNotifier {
           isActive: _isActive,
           isDiscountable: _isDiscountable,
           pricingType: _pricingType,
+          hasInventory: _hasInventory,
+          photoPath: _photoPath,
           levelNames: levelNames,
           levelDescriptions: levelDescriptions,
           levelPrices: levelPrices,
@@ -361,6 +389,94 @@ class ProductFormController extends ChangeNotifier {
   String getPricingTypeDescription() {
     // Business logic extracted to service
     return ProductFormService.getPricingTypeDescription(_pricingType);
+  }
+
+  /// NEW: Pick product photo from camera or gallery
+  Future<void> pickProductPhoto() async {
+    try {
+      // Show photo picker dialog
+      final ImageSource? source = await _showPhotoSourceDialog();
+      if (source == null) return;
+
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (image != null) {
+        _photoPath = image.path;
+        notifyListeners();
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Product photo added'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error selecting photo: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// NEW: Remove product photo
+  void removeProductPhoto() {
+    _photoPath = null;
+    notifyListeners();
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Product photo removed'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
+  /// NEW: Show photo source selection dialog
+  Future<ImageSource?> _showPhotoSourceDialog() async {
+    return await showDialog<ImageSource>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Photo Source'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Colors.blue),
+              title: const Text('Camera'),
+              subtitle: const Text('Take a new photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Colors.green),
+              title: const Text('Gallery'),
+              subtitle: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

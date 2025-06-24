@@ -22,6 +22,14 @@ class CommunicationHistoryController extends ChangeNotifier {
       return false;
     }
 
+    final lowerMessage = message.toLowerCase();
+    
+    // Check for specific outbound message patterns
+    if (lowerMessage.contains('quick sms sent:') ||
+        lowerMessage.contains('outbound call to')) {
+      return true;
+    }
+
     final outgoingKeywords = [
       'sent',
       'delivered',
@@ -32,7 +40,6 @@ class CommunicationHistoryController extends ChangeNotifier {
       'invoice',
       'template'
     ];
-    final lowerMessage = message.toLowerCase();
     return outgoingKeywords.any((keyword) => lowerMessage.contains(keyword));
   }
 
@@ -168,11 +175,36 @@ class CommunicationHistoryController extends ChangeNotifier {
 
   /// Add customer response to communication history
   Future<void> addCustomerResponse(String responseType, String response) async {
-    customer.addCommunication(
-      'Customer responded via $responseType: $response',
-      type: responseType,
-    );
+    String message;
+    
+    if (responseType == 'email') {
+      // For email responses, try to find an existing thread to reply to
+      final emailThreads = groupEmailsByThread();
+      
+      if (emailThreads.isNotEmpty) {
+        // Find the most recent thread to determine if this is a reply
+        final latestThread = emailThreads.first;
+        final normalizedSubject = latestThread['normalizedSubject'] as String;
+        
+        // If the response doesn't specify a subject, treat it as a reply to latest thread
+        if (!response.toLowerCase().contains('subject:')) {
+          message = 'Customer responded via email: Subject: Re: $normalizedSubject\n$response';
+        } else {
+          message = 'Customer responded via email: $response';
+        }
+      } else {
+        // No existing threads, this is a new email
+        if (!response.toLowerCase().contains('subject:')) {
+          message = 'Customer responded via email: Subject: New Email\n$response';
+        } else {
+          message = 'Customer responded via email: $response';
+        }
+      }
+    } else {
+      message = 'Customer responded via $responseType: $response';
+    }
 
+    customer.addCommunication(message, type: responseType);
     await context.read<AppStateProvider>().updateCustomer(customer);
     notifyListeners();
   }
@@ -221,6 +253,45 @@ class CommunicationHistoryController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Add outbound email with proper threading context
+  Future<void> addOutboundEmail({
+    required String subject,
+    required String content,
+    String? replyToThread,
+  }) async {
+    String message;
+    
+    if (replyToThread != null && replyToThread.isNotEmpty) {
+      // This is a reply to an existing thread
+      final normalizedReplySubject = _normalizeEmailSubject(subject);
+      final normalizedThreadSubject = _normalizeEmailSubject(replyToThread);
+      
+      // Check if this is actually a reply (subjects match when normalized)
+      if (normalizedReplySubject == normalizedThreadSubject) {
+        message = 'Email sent: Subject: Re: $replyToThread\n$content';
+      } else {
+        // Different subject, new thread
+        message = 'Email sent: Subject: $subject\n$content';
+      }
+    } else {
+      // New email thread
+      message = 'Email sent: Subject: $subject\n$content';
+    }
+
+    customer.addCommunication(message, type: 'email');
+    await context.read<AppStateProvider>().updateCustomer(customer);
+    notifyListeners();
+  }
+
+  /// Check if a subject would be threaded with existing emails
+  bool wouldCreateNewThread(String subject) {
+    final normalizedSubject = _normalizeEmailSubject(subject);
+    final existingThreads = groupEmailsByThread();
+    
+    return !existingThreads.any((thread) => 
+        thread['normalizedSubject'] == normalizedSubject);
+  }
+
   /// Update existing project note
   Future<void> updateProjectNote(
     String originalEntry,
@@ -250,6 +321,41 @@ class CommunicationHistoryController extends ChangeNotifier {
     }
   }
 
+  /// Update outbound communication (SMS, calls)
+  Future<void> updateOutboundCommunication(
+    String originalMessage,
+    String timestamp,
+    String newMessage,
+  ) async {
+    try {
+      final communicationHistory = customer.communicationHistory;
+
+      for (int i = 0; i < communicationHistory.length; i++) {
+        final entry = communicationHistory[i];
+        final parts = entry.split(': ');
+
+        if (parts.isNotEmpty && parts[0] == timestamp) {
+          final existingMessage = parts.sublist(1).join(': ');
+          
+          // Only update if this is the right entry
+          if (existingMessage == originalMessage) {
+            final updatedEntry = '$timestamp: $newMessage';
+            communicationHistory[i] = updatedEntry;
+
+            await context.read<AppStateProvider>().updateCustomer(customer);
+            notifyListeners();
+
+            return;
+          }
+        }
+      }
+
+      throw Exception('Could not find the original communication to update');
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Get sorted communication history (most recent first)
   List<String> getSortedCommunications() {
     return customer.communicationHistory.reversed.toList();
@@ -266,5 +372,146 @@ class CommunicationHistoryController extends ChangeNotifier {
       contactMethod = emailMatch?.group(1) ?? customer.email ?? '';
     }
     return contactMethod;
+  }
+
+  /// Get only email communications
+  List<Map<String, dynamic>> getEmailCommunications() {
+    final emailComms = <Map<String, dynamic>>[];
+    
+    for (final entry in customer.communicationHistory) {
+      final parts = entry.split(': ');
+      if (parts.length < 2) continue;
+      
+      final timestamp = parts[0];
+      final message = parts.sublist(1).join(': ');
+      
+      // Check if this is an email communication
+      if (message.contains('📧') || 
+          message.toLowerCase().contains('email') ||
+          message.toLowerCase().contains('subject:')) {
+        
+        emailComms.add({
+          'timestamp': timestamp,
+          'message': message,
+          'cleanMessage': cleanMessage(message),
+          'isOutgoing': isOutgoingMessage(message),
+        });
+      }
+    }
+    
+    return emailComms.reversed.toList(); // Most recent first
+  }
+
+  /// Group emails by thread using proper email threading logic
+  List<Map<String, dynamic>> groupEmailsByThread() {
+    final emails = getEmailCommunications();
+    final threads = <String, List<Map<String, dynamic>>>{};
+    
+    for (final email in emails) {
+      final message = email['message'] as String;
+      String rawSubject = 'No Subject';
+      
+      // Extract subject if present
+      final subjectMatch = RegExp(r'Subject:\s*([^\n]+)').firstMatch(message);
+      if (subjectMatch != null) {
+        rawSubject = subjectMatch.group(1)?.trim() ?? 'No Subject';
+      } else if (message.contains('Email sent using template')) {
+        // Extract template name as subject
+        final templateMatch = RegExp(r'"([^"]+)"').firstMatch(message);
+        rawSubject = templateMatch?.group(1) ?? 'Template Email';
+      }
+      
+      // Normalize subject for threading
+      final normalizedSubject = _normalizeEmailSubject(rawSubject);
+      
+      // Add email with both raw and normalized subjects
+      email['rawSubject'] = rawSubject;
+      email['normalizedSubject'] = normalizedSubject;
+      
+      // Group by normalized subject (this creates proper threads)
+      if (!threads.containsKey(normalizedSubject)) {
+        threads[normalizedSubject] = [];
+      }
+      threads[normalizedSubject]!.add(email);
+    }
+    
+    // Convert to list format with thread info
+    final threadList = <Map<String, dynamic>>[];
+    threads.forEach((normalizedSubject, threadEmails) {
+      // Sort emails within thread by timestamp (oldest first for proper conversation order)
+      threadEmails.sort((a, b) {
+        final aTime = DateTime.tryParse(a['timestamp']) ?? DateTime.now();
+        final bTime = DateTime.tryParse(b['timestamp']) ?? DateTime.now();
+        return aTime.compareTo(bTime);
+      });
+      
+      // Use the original subject from the first email as the display subject
+      final displaySubject = threadEmails.first['rawSubject'] as String;
+      
+      threadList.add({
+        'subject': displaySubject,
+        'normalizedSubject': normalizedSubject,
+        'emails': threadEmails,
+        'latestTimestamp': threadEmails.last['timestamp'], // Most recent email
+        'messageCount': threadEmails.length,
+        'hasUnread': false, // Could be enhanced later
+      });
+    });
+    
+    // Sort threads by latest message (most recent threads first)
+    threadList.sort((a, b) {
+      final aTime = DateTime.tryParse(a['latestTimestamp']) ?? DateTime.now();
+      final bTime = DateTime.tryParse(b['latestTimestamp']) ?? DateTime.now();
+      return bTime.compareTo(aTime);
+    });
+    
+    return threadList;
+  }
+
+  /// Normalize email subject for proper threading (like Gmail/Outlook)
+  String _normalizeEmailSubject(String subject) {
+    String normalized = subject.trim();
+    
+    // Remove common email prefixes (case insensitive)
+    final prefixPattern = RegExp(r'^(re|fwd|fw|forward):\s*', caseSensitive: false);
+    
+    // Keep removing prefixes until none are found
+    String previous;
+    do {
+      previous = normalized;
+      normalized = normalized.replaceFirst(prefixPattern, '').trim();
+    } while (normalized != previous && normalized.isNotEmpty);
+    
+    // Remove multiple spaces and normalize
+    normalized = normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
+    
+    // If subject becomes empty after normalization, use fallback
+    if (normalized.isEmpty) {
+      return 'No Subject';
+    }
+    
+    return normalized;
+  }
+
+  /// Parse email content to extract subject and body
+  Map<String, String> parseEmailContent(String message) {
+    String subject = 'No Subject';
+    String body = message;
+    
+    // Try to extract subject
+    final subjectMatch = RegExp(r'Subject:\s*([^\n]+)').firstMatch(message);
+    if (subjectMatch != null) {
+      subject = subjectMatch.group(1)?.trim() ?? 'No Subject';
+      // Remove subject from body
+      body = message.replaceFirst(subjectMatch.group(0)!, '').trim();
+    }
+    
+    // Clean up the body
+    body = cleanMessage(body);
+    
+    return {
+      'subject': subject,
+      'body': body,
+    };
   }
 }

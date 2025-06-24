@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'package:intl/intl.dart';
 
+String formatQuantity(double quantity) {
+  // Remove unnecessary .0 suffix, but keep decimals like 2.3
+  if (quantity == quantity.roundToDouble()) {
+    return quantity.round().toString();
+  } else {
+    return quantity.toString();
+  }
+}
 
 String formatFileSize(int bytes) {
   if (bytes < 1024) return '$bytes B';

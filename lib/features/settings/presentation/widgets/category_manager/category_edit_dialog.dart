@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/buttons/rufko_dialog_actions.dart';
 
 /// Dialog for editing category names
 class CategoryEditDialog extends StatefulWidget {
@@ -95,17 +96,10 @@ class _CategoryEditDialogState extends State<CategoryEditDialog> {
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: _updateCategory,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue.shade600,
-            foregroundColor: Colors.white,
-          ),
-          child: const Text('Update'),
+        RufkoDialogActions(
+          onCancel: () => Navigator.pop(context),
+          onConfirm: _updateCategory,
+          confirmText: 'Update',
         ),
       ],
     );

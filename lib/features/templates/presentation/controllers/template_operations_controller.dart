@@ -176,11 +176,13 @@ class TemplateOperationsController extends ChangeNotifier {
               if (controller.text.trim().isNotEmpty) {
                 Navigator.pop(dialogContext, controller.text.trim());
               } else {
-                ScaffoldMessenger.of(_context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Template name cannot be empty."),
-                  ),
-                );
+                if (_context.mounted) {
+                  ScaffoldMessenger.of(_context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Template name cannot be empty."),
+                    ),
+                  );
+                }
               }
             },
             child: const Text('Create'),

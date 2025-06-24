@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../../data/providers/state/app_state_provider.dart';
 
 class CustomerImportController {
-  CustomerImportController(this.context);
+  CustomerImportController(this.context, this.appState);
 
   final BuildContext context;
+  final AppStateProvider appState;
 
   void importFromContacts() {
     ScaffoldMessenger.of(context).showSnackBar(

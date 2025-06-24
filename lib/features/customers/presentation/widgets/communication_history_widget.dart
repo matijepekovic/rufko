@@ -91,6 +91,13 @@ class _CommunicationHistoryWidgetState extends State<CommunicationHistoryWidget>
     final timestamp = CommunicationUtils.parseTimestamp(entry);
     final message = CommunicationUtils.parseMessage(entry);
 
+    // Filter out project notes and emails from chat bubbles
+    if (message.contains('PROJECT_NOTE:') || 
+        message.toLowerCase().contains('email') ||
+        message.contains('📧')) {
+      return const SizedBox.shrink();
+    }
+
     final isOutgoing = widget.controller.isOutgoingMessage(message);
     final messageType = widget.controller.getMessageType(message);
     final cleanMessage = widget.controller.cleanMessage(message);

@@ -6,7 +6,7 @@ class CategoryOperationsController extends ChangeNotifier {
       : _categories = List.from(initialCategories);
 
   final TextEditingController addController = TextEditingController();
-  List<String> _categories;
+  final List<String> _categories;
 
   List<String> get categories => _categories;
 

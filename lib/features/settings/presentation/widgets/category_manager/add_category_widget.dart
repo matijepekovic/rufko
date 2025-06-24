@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/buttons/rufko_buttons.dart';
 
 /// Widget for adding new categories in the CategoryManagerDialog
 class AddCategoryWidget extends StatelessWidget {
@@ -37,14 +38,9 @@ class AddCategoryWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          ElevatedButton(
+          RufkoIconButton(
             onPressed: onAdd,
-            style: ElevatedButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              backgroundColor: Colors.blue.shade600,
-              foregroundColor: Colors.white,
-            ),
-            child: const Icon(Icons.add),
+            icon: Icons.add,
           ),
         ],
       ),

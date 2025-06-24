@@ -43,57 +43,20 @@ class InspectionDocumentsSection extends StatelessWidget {
   }
 
   Widget _buildSectionHeader() {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.orange.shade100,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            'Inspection Documents',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.orange.shade700,
-              fontSize: 14,
-            ),
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade100,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        'Inspection Documents',
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Colors.orange.shade700,
+          fontSize: 14,
         ),
-        const Spacer(),
-        PopupMenuButton<String>(
-          icon: Icon(Icons.add_circle, color: Colors.orange.shade600, size: 20),
-          onSelected: (value) {
-            if (value == 'note') {
-              onAddNote();
-            } else if (value == 'pdf') {
-              onAddPdf();
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'note',
-              child: Row(
-                children: [
-                  Icon(Icons.note_add, size: 16),
-                  SizedBox(width: 8),
-                  Text('Add Note'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'pdf',
-              child: Row(
-                children: [
-                  Icon(Icons.picture_as_pdf, size: 16),
-                  SizedBox(width: 8),
-                  Text('Add PDF'),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ],
+      ),
     );
   }
 
@@ -130,61 +93,7 @@ class InspectionDocumentsSection extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildActionButton(
-                icon: Icons.note_add,
-                label: 'Add Note',
-                color: Colors.blue,
-                onTap: onAddNote,
-              ),
-              const SizedBox(width: 12),
-              _buildActionButton(
-                icon: Icons.picture_as_pdf,
-                label: 'Add PDF',
-                color: Colors.red,
-                onTap: onAddPdf,
-              ),
-            ],
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: color,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

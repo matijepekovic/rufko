@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../../../../../data/models/templates/email_template.dart';
 import '../../../../../data/providers/state/app_state_provider.dart';
+import '../../../../../shared/widgets/buttons/rufko_footer_action_bar.dart';
+import '../../../../../shared/widgets/buttons/rufko_buttons.dart';
 import '../../controllers/email_template_editor_controller.dart';
 import '../../controllers/placeholder_help_controller.dart';
 import '../form_components/template_form_field.dart';
@@ -259,14 +261,11 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
                   ),
                 ),
                 const Spacer(),
-                TextButton.icon(
+                RufkoTextButton(
                   onPressed: _showCreateCategoryDialog,
-                  icon: const Icon(Icons.add, size: 16),
-                  label: const Text('New Category'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  ),
+                  icon: Icons.add,
+                  size: ButtonSize.small,
+                  child: const Text('New Category'),
                 ),
               ],
             ),
@@ -358,40 +357,23 @@ class _EmailTemplateEditorScreenState extends State<EmailTemplateEditorScreen> {
   }
 
   Widget _buildFooter() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
-            spreadRadius: 1,
-            blurRadius: 4,
-            offset: const Offset(0, -2),
+    return RufkoFooterActionBar(
+      children: [
+        Expanded(
+          child: RufkoSecondaryButton(
+            onPressed: () => Navigator.pop(context),
+            isFullWidth: true,
+            child: const Text('Cancel'),
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
+        ),
+        Expanded(
+          child: RufkoPrimaryButton(
+            onPressed: _handleSave,
+            isFullWidth: true,
+            child: Text(_controller.isEditing ? 'Update' : 'Create'),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: ElevatedButton(
-              onPressed: _handleSave,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
-              child: Text(_controller.isEditing ? 'Update' : 'Create'),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../../data/models/business/customer.dart';
+import '../../../../../shared/widgets/buttons/rufko_dialog_actions.dart';
 
 /// Dialog for confirming customer deletion
 /// Separated from controller logic for better UI organization
@@ -45,16 +46,14 @@ class CustomerDeleteDialog extends StatelessWidget {
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () {
+        RufkoDialogActions(
+          onCancel: () => Navigator.pop(context),
+          onConfirm: () {
             Navigator.pop(context);
             onConfirm();
           },
-          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          confirmText: 'Delete',
+          isDangerousAction: true,
         ),
       ],
     );

@@ -182,6 +182,7 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
       quoteType: _quoteType,
       onAddProductPressed: _showAddProductDialog,
       onRemoveProduct: _removeProduct,
+      onEditProduct: _editProduct,
       quoteLevels: _quoteLevels,
       mainProduct: _mainProduct,
       mainQuantity: _mainQuantity,
@@ -244,6 +245,14 @@ class _SimplifiedQuoteScreenState extends State<SimplifiedQuoteScreen>
   void _addProduct(QuoteItem product) => _controller.addProduct(product);
 
   void _removeProduct(QuoteItem product) => _controller.removeProduct(product);
+  
+  void _editProduct(QuoteItem product) {
+    // TODO: Implement product editing functionality
+    // For now, just show a placeholder message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Product editing not yet implemented')),
+    );
+  }
 
   void _handleTaxRateChanged(double rate) => _controller.taxRate = rate;
 

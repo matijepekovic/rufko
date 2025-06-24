@@ -6,6 +6,42 @@ class CustomerFilterController {
 
   final AppStateProvider appState;
 
+  // ADD: Chip filter state management
+  String _selectedFilter = 'All';
+  String get selectedFilter => _selectedFilter;
+
+  // ADD: Filter selection method
+  void selectFilter(String filter) {
+    if (_selectedFilter != filter) {
+      _selectedFilter = filter;
+      // Controller handles state change logic
+    }
+  }
+
+  // ADD: Get customers with current chip filter
+  List<Customer> getChipFilteredCustomers({
+    required String searchQuery,
+    required String sortBy,
+    required bool sortAscending,
+  }) {
+    return getFilteredCustomers(
+      filter: _selectedFilter,
+      searchQuery: searchQuery,
+      sortBy: sortBy,
+      sortAscending: sortAscending,
+    );
+  }
+
+  // ADD: Get available filter options
+  List<String> getFilterOptions() {
+    return ['All', 'Recent', 'Active', 'Inactive'];
+  }
+
+  // ADD: Reset filter to default
+  void resetFilter() {
+    _selectedFilter = 'All';
+  }
+
   List<Customer> getFilteredCustomers({
     required String filter,
     required String searchQuery,

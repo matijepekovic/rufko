@@ -51,34 +51,12 @@ class ProjectNotesSection extends StatelessWidget {
 
         final noteContent = fullNote.replaceFirst('PROJECT_NOTE: ', '');
 
-        IconData noteIcon = Icons.note;
-        Color noteColor = Colors.blue;
-
-        if (noteContent.toLowerCase().contains('meeting')) {
-          noteIcon = Icons.group;
-          noteColor = Colors.orange;
-        } else if (noteContent.toLowerCase().contains('site visit')) {
-          noteIcon = Icons.home_work;
-          noteColor = Colors.green;
-        } else if (noteContent.toLowerCase().contains('follow-up')) {
-          noteIcon = Icons.schedule;
-          noteColor = Colors.purple;
-        }
-
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           child: Card(
             elevation: 0.5,
             color: Colors.grey.shade50,
             child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: noteColor.withAlpha(25),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(noteIcon, size: 20, color: noteColor),
-              ),
               title: Text(
                 noteContent,
                 style: Theme.of(context).textTheme.bodyMedium,

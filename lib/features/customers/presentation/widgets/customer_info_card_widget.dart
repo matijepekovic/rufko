@@ -7,10 +7,12 @@ import '../../../../data/models/business/customer.dart';
 /// Extracted from InfoTab to create reusable component
 class CustomerInfoCardWidget extends StatelessWidget {
   final Customer customer;
+  final VoidCallback? onEdit;
 
   const CustomerInfoCardWidget({
     super.key,
     required this.customer,
+    this.onEdit,
   });
 
   @override
@@ -34,30 +36,19 @@ class CustomerInfoCardWidget extends StatelessWidget {
   Widget _buildCustomerHeader(BuildContext context) {
     return Row(
       children: [
-        _buildCustomerAvatar(context),
-        const SizedBox(width: 16),
         Expanded(
           child: _buildCustomerDetails(context),
         ),
+        if (onEdit != null)
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: onEdit,
+            tooltip: 'Edit Customer',
+          ),
       ],
     );
   }
 
-  Widget _buildCustomerAvatar(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: Theme.of(context).primaryColor.withAlpha(25),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        Icons.person_outline,
-        color: Theme.of(context).primaryColor,
-        size: 28,
-      ),
-    );
-  }
 
   Widget _buildCustomerDetails(BuildContext context) {
     return Column(

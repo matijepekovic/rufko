@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import '../../../data/models/business/customer.dart';
@@ -101,7 +102,7 @@ class PdfFileService {
 
         if (!addMediaResult.isSuccess) {
           // Log but don't fail the save operation
-          print('Warning: Failed to add PDF to customer media: ${addMediaResult.errorMessage}');
+          debugPrint('Warning: Failed to add PDF to customer media: ${addMediaResult.errorMessage}');
         }
       }
 

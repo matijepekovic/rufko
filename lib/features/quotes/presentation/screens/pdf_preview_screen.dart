@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
-import '../controllers/pdf_document_controller.dart';
 import '../controllers/pdf_editing_controller.dart';
 import '../controllers/pdf_file_operations_controller.dart';
 import '../controllers/pdf_viewer_ui_builder.dart';
@@ -245,7 +244,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen>
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 2),
                   ),
@@ -425,16 +424,16 @@ class FormFieldOverlayPainter extends CustomPainter {
       Color borderColor;
 
       if (isSelected) {
-        overlayColor = Colors.blue.withOpacity(0.3);
+        overlayColor = Colors.blue.withValues(alpha: 0.3);
         borderColor = Colors.blue;
       } else if (hasEdit) {
-        overlayColor = Colors.green.withOpacity(0.2);
+        overlayColor = Colors.green.withValues(alpha: 0.2);
         borderColor = Colors.green;
       } else if (field.isRequired) {
-        overlayColor = Colors.red.withOpacity(0.2);
+        overlayColor = Colors.red.withValues(alpha: 0.2);
         borderColor = Colors.red;
       } else {
-        overlayColor = Colors.purple.withOpacity(0.15);
+        overlayColor = Colors.purple.withValues(alpha: 0.15);
         borderColor = Colors.purple;
       }
 
@@ -457,7 +456,7 @@ class FormFieldOverlayPainter extends CustomPainter {
       final textSpan = TextSpan(
         text: field.type.toUpperCase(),
         style: TextStyle(
-          color: borderColor.withOpacity(0.8),
+          color: borderColor.withValues(alpha: 0.8),
           fontSize: 8,
           fontWeight: FontWeight.bold,
         ),

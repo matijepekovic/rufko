@@ -16,7 +16,10 @@ class QuoteDetailController extends ChangeNotifier {
           context: context,
           quote: quote,
           customer: customer,
-        );
+        ) {
+    // Listen to UI controller changes and forward them
+    _uiController.addListener(_onUIControllerChanged);
+  }
 
   final SimplifiedMultiLevelQuote quote;
   final Customer customer;
@@ -40,6 +43,11 @@ class QuoteDetailController extends ChangeNotifier {
   Color getStatusColor() => _uiController.getStatusColor();
   String getStatusButtonText() => _uiController.getStatusButtonText();
 
+  /// Forward UI controller changes to listeners
+  void _onUIControllerChanged() {
+    notifyListeners();
+  }
+
   /// Legacy methods for backward compatibility - now delegate to handler
   void selectLevel(String levelId) {
     _uiController.selectLevel(levelId);
@@ -57,22 +65,23 @@ class QuoteDetailController extends ChangeNotifier {
 
   @Deprecated('Use QuoteDetailHandler.updateQuoteStatus() in new architecture')
   void updateQuoteStatus(BuildContext context) {
-    print('updateQuoteStatus() called - use QuoteDetailHandler.updateQuoteStatus() in new architecture');
+    debugPrint('updateQuoteStatus() called - use QuoteDetailHandler.updateQuoteStatus() in new architecture');
   }
 
   @Deprecated('Use QuoteDetailHandler.deleteQuote() in new architecture')
   void deleteQuote(BuildContext context) {
-    print('deleteQuote() called - use QuoteDetailHandler.deleteQuote() in new architecture');
+    debugPrint('deleteQuote() called - use QuoteDetailHandler.deleteQuote() in new architecture');
   }
 
   @Deprecated('Use QuoteDetailHandler.handleMenuAction() in new architecture')
   void handleMenuAction(BuildContext context, String action, PDFGenerationController pdfController) {
-    print('handleMenuAction() called - use QuoteDetailHandler.handleMenuAction() in new architecture');
+    debugPrint('handleMenuAction() called - use QuoteDetailHandler.handleMenuAction() in new architecture');
   }
 
   /// Clean up resources
   @override
   void dispose() {
+    _uiController.removeListener(_onUIControllerChanged);
     _uiController.dispose();
     super.dispose();
   }

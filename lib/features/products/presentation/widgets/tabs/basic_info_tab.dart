@@ -7,6 +7,7 @@ import '../../controllers/product_form_controller.dart';
 import '../form_components/compact_text_field.dart';
 import '../form_components/compact_dropdown.dart';
 import '../form_components/compact_switch.dart';
+import '../product_photo_section.dart';
 
 /// Basic info tab widget extracted from ProductFormDialog
 /// Handles product name, description, price, category, unit, and settings
@@ -199,6 +200,20 @@ class BasicInfoTab extends StatelessWidget {
               margin: EdgeInsets.only(top: isPhone ? 12 : 16),
               child: Column(
                 children: [
+                  // NEW: Product Photo Section
+                  ProductPhotoSection(controller: controller),
+                  SizedBox(height: isPhone ? 12 : 16),
+                  // NEW: Inventory Tracking
+                  CompactSwitch(
+                    label: 'Has Inventory',
+                    subtitle: 'Track inventory levels for this product',
+                    value: controller.hasInventory,
+                    onChanged: (value) {
+                      controller.hasInventory = value;
+                    },
+                    isPhone: isPhone,
+                  ),
+                  SizedBox(height: isPhone ? 12 : 16),
                   CompactSwitch(
                     label: 'Active Product',
                     subtitle: 'Available for use in quotes',

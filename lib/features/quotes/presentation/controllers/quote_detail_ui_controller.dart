@@ -13,7 +13,7 @@ class QuoteDetailUIController extends ChangeNotifier {
     required this.customer,
     required AppStateProvider appState,
   }) : _appState = appState, _service = QuoteService() {
-    selectedLevelId = quote.levels.isNotEmpty ? quote.levels.first.id : null;
+    selectedLevelId = quote.effectiveSelectedLevelId;
   }
 
   final SimplifiedMultiLevelQuote quote;
@@ -69,8 +69,20 @@ class QuoteDetailUIController extends ChangeNotifier {
   }
 
   /// Select quote level
-  void selectLevel(String levelId) {
+  Future<void> selectLevel(String levelId) async {
     selectedLevelId = levelId;
+    
+    // Persist the selection to the quote
+    quote.selectedLevelId = levelId;
+    quote.updatedAt = DateTime.now();
+    
+    try {
+      await _appState.updateSimplifiedQuote(quote);
+    } catch (e) {
+      // If save fails, we keep the UI updated but log the error
+      debugPrint('Failed to save level selection: $e');
+    }
+    
     notifyListeners();
   }
 

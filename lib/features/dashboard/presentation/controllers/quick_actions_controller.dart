@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../core/mixins/ui/responsive_spacing_mixin.dart';
 import '../../../../core/mixins/ui/responsive_text_mixin.dart';
 import '../../../../core/mixins/ui/responsive_dimensions_mixin.dart';
 import '../../../../core/mixins/ui/responsive_breakpoints_mixin.dart';
 import '../../../../core/mixins/ui/responsive_widget_mixin.dart';
+import '../../../../data/providers/state/app_state_provider.dart';
+import '../../../customers/presentation/controllers/customer_dialog_manager.dart';
+import '../../../customers/presentation/controllers/customer_import_controller.dart';
+import '../../../products/presentation/controllers/product_dialog_manager.dart';
+import '../../../quotes/presentation/controllers/quote_navigation_controller.dart';
 
 class QuickActionsController
     with
@@ -18,7 +24,23 @@ class QuickActionsController
   final BuildContext context;
   final void Function(int) navigateToTab;
 
+  // Initialize dialog managers
+  CustomerDialogManager? _customerDialogManager;
+  ProductDialogManager? _productDialogManager;
+  QuoteNavigationController? _quoteNavigationController;
+
+  void _initializeControllers() {
+    if (_customerDialogManager != null) return; // Already initialized
+    
+    final appState = context.read<AppStateProvider>();
+    final importController = CustomerImportController(context, appState);
+    _customerDialogManager = CustomerDialogManager(context, importController);
+    _productDialogManager = ProductDialogManager(context);
+    _quoteNavigationController = QuoteNavigationController(context);
+  }
+
   void showQuickCreateDialog() {
+    _initializeControllers(); // Initialize controllers when needed
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -69,7 +91,7 @@ class QuickActionsController
             Colors.blue.shade600,
             () {
               Navigator.pop(context);
-              navigateToTab(1);
+              _customerDialogManager!.showAddCustomerDialog();
             },
           ),
           _buildQuickActionTile(
@@ -79,7 +101,7 @@ class QuickActionsController
             Colors.green.shade600,
             () {
               Navigator.pop(context);
-              navigateToTab(2);
+              _quoteNavigationController!.navigateToCreateQuote();
             },
           ),
           _buildQuickActionTile(
@@ -89,7 +111,7 @@ class QuickActionsController
             Colors.orange.shade600,
             () {
               Navigator.pop(context);
-              navigateToTab(3);
+              _productDialogManager!.showAddProductDialog();
             },
           ),
           SizedBox(height: spacingLG(context)),

@@ -1,6 +1,8 @@
 import "package:flutter/material.dart";
 
 import "../../../../../data/models/business/quote_extras.dart";
+import "../../../../../shared/widgets/buttons/rufko_buttons.dart";
+import "../calculator/calculator_text_field.dart";
 
 class CustomItemDialog extends StatefulWidget {
   final Function(CustomLineItem) onItemAdded;
@@ -58,15 +60,11 @@ class CustomItemDialogState extends State<CustomItemDialog> {
                     validator: (value) => value?.isEmpty == true ? 'Required' : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  CalculatorTextField(
                     controller: _amountController,
-                    decoration: const InputDecoration(
-                      labelText: 'Amount',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.attach_money),
-                      prefixText: '\$ ',
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    labelText: 'Amount',
+                    prefixIcon: const Icon(Icons.attach_money),
+                    prefixText: '\$ ',
                     validator: (value) {
                       if (value?.isEmpty == true) return 'Required';
                       final amount = double.tryParse(value!);
@@ -98,16 +96,17 @@ class CustomItemDialogState extends State<CustomItemDialog> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
+                  child: RufkoSecondaryButton(
                     onPressed: () => Navigator.pop(context),
+                    isFullWidth: true,
                     child: const Text('Cancel'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton(
+                  child: RufkoPrimaryButton(
                     onPressed: _addCustomItem,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+                    isFullWidth: true,
                     child: const Text('Add Item'),
                   ),
                 ),

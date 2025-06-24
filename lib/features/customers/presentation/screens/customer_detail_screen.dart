@@ -19,7 +19,9 @@ import '../../../../shared/controllers/ui_state_controller.dart';
 import '../widgets/tabs/quotes_tab.dart';
 import '../widgets/tabs/media_tab.dart';
 import '../widgets/tabs/info_tab.dart';
+import '../widgets/tabs/communications_tab.dart';
 import '../widgets/tabs/inspection_tab.dart';
+import '../widgets/media/media_selection_toolbar.dart';
 import '../../../communication/presentation/controllers/communication_controller.dart';
 import '../../../communication/presentation/controllers/communication_dialog_controller.dart';
 import '../../../communication/presentation/widgets/dialogs/sms_preview_dialog.dart';
@@ -29,10 +31,12 @@ import '../../../communication/presentation/widgets/dialogs/email_edit_dialog.da
 
 class CustomerDetailScreen extends StatefulWidget {
   final Customer customer;
+  final int initialTabIndex;
 
   const CustomerDetailScreen({
     super.key,
     required this.customer,
+    this.initialTabIndex = 0,
   });
 
   @override
@@ -55,6 +59,14 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   late MediaTabController _mediaController;
   late CommunicationController _commController;
 
+  // Media selection state for toolbar
+  bool _isMediaSelectionMode = false;
+  int _selectedCount = 0;
+  VoidCallback? _onSelectAll;
+  VoidCallback? _onDeleteSelected;
+  VoidCallback? _onCancelSelection;
+  bool _isDeleteEnabled = false;
+
   @override
   Customer get customer => widget.customer;
 
@@ -68,7 +80,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
   void initState() {
     super.initState();
     _uiController =
-        UIStateController(vsync: this, onUpdate: () => setState(() {}));
+        UIStateController(vsync: this, onUpdate: () => setState(() {}), initialIndex: widget.initialTabIndex);
     _mediaController = MediaTabController(
       context: context,
       customer: widget.customer,
@@ -116,9 +128,39 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
 
     _uiController.tabController.addListener(() {
       if (_selectionController.isSelectionMode &&
-          _uiController.tabController.index != 3) {
+          _uiController.tabController.index != 4) {
         _selectionController.exitSelectionMode();
       }
+    });
+  }
+
+  void _onMediaSelectionModeChanged(bool isSelectionMode) {
+    setState(() {
+      _isMediaSelectionMode = isSelectionMode;
+      if (!isSelectionMode) {
+        // Clear selection state when exiting selection mode
+        _selectedCount = 0;
+        _onSelectAll = null;
+        _onDeleteSelected = null;
+        _onCancelSelection = null;
+        _isDeleteEnabled = false;
+      }
+    });
+  }
+
+  void _onMediaSelectionStateChanged(
+    int selectedCount,
+    VoidCallback onSelectAll,
+    VoidCallback onDeleteSelected,
+    VoidCallback onCancelSelection,
+    bool isDeleteEnabled,
+  ) {
+    setState(() {
+      _selectedCount = selectedCount;
+      _onSelectAll = onSelectAll;
+      _onDeleteSelected = onDeleteSelected;
+      _onCancelSelection = onCancelSelection;
+      _isDeleteEnabled = isDeleteEnabled;
     });
   }
 
@@ -128,6 +170,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
     _communicationController.dispose();
     super.dispose();
   }
+
 
   // SELECTION MODE METHODS ARE HANDLED BY MediaSelectionController
 
@@ -146,77 +189,78 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen>
         builder: (context, appState, child) {
           return Scaffold(
             backgroundColor: Colors.grey[50],
-            body: NestedScrollView(
-              headerSliverBuilder:
-                  (BuildContext context, bool innerBoxIsScrolled) {
-                return <Widget>[
-                  _buildModernSliverAppBar(appState),
-                ];
-              },
-              body: TabBarView(
-                controller: _uiController.tabController,
-                children: [
-                  InfoTab(
-                    customer: widget.customer,
-                    formatDate: formatCommunicationDate,
-                    onTemplateEmail: showTemplateEmailPicker,
-                    onTemplateSMS: showTemplateSMSPicker,
-                    onQuickCommunication: showQuickCommunicationOptions,
-                    onAddCommunication: addCommunication,
+            body: Stack(
+              children: [
+                NestedScrollView(
+                  headerSliverBuilder:
+                      (BuildContext context, bool innerBoxIsScrolled) {
+                    return <Widget>[
+                      _buildModernSliverAppBar(appState),
+                    ];
+                  },
+                  body: TabBarView(
+                    controller: _uiController.tabController,
+                    children: [
+                      InfoTab(
+                        customer: widget.customer,
+                        formatDate: formatCommunicationDate,
+                        onEditCustomer: _actionsController.editCustomer,
+                      ),
+                      CommunicationsTab(
+                        customer: widget.customer,
+                        formatDate: formatCommunicationDate,
+                        onTemplateEmail: showTemplateEmailPicker,
+                        onTemplateSMS: showTemplateSMSPicker,
+                        onQuickCommunication: showQuickCommunicationOptions,
+                        onAddCommunication: addCommunication,
+                      ),
+                      QuotesTab(
+                        customer: widget.customer,
+                        onCreateQuote:
+                            _navigationController.navigateToCreateQuoteScreen,
+                        onOpenQuote:
+                            _navigationController.navigateToSimplifiedQuoteDetail,
+                      ),
+                      InspectionTab(customer: widget.customer), // NEW
+                      MediaTab(
+                        customer: widget.customer,
+                        onPickImageFromCamera: _mediaController.pickImageFromCamera,
+                        onPickImageFromGallery: _mediaController.pickImageFromGallery,
+                        onPickDocument: _mediaController.pickDocument,
+                        onViewMedia: _mediaController.viewMedia,
+                        onShowContextMenu: _mediaController.showMediaContextMenu,
+                        onSelectionModeChanged: _onMediaSelectionModeChanged,
+                        onSelectionStateChanged: _onMediaSelectionStateChanged,
+                        mediaController: _mediaController,
+                      ),
+                    ],
                   ),
-                  QuotesTab(
-                    customer: widget.customer,
-                    onCreateQuote:
-                        _navigationController.navigateToCreateQuoteScreen,
-                    onOpenQuote:
-                        _navigationController.navigateToSimplifiedQuoteDetail,
+                ),
+                // Floating selection toolbar - positioned right below the tab bar
+                if (_isMediaSelectionMode && _uiController.tabController.index == 4)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + kToolbarHeight + kTextTabBarHeight,
+                    left: 0,
+                    right: 0,
+                    child: Material(
+                      elevation: 0,
+                      child: MediaSelectionToolbar(
+                        selectedCount: _selectedCount,
+                        onSelectAll: _onSelectAll ?? () {},
+                        onDelete: _onDeleteSelected ?? () {},
+                        onCancel: _onCancelSelection ?? () {},
+                        isDeleteEnabled: _isDeleteEnabled,
+                      ),
+                    ),
                   ),
-                  InspectionTab(customer: widget.customer), // NEW
-                  MediaTab(
-                    customer: widget.customer,
-                    isProcessing: _uiController.isProcessingMedia,
-                    isSelectionMode: _selectionController.isSelectionMode,
-                    selectedMediaIds: _selectionController.selectedMediaIds,
-                    onEnterSelection: _selectionController.enterSelectionMode,
-                    onExitSelection: _selectionController.exitSelectionMode,
-                    onSelectAll: _selectionController.selectAllMedia,
-                    onToggleSelection:
-                        _selectionController.toggleMediaSelection,
-                    onDeleteSelected: _selectionController.deleteSelectedMedia,
-                    onPickImageFromCamera: _mediaController.pickImageFromCamera,
-                    onPickImageFromGallery:
-                        _mediaController.pickImageFromGallery,
-                    onPickDocument: _mediaController.pickDocument,
-                    onViewMedia: _mediaController.viewMedia,
-                    onShowContextMenu: _mediaController.showMediaContextMenu,
-                    onShowMediaOptions: _mediaController.showMediaOptions,
-                  ),
-                ],
-              ),
+              ],
             ),
-            floatingActionButton: _buildFloatingActionButton(),
           );
         },
       ),
     );
   }
 
-  Widget _buildFloatingActionButton() {
-    return AnimatedBuilder(
-      animation: _uiController.tabController,
-      builder: (context, child) {
-        return _uiController.buildFloatingActionButton(
-          isSelectionMode: _selectionController.isSelectionMode,
-          selectedMediaIds: _selectionController.selectedMediaIds,
-          deleteSelectedMedia: _selectionController.deleteSelectedMedia,
-          exitSelectionMode: _selectionController.exitSelectionMode,
-          navigateToCreateQuoteScreen:
-              _navigationController.navigateToCreateQuoteScreen,
-          showMediaOptions: _mediaController.showMediaOptions,
-        );
-      },
-    );
-  }
 
   Widget _buildModernSliverAppBar(AppStateProvider appState) {
     return _uiController.buildModernSliverAppBar(

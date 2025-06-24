@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../data/models/templates/pdf_template.dart';
+import '../../../../../shared/widgets/buttons/rufko_dialog_actions.dart';
 
 class TemplateSelectionDialog extends StatelessWidget {
   final List<PDFTemplate> templates;
@@ -98,13 +99,10 @@ class TemplateSelectionDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, 'cancelled'),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, 'standard'),
-          child: const Text('Use Standard PDF'),
+        RufkoDialogActions(
+          onCancel: () => Navigator.pop(context, 'cancelled'),
+          onConfirm: () => Navigator.pop(context, 'standard'),
+          confirmText: 'Use Standard PDF',
         ),
       ],
     );

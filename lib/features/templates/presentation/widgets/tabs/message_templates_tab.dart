@@ -6,6 +6,7 @@ import '../../../../../data/models/templates/message_template.dart';
 import '../../../../../data/providers/state/app_state_provider.dart';
 import '../dialogs/message_template_editor.dart';
 import '../../../../../core/mixins/template_tab_mixin.dart';
+import '../../../../../shared/widgets/buttons/rufko_dialog_actions.dart';
 
 class MessageTemplatesTab extends StatefulWidget {
   const MessageTemplatesTab({super.key});
@@ -406,13 +407,11 @@ class _MessageTemplatesTabState extends State<MessageTemplatesTab> with Template
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          RufkoDialogActions(
+            onCancel: () => Navigator.pop(context, false),
+            onConfirm: () => Navigator.pop(context, true),
+            confirmText: 'Delete',
+            isDangerousAction: true,
           ),
         ],
       ),

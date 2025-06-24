@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../../data/models/business/customer.dart';
@@ -267,39 +266,7 @@ mixin CustomerCommunicationMixin<T extends StatefulWidget> on State<T>, Communic
                     Icons.sms,
                     Colors.purple,
                     customer.phone != null ? () => sendSMS(customer.phone!) : null),
-                const Divider(height: 32),
-                Text(
-                  'Quick Log Entry',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                _buildQuickCommTile(
-                    'Initial Contact',
-                    'Customer inquiry received',
-                    Icons.contact_phone,
-                    Colors.blue,
-                    () => _addQuickNote('📞 Initial contact - Customer interested in roofing services')),
-                _buildQuickCommTile(
-                    'Quote Sent',
-                    'Quote delivered to customer',
-                    Icons.send,
-                    Colors.green,
-                    () => _showQuoteSentDialog()),
-                _buildQuickCommTile(
-                    'Site Visit',
-                    'Schedule or log site visit',
-                    Icons.location_on,
-                    Colors.orange,
-                    () => _showSiteVisitDialog()),
-                _buildQuickCommTile(
-                    'Follow-up Needed',
-                    'Set reminder note',
-                    Icons.schedule,
-                    Colors.amber,
-                    () => _showFollowUpDialog()),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
               ],
             ),
           ),
@@ -308,30 +275,6 @@ mixin CustomerCommunicationMixin<T extends StatefulWidget> on State<T>, Communic
     );
   }
 
-  Widget _buildQuickCommTile(
-      String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withAlpha(25),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        onTap: () {
-          Navigator.pop(context);
-          onTap();
-        },
-      ),
-    );
-  }
 
   Widget _buildRealCommTile(
       String title, String subtitle, IconData icon, Color color, VoidCallback? onTap) {
@@ -371,148 +314,7 @@ mixin CustomerCommunicationMixin<T extends StatefulWidget> on State<T>, Communic
     );
   }
 
-  void _addQuickNote(String message) {
-    customer.addCommunication(message);
-    context.read<AppStateProvider>().updateCustomer(customer);
-    if (mounted) setState(() {});
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Communication logged'), backgroundColor: Colors.green),
-    );
-  }
 
-  void _showQuoteSentDialog() {
-    final quoteController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Quote Sent'),
-        content: TextField(
-          controller: quoteController,
-          decoration: const InputDecoration(
-            labelText: 'Quote Number (optional)',
-            hintText: 'e.g., Q-2024-001',
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              final quoteNum = quoteController.text.isNotEmpty ? quoteController.text : 'new quote';
-              _addQuickNote('📧 Quote sent - $quoteNum delivered to customer');
-              Navigator.pop(context);
-            },
-            child: const Text('Log'),
-          ),
-        ],
-      ),
-    );
-  }
 
-  void _showSiteVisitDialog() {
-    final notesController = TextEditingController();
-    bool isScheduled = true;
 
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Site Visit'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Radio<bool>(
-                    value: true,
-                    groupValue: isScheduled,
-                    onChanged: (value) => setDialogState(() => isScheduled = value!),
-                  ),
-                  const Text('Scheduled'),
-                  Radio<bool>(
-                    value: false,
-                    groupValue: isScheduled,
-                    onChanged: (value) => setDialogState(() => isScheduled = value!),
-                  ),
-                  const Text('Completed'),
-                ],
-              ),
-              TextField(
-                controller: notesController,
-                decoration: InputDecoration(
-                  labelText: isScheduled ? 'Schedule Details' : 'Visit Notes',
-                  hintText: isScheduled ? 'Date and time...' : 'What was observed...',
-                ),
-                maxLines: 2,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                final prefix = isScheduled ? '📅 Site visit scheduled' : '🏠 Site visit completed';
-                final notes = notesController.text.isNotEmpty ? ' - ${notesController.text}' : '';
-                _addQuickNote('$prefix$notes');
-                Navigator.pop(context);
-              },
-              child: const Text('Log'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showFollowUpDialog() {
-    final notesController = TextEditingController();
-    DateTime selectedDate = DateTime.now().add(const Duration(days: 7));
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Follow-up Reminder'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Follow-up Note',
-                  hintText: 'What needs to be followed up?',
-                ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                title: Text('Date: ${DateFormat('MMM dd, yyyy').format(selectedDate)}'),
-                trailing: const Icon(Icons.calendar_today),
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: selectedDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 365)),
-                  );
-                  if (date != null) setDialogState(() => selectedDate = date);
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-            ElevatedButton(
-              onPressed: () {
-                final notes = notesController.text.isNotEmpty ? notesController.text : 'General follow-up';
-                final dateStr = DateFormat('MMM dd').format(selectedDate);
-                _addQuickNote('📅 FOLLOW-UP ($dateStr): $notes');
-                Navigator.pop(context);
-              },
-              child: const Text('Set Reminder'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

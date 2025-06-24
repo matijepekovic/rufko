@@ -7,6 +7,7 @@ import '../../../../data/models/business/simplified_quote.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
 import '../screens/simplified_quote_detail_screen.dart';
 import '../screens/simplified_quote_screen.dart';
+import '../../../customers/presentation/screens/customer_selection_screen.dart';
 
 /// Manages navigation related to quote actions and creation.
 class QuoteNavigationController {
@@ -39,7 +40,7 @@ class QuoteNavigationController {
     }
 
     if (customer == null) {
-      _showCustomerSelection(appState, roofScopeData);
+      _showCustomerSelection(roofScopeData);
     } else {
       Navigator.push(
         context,
@@ -53,34 +54,16 @@ class QuoteNavigationController {
     }
   }
 
-  void _showCustomerSelection(AppStateProvider appState, RoofScopeData? data) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Select Customer for New Quote'),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 300,
-          child: ListView.builder(
-            itemCount: appState.customers.length,
-            itemBuilder: (context, index) {
-              final cust = appState.customers[index];
-              return ListTile(
-                title: Text(cust.name),
-                onTap: () {
-                  Navigator.of(dialogContext).pop();
-                  navigateToCreateQuote(customer: cust, roofScopeData: data);
-                },
-              );
-            },
-          ),
+  void _showCustomerSelection(RoofScopeData? data) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CustomerSelectionScreen(
+          onCustomerSelected: (customer) {
+            Navigator.pop(context); // Close customer selection
+            navigateToCreateQuote(customer: customer, roofScopeData: data);
+          },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
       ),
     );
   }

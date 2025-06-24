@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../../core/mixins/ui/responsive_breakpoints_mixin.dart';
 import '../../../../../core/mixins/ui/responsive_spacing_mixin.dart';
 import '../../../../../data/models/business/simplified_quote.dart';
-import '../../../../../app/theme/rufko_theme.dart';
+import '../../../../../shared/widgets/buttons/rufko_buttons.dart';
 
 class DiscountDialog extends StatefulWidget {
   final ValueChanged<QuoteDiscount> onDiscountAdded;
@@ -28,17 +28,37 @@ class _DiscountDialogState extends State<DiscountDialog>
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.9,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildHeader(context),
-            _buildContent(context),
-            _buildActions(context),
-          ],
+    return Material(
+      type: MaterialType.transparency,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.95,
+          margin: const EdgeInsets.only(top: 40),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+            maxWidth: 500,
+          ),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildHeader(context),
+              Expanded(
+                child: _buildContent(context),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -46,66 +66,89 @@ class _DiscountDialogState extends State<DiscountDialog>
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(spacingSM(context) * 5),
-      decoration: const BoxDecoration(
-        color: RufkoTheme.primaryColor,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
         ),
       ),
-      child: Row(
+      child: Column(
         children: [
-          const Icon(Icons.local_offer, color: Colors.white, size: 24),
-          SizedBox(width: spacingMD(context)),
-          const Expanded(
-            child: Text(
-              'Add Discount',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
+          Row(
+            children: [
+              Icon(
+                Icons.local_offer,
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
               ),
-            ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Add Discount',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Add percentage or fixed discount to quote',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.close, color: Colors.white),
-            padding: EdgeInsets.zero,
-          ),
+          const SizedBox(height: 16),
+          _buildActions(context),
         ],
       ),
     );
   }
 
   Widget _buildContent(BuildContext context) {
-    return Flexible(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.all(spacingSM(context) * 5),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
               DropdownButtonFormField<String>(
                 value: _type,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Discount Type',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.category),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  prefixIcon: const Icon(Icons.category),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
                 ),
+                isExpanded: true,
                 items: const [
                   DropdownMenuItem(
                     value: 'percentage',
-                    child: Text('Percentage Discount'),
+                    child: Text('Percentage Discount', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'fixed_amount',
-                    child: Text('Fixed Amount Discount'),
+                    child: Text('Fixed Amount Discount', overflow: TextOverflow.ellipsis),
                   ),
                   DropdownMenuItem(
                     value: 'voucher',
-                    child: Text('Voucher Code'),
+                    child: Text('Voucher Code', overflow: TextOverflow.ellipsis),
                   ),
                 ],
                 onChanged: (value) => setState(() => _type = value!),
@@ -116,12 +159,16 @@ class _DiscountDialogState extends State<DiscountDialog>
                 decoration: InputDecoration(
                   labelText:
                       _type == 'percentage' ? 'Percentage (%)' : 'Amount (\$)',
-                  border: const OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   prefixIcon: Icon(_type == 'percentage'
                       ? Icons.percent
                       : Icons.attach_money),
                   suffixText: _type == 'percentage' ? '%' : null,
                   prefixText: _type == 'fixed_amount' ? '\$ ' : null,
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
                 ),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
@@ -141,21 +188,31 @@ class _DiscountDialogState extends State<DiscountDialog>
               const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Description (Optional)',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  prefixIcon: const Icon(Icons.description),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+                  alignLabelWithHint: true,
                 ),
                 maxLines: 2,
+                textAlignVertical: TextAlignVertical.top,
               ),
               if (_type == 'voucher') ...[
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _codeController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Voucher Code',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.confirmation_number),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    prefixIcon: const Icon(Icons.confirmation_number),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
                   ),
                   textCapitalization: TextCapitalization.characters,
                   validator: (value) => value == null || value.isEmpty
@@ -166,13 +223,19 @@ class _DiscountDialogState extends State<DiscountDialog>
               const SizedBox(height: 20),
               Card(
                 elevation: 0,
-                color: Colors.grey[50],
+                color: Theme.of(context).colorScheme.surfaceContainerLow,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Column(
                   children: [
                     SwitchListTile(
                       title: const Text('Apply to Add-ons'),
-                      subtitle:
-                          const Text('Include add-on products in discount'),
+                      subtitle: const Text(
+                        'Include add-on products in discount',
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
                       value: _applyToAddons,
                       onChanged: (value) =>
                           setState(() => _applyToAddons = value),
@@ -184,6 +247,7 @@ class _DiscountDialogState extends State<DiscountDialog>
                         _expiryDate != null
                             ? DateFormat('MMM dd, yyyy').format(_expiryDate!)
                             : 'No expiry date set',
+                        overflow: TextOverflow.ellipsis,
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () async {
@@ -202,49 +266,28 @@ class _DiscountDialogState extends State<DiscountDialog>
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildActions(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(spacingSM(context) * 5),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(16),
-          bottomRight: Radius.circular(16),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        RufkoSecondaryButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
         ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: () => Navigator.pop(context),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: const Text('Cancel'),
-            ),
-          ),
-          SizedBox(width: spacingMD(context)),
-          Expanded(
-            flex: 2,
-            child: ElevatedButton(
-              onPressed: _addDiscount,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: RufkoTheme.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: const Text('Add Discount'),
-            ),
-          ),
-        ],
-      ),
+        const SizedBox(width: 12),
+        RufkoPrimaryButton(
+          onPressed: _addDiscount,
+          icon: Icons.add,
+          child: const Text('Add Discount'),
+        ),
+      ],
     );
   }
 

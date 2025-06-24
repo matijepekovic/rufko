@@ -23,7 +23,8 @@ class TaxRateSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: 0,
+      color: Theme.of(context).colorScheme.surfaceContainerLow,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -90,11 +91,11 @@ class TaxRateSection extends StatelessWidget {
                   flex: 3,
                   child: Consumer<AppStateProvider>(
                     builder: (context, appState, child) {
-                      return ElevatedButton.icon(
+                      return FilledButton.icon(
                         onPressed: onAutoDetectPressed,
                         icon: const Icon(Icons.location_on, size: 18),
-                        label: const Text('Auto-Detect from Address'),
-                        style: ElevatedButton.styleFrom(
+                        label: const Text('Auto-Detect'),
+                        style: FilledButton.styleFrom(
                           backgroundColor: Colors.blue.shade600,
                           foregroundColor: Colors.white,
                         ),
@@ -118,7 +119,7 @@ class TaxRateSection extends StatelessWidget {
                     Icon(Icons.info_outline, color: Colors.green.shade700, size: 16),
                     const SizedBox(width: 8),
                     Text(
-                      'Tax rate: ${taxRate.toStringAsFixed(2)}% will be applied to all quote levels',
+                      'Tax rate: ${taxRate.toStringAsFixed(2)}% will be applied.',
                       style: TextStyle(
                         color: Colors.green.shade800,
                         fontSize: 12,

@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../controllers/pdf_generation_controller.dart';
 import '../controllers/quote_detail_controller.dart';
 import '../controllers/quote_totals_controller.dart';
+import 'pdf_preview_screen.dart';
 
 import '../../../../data/models/business/customer.dart';
 import '../../../../data/models/business/simplified_quote.dart';
@@ -68,7 +69,6 @@ class _SimplifiedQuoteDetailScreenState
       selectedLevelId: _controller.selectedLevelId ?? '',
     );
     _pdfController = PDFGenerationController(
-      context: context,
       quote: widget.quote,
       customer: widget.customer,
       selectedLevelId: _controller.selectedLevelId,
@@ -114,7 +114,7 @@ class _SimplifiedQuoteDetailScreenState
               actions: [
                 IconButton(
                   icon: const Icon(Icons.preview),
-                  onPressed: _pdfController.previewPdf,
+                  onPressed: _previewPdf,
                   color: Colors.white,
                   tooltip: 'Preview PDF',
                 ),
@@ -246,7 +246,7 @@ class _SimplifiedQuoteDetailScreenState
       children: [
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: _pdfController.generatePdf,
+            onPressed: _generatePdf,
             icon: const Icon(Icons.picture_as_pdf),
             label: const Text('Generate PDF'),
           ),
@@ -254,7 +254,12 @@ class _SimplifiedQuoteDetailScreenState
         SizedBox(width: spacingMD(context)),
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () => _controller.updateQuoteStatus(context),
+            onPressed: () {
+              final nextStatus = _controller.uiController.getNextLogicalStatus();
+              if (nextStatus != null) {
+                _controller.uiController.updateQuoteStatus(nextStatus);
+              }
+            },
             icon: const Icon(Icons.send),
             label: Text(_controller.getStatusButtonText()),
           ),
@@ -268,13 +273,13 @@ class _SimplifiedQuoteDetailScreenState
       context: context,
       builder: (context) => DiscountDialog(
         onDiscountAdded: (discount) =>
-            _controller.addDiscount(context, discount),
+            _controller.uiController.addDiscount(discount),
       ),
     );
   }
 
   void _removeDiscount(String discountId) {
-    _controller.removeDiscount(context, discountId);
+    _controller.uiController.removeDiscount(discountId);
   }
 
   void _editQuote() {
@@ -294,6 +299,56 @@ class _SimplifiedQuoteDetailScreenState
         ),
       ),
     );
+  }
+
+  // PDF generation methods using new architecture
+  Future<void> _previewPdf() async {
+    // Use the proper UI controller method for PDF preview
+    // This replaces the deprecated _pdfController.previewPdf()
+    try {
+      // For preview, we could show a template selection dialog and generate a preview
+      // For now, we'll redirect to the generate PDF flow
+      await _generatePdf();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to preview PDF: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _generatePdf() async {
+    // Use the proper UI controller method for PDF generation
+    // This replaces the deprecated _pdfController.generatePdf()
+    try {
+      final result = await _pdfController.uiController.generatePdf(
+        context: context,
+      );
+      
+      if (result != null && mounted) {
+        // Navigate to PDF preview screen
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => PdfPreviewScreen(
+              pdfPath: result.pdfPath,
+              suggestedFileName: result.suggestedFileName,
+              quote: widget.quote,
+              customer: widget.customer,
+              templateId: result.templateId,
+              selectedLevelId: _controller.selectedLevelId,
+              originalCustomData: result.customData,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to generate PDF: $e')),
+        );
+      }
+    }
   }
 
   // PDF generation, template selection and status updates are handled

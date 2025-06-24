@@ -25,45 +25,46 @@ class CustomLineItemsSection extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Colors.green.withAlpha(25),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.inventory_2_outlined,
+                    color: Colors.green,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
                 Expanded(
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.add_box,
-                          color: Colors.purple,
-                          size: 24,
-                        ),
+                      Text(
+                        'Line Items (Optional)',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Custom Line Items (Optional)',
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.bold),
+                      Text(
+                        'Add custom line items to this quote',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[600],
                         ),
                       ),
                     ],
                   ),
                 ),
-                ElevatedButton.icon(
+                IconButton(
                   onPressed: onAddItemPressed,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Item'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple,
-                    foregroundColor: Colors.white,
-                  ),
+                  icon: const Icon(Icons.add, size: 24),
+                  tooltip: 'Add Item',
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 ),
               ],
             ),
@@ -81,12 +82,12 @@ class CustomLineItemsSection extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'No custom items added',
+                        'No line items added',
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Add custom fees, rentals, or special services',
+                        'Add fees, rentals, or special services',
                         style: TextStyle(
                           color: Colors.grey[500],
                           fontSize: 12,
@@ -98,7 +99,7 @@ class CustomLineItemsSection extends StatelessWidget {
               ),
             ] else ...[
               Text(
-                'Custom items:',
+                'Line items:',
                 style: TextStyle(
                   color: Colors.grey[700],
                   fontWeight: FontWeight.w500,
@@ -109,45 +110,58 @@ class CustomLineItemsSection extends StatelessWidget {
               ...customLineItems.map(
                 (item) => Card(
                   margin: const EdgeInsets.only(bottom: 8),
-                  color: Colors.purple.shade50,
+                  color: Colors.green.shade50,
                   child: ListTile(
-                    leading: Icon(
-                      item.isTaxable ? Icons.monetization_on : Icons.money_off,
-                      color: Colors.purple.shade700,
+                    leading: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        Icons.check_circle,
+                        color: Colors.green.shade700,
+                        size: 16,
+                      ),
                     ),
-                    title: Text(item.name),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (item.description?.isNotEmpty == true)
-                          Text(item.description!),
-                        Text(
-                          item.isTaxable ? 'Taxable' : 'Non-taxable',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
+                    title: Text(
+                      item.name,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    subtitle: Text(
+                      '1.0 ea @ ${NumberFormat.currency(symbol: '\$').format(item.amount)} each${item.description?.isNotEmpty == true ? ' • ${item.description}' : ''}',
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          NumberFormat.currency(symbol: '\$').format(item.amount),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              NumberFormat.currency(symbol: '\$').format(item.amount),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              item.isTaxable ? 'Taxable' : 'Non-taxable',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(width: 8),
                         IconButton(
                           icon: const Icon(Icons.delete_outline, color: Colors.red),
                           onPressed: () => onRemoveItem(item),
+                          tooltip: 'Remove item',
                         ),
                       ],
                     ),
-                    isThreeLine: item.description?.isNotEmpty == true,
                   ),
                 ),
               ),
@@ -156,10 +170,10 @@ class CustomLineItemsSection extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Total Custom Items:',
+                    'Total Line Items:',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.purple.shade800,
+                      color: Colors.green.shade800,
                     ),
                   ),
                   Text(
@@ -169,7 +183,7 @@ class CustomLineItemsSection extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
-                      color: Colors.purple.shade800,
+                      color: Colors.green.shade800,
                     ),
                   ),
                 ],

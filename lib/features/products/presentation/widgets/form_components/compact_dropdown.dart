@@ -22,6 +22,9 @@ class CompactDropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final uniqueItems = items.toSet().toList();
+    final currentValue = items.contains(value) ? value : null;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -34,8 +37,8 @@ class CompactDropdown<T> extends StatelessWidget {
         ),
         SizedBox(height: isPhone ? 6 : 8),
         DropdownButtonFormField<T>(
-          value: value,
-          items: items.map((item) {
+          value: currentValue,
+          items: uniqueItems.map((item) {
             return DropdownMenuItem<T>(
               value: item,
               child: Text(

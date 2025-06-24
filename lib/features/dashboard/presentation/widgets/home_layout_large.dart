@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 class HomeLargeLayout extends StatelessWidget {
   final int selectedIndex;
-  final List<BottomNavigationBarItem> navItems;
+  // navItems no longer needed with custom navigation
   final ValueChanged<int> onItemSelected;
   final ValueChanged<int> onPageChanged;
   final PageController pageController;
@@ -14,7 +14,6 @@ class HomeLargeLayout extends StatelessWidget {
   const HomeLargeLayout({
     super.key,
     required this.selectedIndex,
-    required this.navItems,
     required this.onItemSelected,
     required this.pageController,
     required this.pages,
@@ -32,14 +31,28 @@ class HomeLargeLayout extends StatelessWidget {
             selectedIndex: selectedIndex,
             onDestinationSelected: onItemSelected,
             labelType: NavigationRailLabelType.all,
-            destinations: navItems
-                .map(
-                  (item) => NavigationRailDestination(
-                    icon: item.icon,
-                    label: Text(item.label ?? ''),
-                  ),
-                )
-                .toList(),
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.dashboard_rounded),
+                label: Text('Dash'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.handshake_rounded),
+                label: Text('Sales'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.calendar_today_rounded),
+                label: Text('Jobs'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.archive_rounded),
+                label: Text('Vault'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings_rounded),
+                label: Text('Tools'),
+              ),
+            ],
           ),
           const VerticalDivider(width: 1),
           Expanded(

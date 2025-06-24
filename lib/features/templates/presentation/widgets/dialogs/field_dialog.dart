@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../../data/models/settings/custom_app_data.dart';
 import '../../../../../data/providers/state/app_state_provider.dart';
+import '../../../../../shared/widgets/buttons/rufko_dialog_actions.dart';
 import '../../controllers/field_dialog_controller.dart';
 import '../field_form/field_form_header.dart';
 import '../field_form/field_category_dropdown.dart';
@@ -115,6 +116,40 @@ class FieldDialog extends StatefulWidget {
   static Future<String?> _createNewCategoryAndReturn(BuildContext context) async {
     final TextEditingController controller = TextEditingController();
 
+    Future<void> handleCreateCategory() async {
+      final categoryName = controller.text.trim();
+      if (categoryName.isNotEmpty) {
+        try {
+          final appState = context.read<AppStateProvider>();
+          final categoryKey = categoryName
+              .toLowerCase()
+              .replaceAll(' ', '_');
+
+          await appState.addTemplateCategory(
+              'custom_fields', categoryKey, categoryName);
+
+          if (context.mounted) {
+            Navigator.of(context).pop(categoryKey);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Created category: $categoryName'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error creating category: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      }
+    }
+
     return showDialog<String>(
       context: context,
       builder: (BuildContext context) {
@@ -192,56 +227,10 @@ class FieldDialog extends StatefulWidget {
                   decoration: BoxDecoration(
                     border: Border(top: BorderSide(color: Colors.grey.shade300)),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () async {
-                          final categoryName = controller.text.trim();
-                          if (categoryName.isNotEmpty) {
-                            try {
-                              final appState = context.read<AppStateProvider>();
-                              final categoryKey = categoryName
-                                  .toLowerCase()
-                                  .replaceAll(' ', '_');
-
-                              await appState.addTemplateCategory(
-                                  'custom_fields', categoryKey, categoryName);
-
-                              if (context.mounted) {
-                                Navigator.of(context).pop(categoryKey);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Created category: $categoryName'),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Error creating category: $e'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2196F3), // RufkoTheme.primaryColor
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        ),
-                        child: const Text('Create'),
-                      ),
-                    ],
+                  child: RufkoDialogActions(
+                    onCancel: () => Navigator.of(context).pop(),
+                    onConfirm: handleCreateCategory,
+                    confirmText: 'Create',
                   ),
                 ),
               ],

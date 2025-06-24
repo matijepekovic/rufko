@@ -31,55 +31,125 @@ class QuoteHeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Customer: ${customer.name}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleLarge
-                              ?.copyWith(fontWeight: FontWeight.bold)),
-                      if (customer.fullDisplayAddress.isNotEmpty &&
-                          customer.fullDisplayAddress != 'No address provided')
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Text(customer.fullDisplayAddress,
-                              style: Theme.of(context).textTheme.bodyMedium),
-                        ),
-                      Text('Quote ID: ${quote.id}',
-                          style: Theme.of(context).textTheme.bodySmall),
-                      Text('Created: ${DateFormat('MMM dd, yyyy').format(quote.createdAt)}'),
-                      Text('Valid Until: ${DateFormat('MMM dd, yyyy').format(quote.validUntil)}'),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(quote.status),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    quote.status.toUpperCase(),
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
+            _buildQuoteHeader(context),
+            const SizedBox(height: 16),
+            _buildQuoteDetails(context),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildQuoteHeader(BuildContext context) {
+    return Row(
+      children: [
+        _buildQuoteAvatar(context),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Quote ${quote.quoteNumber}',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                'Customer: ${customer.name}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: _getStatusColor(quote.status),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            quote.status.toUpperCase(),
+            style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuoteAvatar(BuildContext context) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withAlpha(25),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        Icons.description_outlined,
+        color: Theme.of(context).primaryColor,
+        size: 28,
+      ),
+    );
+  }
+
+  Widget _buildQuoteDetails(BuildContext context) {
+    return Column(
+      children: [
+        if (customer.fullDisplayAddress.isNotEmpty &&
+            customer.fullDisplayAddress != 'No address provided')
+          _buildInfoRow(context, Icons.location_on_outlined, 'Address', customer.fullDisplayAddress),
+        if (customer.phone != null && customer.phone!.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _buildInfoRow(context, Icons.phone_outlined, 'Phone', customer.phone!),
+        ],
+        const SizedBox(height: 12),
+        _buildInfoRow(context, Icons.calendar_today_outlined, 'Created', DateFormat('MMM dd, yyyy').format(quote.createdAt)),
+        const SizedBox(height: 12),
+        _buildInfoRow(context, Icons.schedule_outlined, 'Valid Until', DateFormat('MMM dd, yyyy').format(quote.validUntil)),
+        const SizedBox(height: 12),
+        _buildInfoRow(context, Icons.tag_outlined, 'Quote ID', quote.id),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(BuildContext context, IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: Colors.grey[700]),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.3),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

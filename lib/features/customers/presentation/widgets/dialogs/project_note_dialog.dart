@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../../data/models/business/customer.dart';
 import '../../controllers/communication_history_controller.dart';
 
-/// Dialog for adding project notes
-/// Extracted from InfoTab to create reusable component
+/// Full-screen dialog for adding project notes
+/// Redesigned to match CustomerFormDialog pattern
 class ProjectNoteDialog extends StatefulWidget {
   final Customer customer;
   final CommunicationHistoryController controller;
@@ -37,110 +37,72 @@ class _ProjectNoteDialogState extends State<ProjectNoteDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        constraints: const BoxConstraints(maxHeight: 600),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildHeader(),
-            _buildContent(),
-            _buildFooter(),
-          ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add Project Note'),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => Navigator.pop(context),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.blue.withValues(alpha: 0.1),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.add_task, color: Colors.blue, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Add Project Note',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Record meetings, site visits, and project details',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
+        actions: [
+          FilledButton(
+            onPressed: _handleAddNote,
+            child: const Text('Add Note'),
           ),
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
-          ),
+          const SizedBox(width: 8),
         ],
+        elevation: 0,
+        scrolledUnderElevation: 1,
       ),
-    );
-  }
-
-  Widget _buildContent() {
-    return Flexible(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildNoteTypeSelector(),
-            const SizedBox(height: 20),
-            _buildNoteContentField(),
-            const SizedBox(height: 16),
-            _buildQuickTemplates(),
-          ],
+      body: Form(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildNoteTypeSelector(),
+              const SizedBox(height: 24),
+              _buildNoteContentField(),
+              const SizedBox(height: 24),
+              _buildQuickTemplates(),
+              const SizedBox(height: 24), // Extra space for keyboard
+            ],
+          ),
         ),
       ),
     );
   }
+
+
 
   Widget _buildNoteTypeSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Note Type:',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.bold,
+          'Note Type',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         SegmentedButton<String>(
           segments: const [
             ButtonSegment(
               value: 'note',
               label: Text('General'),
-              icon: Icon(Icons.note),
+              icon: Icon(Icons.note, size: 18),
             ),
             ButtonSegment(
               value: 'meeting',
               label: Text('Meeting'),
-              icon: Icon(Icons.group),
+              icon: Icon(Icons.group, size: 18),
             ),
             ButtonSegment(
               value: 'site_visit',
               label: Text('Site Visit'),
-              icon: Icon(Icons.home_work),
+              icon: Icon(Icons.home_work, size: 18),
             ),
           ],
           selected: {noteType},
@@ -159,22 +121,62 @@ class _ProjectNoteDialogState extends State<ProjectNoteDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Note Content:',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.bold,
+          'Note Content',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         TextFormField(
           controller: noteController,
           decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            labelText: 'Project Note*',
             hintText: _getProjectNoteHint(noteType),
-            prefixIcon: Icon(_getProjectNoteIcon(noteType)),
+            prefixIcon: Icon(
+              _getProjectNoteIcon(noteType),
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.error,
+                width: 2,
+              ),
+            ),
+            filled: true,
+            fillColor: Theme.of(context).colorScheme.surface,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
             alignLabelWithHint: true,
           ),
-          maxLines: 5,
+          maxLines: 6,
           textAlignVertical: TextAlignVertical.top,
+          textCapitalization: TextCapitalization.sentences,
         ),
       ],
     );
@@ -185,22 +187,32 @@ class _ProjectNoteDialogState extends State<ProjectNoteDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Quick Templates:',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.bold,
+          'Quick Templates',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 8,
-          runSpacing: 4,
+          runSpacing: 8,
           children: _getProjectNoteTemplates(noteType).map((template) {
             return ActionChip(
-              label: Text(template),
+              label: Text(
+                template,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
               onPressed: () {
                 noteController.text = template;
               },
-              backgroundColor: Colors.grey[100],
+              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+              ),
             );
           }).toList(),
         ),
@@ -208,37 +220,6 @@ class _ProjectNoteDialogState extends State<ProjectNoteDialog> {
     );
   }
 
-  Widget _buildFooter() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(16),
-          bottomRight: Radius.circular(16),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton.icon(
-            onPressed: _handleAddNote,
-            icon: const Icon(Icons.save),
-            label: const Text('Add Note'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _handleAddNote() async {
     final noteContent = noteController.text.trim();

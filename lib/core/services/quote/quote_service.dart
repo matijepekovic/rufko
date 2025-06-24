@@ -1,5 +1,4 @@
 import '../../../data/models/business/simplified_quote.dart';
-import '../../../data/models/business/customer.dart';
 import '../../../data/providers/state/app_state_provider.dart';
 
 /// Result object for quote operations

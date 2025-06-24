@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/dialogs/help_dialog.dart';
 import '../../../../shared/widgets/dialogs/premium_feature_dialog.dart';
 import '../widgets/settings_section.dart';
+import '../widgets/calculator_settings_section.dart';
 import '../controllers/product_configuration_controller.dart';
 import 'company_info_screen.dart';
 import 'data_management_screen.dart';
@@ -49,6 +50,9 @@ class SettingsScreen extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const DiscountSettingsScreen()),
             ),
           ),
+          const SizedBox(height: 24),
+          const SectionHeader('Calculator Settings'),
+          CalculatorSettingsSection(),
           const SizedBox(height: 24),
           const SectionHeader('Data Management'),
           DataManagementSection(

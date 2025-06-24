@@ -1,50 +1,21 @@
-// lib/models/custom_app_data.dart
+// lib/models/custom_app_data.dart (HIVE ANNOTATIONS REMOVED)
 
-import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part '../../generated/custom_app_data.g.dart';
-
-@HiveType(typeId: 12) // New type ID
-class CustomAppDataField extends HiveObject {
-  @HiveField(0)
+class CustomAppDataField {
   late String id;
-
-  @HiveField(1)
   String fieldName; // e.g., "companyName", "licenseNumber"
-
-  @HiveField(2)
   String displayName; // e.g., "Company Name", "License Number"
-
-  @HiveField(3)
   String fieldType; // "text", "number", "email", "phone", "multiline", "date", "currency"
-
-  @HiveField(4)
   String currentValue; // The actual value
-
-  @HiveField(5)
   String category; // "company", "contact", "legal", "pricing", "custom"
-
-  @HiveField(6)
   bool isRequired;
-
-  @HiveField(7)
   String? placeholder; // Placeholder text
-
-  @HiveField(8)
   String? description; // Help text
-
-  @HiveField(9)
   int sortOrder; // For organizing fields
-
-  @HiveField(10)
   DateTime createdAt;
-
-  @HiveField(11)
   DateTime updatedAt;
-
-  @HiveField(12) // Add dropdown options support
-  List<String>? dropdownOptions;
+  List<String>? dropdownOptions; // Add dropdown options support
 
   CustomAppDataField({
     String? id,
@@ -68,7 +39,6 @@ class CustomAppDataField extends HiveObject {
   void updateValue(String newValue) {
     currentValue = newValue;
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   void updateField({
@@ -91,7 +61,6 @@ class CustomAppDataField extends HiveObject {
     if (dropdownOptions != null) this.dropdownOptions = dropdownOptions;
 
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   Map<String, dynamic> toMap() {

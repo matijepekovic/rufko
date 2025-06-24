@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../shared/widgets/buttons/rufko_buttons.dart';
 
 /// Reusable dialog for creating new template categories
 /// Extracted from EmailTemplateEditorScreen for reusability
@@ -121,18 +122,13 @@ class _CategoryCreationDialogState extends State<CategoryCreationDialog> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          TextButton(
+          RufkoSecondaryButton(
             onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
           const SizedBox(width: 8),
-          ElevatedButton(
+          RufkoPrimaryButton(
             onPressed: _isLoading ? null : _handleCreate,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            ),
             child: _isLoading
                 ? const SizedBox(
                     width: 16,

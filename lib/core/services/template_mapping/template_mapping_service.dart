@@ -1,5 +1,4 @@
 import '../../../data/models/templates/pdf_template.dart';
-import '../../../data/providers/state/app_state_provider.dart';
 import '../pdf/pdf_field_mapping_service.dart';
 
 /// Result object for template field mapping operations

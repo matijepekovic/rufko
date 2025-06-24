@@ -17,17 +17,12 @@ class QuoteListBuilder {
 
   Widget buildQuotesList({
     required AppStateProvider appState,
-    required String statusFilter,
-    required String searchQuery,
+    required QuoteFilterController filter,
   }) {
-    final filter = QuoteFilterController(appState);
-    final quotes = filter.getFilteredQuotes(
-      status: statusFilter,
-      searchQuery: searchQuery,
-    );
+    final quotes = filter.getFilteredQuotes();
 
     if (quotes.isEmpty) {
-      return buildEmptyState(statusFilter, searchQuery);
+      return buildEmptyState(filter.selectedStatus, filter.searchQuery);
     }
 
     return RefreshIndicator(

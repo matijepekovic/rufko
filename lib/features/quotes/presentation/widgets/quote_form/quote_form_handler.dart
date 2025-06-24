@@ -183,28 +183,3 @@ class _QuoteFormHandlerState extends State<QuoteFormHandler> {
   }
 }
 
-/// Adapter class to make QuoteFormUIController compatible with TaxRateDialogs
-class _ManualTaxRateController extends ChangeNotifier {
-  final QuoteFormUIController _controller;
-  
-  _ManualTaxRateController(this._controller) {
-    _controller.addListener(() => notifyListeners());
-  }
-
-  double get taxRate => _controller.taxRate;
-  
-  set taxRate(double value) {
-    _controller.setTaxRate(value);
-    notifyListeners();
-  }
-
-  void updateQuoteLevelsQuantity() {
-    // This is handled automatically by setTaxRate
-  }
-
-  @override
-  void dispose() {
-    _controller.removeListener(() => notifyListeners());
-    super.dispose();
-  }
-}

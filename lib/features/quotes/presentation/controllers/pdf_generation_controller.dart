@@ -39,12 +39,12 @@ class PDFGenerationController {
   /// Legacy methods for backward compatibility - simplified implementation
   Future<void> previewPdf() async {
     // Legacy implementation - in new architecture this would be handled by PDFGenerationHandler
-    print('previewPdf() called - use PDFGenerationHandler.previewExistingPdf() in new architecture');
+    debugPrint('previewPdf() called - use PDFGenerationHandler.previewExistingPdf() in new architecture');
   }
 
   Future<void> generatePdf() async {
     // Legacy implementation - in new architecture this would be handled by PDFGenerationHandler
-    print('generatePdf() called - use PDFGenerationHandler.generateAndPreviewPdf() in new architecture');
+    debugPrint('generatePdf() called - use PDFGenerationHandler.generateAndPreviewPdf() in new architecture');
   }
 
   /// Legacy method - filename generation moved to service layer

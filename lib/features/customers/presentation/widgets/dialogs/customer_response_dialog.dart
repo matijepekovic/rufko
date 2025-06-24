@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../../data/models/business/customer.dart';
+import '../../../../../shared/widgets/buttons/rufko_dialog_actions.dart';
 import '../../controllers/communication_history_controller.dart';
 
 /// Dialog for adding customer responses
@@ -10,6 +11,7 @@ class CustomerResponseDialog extends StatefulWidget {
   final String contactMethod;
   final Customer customer;
   final CommunicationHistoryController controller;
+  final String? replyToSubject;
 
   const CustomerResponseDialog({
     super.key,
@@ -17,6 +19,7 @@ class CustomerResponseDialog extends StatefulWidget {
     required this.contactMethod,
     required this.customer,
     required this.controller,
+    this.replyToSubject,
   });
 
   @override
@@ -42,82 +45,110 @@ class _CustomerResponseDialogState extends State<CustomerResponseDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        constraints: const BoxConstraints(maxHeight: 500),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildHeader(),
-            _buildContent(),
-            _buildFooter(),
-          ],
+    return Material(
+      type: MaterialType.transparency,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.9,
+          margin: const EdgeInsets.only(top: 60),
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+            maxWidth: 600,
+          ),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 20,
+                    bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildResponseTypeSelector(),
+                      const SizedBox(height: 20),
+                      _buildResponseContentField(),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.1),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
         ),
       ),
-      child: Row(
+      child: Column(
         children: [
-          const Icon(Icons.add_comment, color: Colors.green, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Add Customer Response',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+          Row(
+            children: [
+              Icon(
+                Icons.add_comment, 
+                color: Theme.of(context).colorScheme.primary, 
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Add Customer Response',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Manually log ${widget.customer.name}\'s response',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  'Manually log ${widget.customer.name}\'s response',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => Navigator.pop(context),
+          const SizedBox(height: 16),
+          RufkoDialogActions(
+            onCancel: () => Navigator.pop(context),
+            onConfirm: _handleSaveResponse,
+            confirmText: 'Log Response',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildContent() {
-    return Flexible(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildResponseTypeSelector(),
-            const SizedBox(height: 20),
-            _buildResponseContentField(),
-            const SizedBox(height: 16),
-            _buildQuickResponseTemplates(),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildResponseTypeSelector() {
     return Column(
@@ -125,8 +156,8 @@ class _CustomerResponseDialogState extends State<CustomerResponseDialog> {
       children: [
         Text(
           'Response Method:',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.bold,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 8),
@@ -142,11 +173,7 @@ class _CustomerResponseDialogState extends State<CustomerResponseDialog> {
               label: Text('Phone Call'),
               icon: Icon(Icons.phone),
             ),
-            const ButtonSegment(
-              value: 'email',
-              label: Text('Email Reply'),
-              icon: Icon(Icons.email),
-            ),
+            // Remove email option for messages & calls
           ],
           selected: {responseType},
           onSelectionChanged: (selection) {
@@ -165,19 +192,24 @@ class _CustomerResponseDialogState extends State<CustomerResponseDialog> {
       children: [
         Text(
           'Customer Response:',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.bold,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 8),
         TextFormField(
           controller: responseController,
           decoration: InputDecoration(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             hintText: _getResponseHint(responseType),
             prefixIcon: Icon(_getResponseIcon(responseType)),
             alignLabelWithHint: true,
+            filled: true,
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHigh,
           ),
+          style: Theme.of(context).textTheme.bodySmall,
           maxLines: responseType == 'call' ? 3 : 4,
           textAlignVertical: TextAlignVertical.top,
         ),
@@ -185,65 +217,7 @@ class _CustomerResponseDialogState extends State<CustomerResponseDialog> {
     );
   }
 
-  Widget _buildQuickResponseTemplates() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Responses:',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          children: _getQuickResponses(responseType).map((response) {
-            return ActionChip(
-              label: Text(response),
-              onPressed: () {
-                responseController.text = response;
-              },
-              backgroundColor: Colors.grey[100],
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildFooter() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(16),
-          bottomRight: Radius.circular(16),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          const SizedBox(width: 12),
-          ElevatedButton.icon(
-            onPressed: _handleSaveResponse,
-            icon: const Icon(Icons.save),
-            label: const Text('Log Response'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Future<void> _handleSaveResponse() async {
     final response = responseController.text.trim();
@@ -303,34 +277,4 @@ class _CustomerResponseDialogState extends State<CustomerResponseDialog> {
     }
   }
 
-  List<String> _getQuickResponses(String responseType) {
-    switch (responseType) {
-      case 'call':
-        return [
-          'Interested, wants to schedule appointment',
-          'Needs to think about it',
-          'Price is too high',
-          'Not interested at this time',
-          'Wants to compare with other quotes',
-        ];
-      case 'email':
-        return [
-          'Thanks for the quote!',
-          'When can you start?',
-          'Can you adjust the price?',
-          'I need to discuss with my spouse',
-          'Looks good, let\'s proceed',
-        ];
-      case 'text':
-      default:
-        return [
-          'Yes, sounds good!',
-          'Thanks!',
-          'When can you start?',
-          'Let me think about it',
-          'Call me',
-          'Too expensive',
-        ];
-    }
-  }
 }

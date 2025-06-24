@@ -7,7 +7,7 @@ import '../../../../data/models/business/customer.dart';
 import '../../../../data/models/media/project_media.dart';
 import '../../../../data/providers/state/app_state_provider.dart';
 import '../controllers/media_operations_controller.dart';
-import 'media/media_options_sheet.dart';
+import 'media/upload_options_sheet.dart';
 import 'media/media_context_menu.dart';
 import '../../../quotes/presentation/screens/pdf_preview_screen.dart';
 
@@ -58,16 +58,20 @@ class MediaTabController {
     }
   }
 
-  /// Show media addition options bottom sheet
+  /// Show upload options bottom sheet (gallery and documents only)
   void showMediaOptions() {
     showModalBottomSheet(
       context: context,
-      builder: (context) => MediaOptionsSheet(
-        onTakeMultiplePhotos: _handleTakeMultiplePhotos,
+      builder: (context) => UploadOptionsSheet(
         onSelectMultiplePhotos: _handleSelectMultiplePhotos,
         onUploadDocuments: _handleUploadDocuments,
       ),
     );
+  }
+  
+  /// Take photos directly without showing options sheet
+  Future<void> takePhotosDirectly() async {
+    await _handleTakeMultiplePhotos();
   }
 
   /// Handle taking multiple photos

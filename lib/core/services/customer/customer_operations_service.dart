@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../data/models/business/customer.dart';
 import '../../../data/providers/state/app_state_provider.dart';
-import '../../../features/customers/presentation/widgets/customer_edit_dialog.dart';
+import '../../../features/customers/presentation/widgets/dialogs/customer_form_dialog.dart';
 
 /// Service that contains EXACT customer operation logic copied from CustomerActionsControllerLegacy
 /// This is pure extraction - no rewriting of business logic
@@ -33,19 +33,19 @@ class CustomerOperationsService {
     required Customer customer,
     required VoidCallback? onCustomerUpdated,
   }) {
-    // EXACT COPY of lines 29-37 from CustomerActionsControllerLegacy
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => CustomerEditDialog(
-        customer: customer,
-        onCustomerUpdated: onCustomerUpdated,
+    // Use the existing "Edit Lead" dialog (CustomerFormDialog) with full-screen navigation
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CustomerFormDialog(customer: customer),
+        fullscreenDialog: true,
       ),
-    );
+    ).then((_) {
+      // Call the callback when returning from the dialog
+      onCustomerUpdated?.call();
+    });
   }
 
-  /// EXACT COPY of the quick actions logic from the controller
-  /// This is the ORIGINAL working code, just moved to a service
+  /// Enhanced quick actions with additional functionality
   static void showQuickActions({
     required BuildContext context,
     required Customer customer,
@@ -53,6 +53,10 @@ class CustomerOperationsService {
     required VoidCallback navigateToCreateQuoteScreen,
     required VoidCallback showQuickCommunicationOptions,
     required VoidCallback showDeleteCustomerConfirmation,
+    required VoidCallback showMediaOptions,
+    required VoidCallback showAddProjectNoteDialog,
+    required VoidCallback scheduleJob,
+    required VoidCallback goToLocation,
   }) {
     // EXACT COPY of lines 88-172 from CustomerActionsControllerLegacy
     showModalBottomSheet(
@@ -83,16 +87,70 @@ class CustomerOperationsService {
               ],
             ),
             const SizedBox(height: 24),
+            // First row of actions
             Row(
               children: [
                 Expanded(
                   child: _ActionButton(
-                    icon: Icons.edit,
-                    label: 'Edit',
+                    icon: Icons.message,
+                    label: 'Contact',
                     color: Colors.blue,
                     onTap: () {
                       Navigator.pop(context);
-                      editCustomer();
+                      showQuickCommunicationOptions();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.note_add,
+                    label: 'Note',
+                    color: Colors.blue,
+                    onTap: () {
+                      Navigator.pop(context);
+                      showAddProjectNoteDialog();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.schedule,
+                    label: 'Schedule',
+                    color: Colors.blue,
+                    onTap: () {
+                      Navigator.pop(context);
+                      scheduleJob();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.location_on,
+                    label: 'Location',
+                    color: Colors.green,
+                    onTap: () {
+                      Navigator.pop(context);
+                      goToLocation();
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Second row of actions
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionButton(
+                    icon: Icons.add_a_photo,
+                    label: 'Media',
+                    color: Colors.blue,
+                    onTap: () {
+                      Navigator.pop(context);
+                      showMediaOptions();
                     },
                   ),
                 ),
@@ -101,7 +159,7 @@ class CustomerOperationsService {
                   child: _ActionButton(
                     icon: Icons.description,
                     label: 'Quote',
-                    color: Colors.green,
+                    color: Colors.blue,
                     onTap: () {
                       Navigator.pop(context);
                       navigateToCreateQuoteScreen();
@@ -111,12 +169,12 @@ class CustomerOperationsService {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _ActionButton(
-                    icon: Icons.message,
-                    label: 'Contact',
-                    color: Colors.orange,
+                    icon: Icons.edit,
+                    label: 'Edit',
+                    color: Colors.blue,
                     onTap: () {
                       Navigator.pop(context);
-                      showQuickCommunicationOptions();
+                      editCustomer();
                     },
                   ),
                 ),

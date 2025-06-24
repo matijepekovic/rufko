@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/utils/settings_constants.dart';
+import '../buttons/rufko_buttons.dart';
 
 /// Displays general help information for the application.
 class HelpDialog extends StatelessWidget {
@@ -27,7 +28,7 @@ class HelpDialog extends StatelessWidget {
         child: Text(helpText, style: const TextStyle(fontSize: 16)),
       ),
       actions: [
-        TextButton(
+        RufkoTextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Close'),
         ),

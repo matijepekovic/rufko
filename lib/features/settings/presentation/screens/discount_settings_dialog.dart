@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../shared/widgets/buttons/rufko_dialog_actions.dart';
 class DiscountSettingsDialog extends StatefulWidget {
   final List<String> discountTypes;
   final double defaultDiscountLimit;
@@ -120,16 +121,13 @@ class DiscountSettingsDialogState extends State<DiscountSettingsDialog> {
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () {
+        RufkoDialogActions(
+          onCancel: () => Navigator.pop(context),
+          onConfirm: () {
             widget.onSave(_discountTypes, _discountLimit);
             Navigator.pop(context);
           },
-          child: const Text('Save'),
+          confirmText: 'Save',
         ),
       ],
     );

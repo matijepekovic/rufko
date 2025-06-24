@@ -173,7 +173,7 @@ class QuoteFormService {
       await appState.addSimplifiedQuote(newQuote);
 
       return QuoteFormOperationResult.success(
-        message: '${quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${newQuote.quoteNumber} generated with ${taxRate.toStringAsFixed(2)}% tax!',
+        message: '${quoteType == 'single-tier' ? 'Single' : 'Tiered'} quote ${newQuote.quoteNumber} generated with ${taxRate.toStringAsFixed(2)}% tax!',
         quote: newQuote,
       );
     } catch (e) {
@@ -216,7 +216,7 @@ class QuoteFormService {
       await appState.updateSimplifiedQuote(existingQuote);
 
       return QuoteFormOperationResult.success(
-        message: '${quoteType == 'single-tier' ? 'Single-tier' : 'Multi-level'} quote ${existingQuote.quoteNumber} updated with ${taxRate.toStringAsFixed(2)}% tax!',
+        message: '${quoteType == 'single-tier' ? 'Single' : 'Tiered'} quote ${existingQuote.quoteNumber} updated with ${taxRate.toStringAsFixed(2)}% tax!',
         quote: existingQuote,
       );
     } catch (e) {

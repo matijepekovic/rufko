@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../data/models/business/product.dart';
 import '../../../../data/models/business/simplified_quote.dart';
+import '../../../../core/utils/helpers/common_utils.dart';
 
 class QuoteLevelsPreview extends StatelessWidget {
   final List<QuoteLevel> quoteLevels;
@@ -63,7 +64,7 @@ class QuoteLevelsPreview extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${mainProduct!.name} (${mainQuantity.toStringAsFixed(1)}${mainProduct!.unit})',
+                    '${mainProduct!.name} (${formatQuantity(mainQuantity)} ${mainProduct!.unit})',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 12),
@@ -118,7 +119,7 @@ class QuoteLevelsPreview extends StatelessWidget {
                                 style: const TextStyle(fontWeight: FontWeight.w500),
                               ),
                               Text(
-                                'Quantity: ${mainQuantity.toStringAsFixed(1)} ${mainProduct!.unit}',
+                                'Quantity: ${formatQuantity(mainQuantity)} ${mainProduct!.unit}',
                                 style: TextStyle(color: Colors.grey[600]),
                               ),
                             ],

@@ -9,6 +9,10 @@ import '../../controllers/inspection_tab_controller.dart';
 import '../inspection/inspection_field_widget.dart';
 import '../inspection/inspection_documents_section.dart';
 import '../inspection/inspection_dialogs.dart';
+import '../../../../../core/mixins/ui/responsive_spacing_mixin.dart';
+import '../../../../../core/mixins/ui/responsive_dimensions_mixin.dart';
+import '../../../../../core/mixins/ui/responsive_breakpoints_mixin.dart';
+import '../../../../../shared/widgets/buttons/rufko_buttons.dart';
 
 /// Refactored InspectionTab with extracted components
 /// Original 944-line monolithic file broken down into manageable components
@@ -22,7 +26,8 @@ class InspectionTab extends StatefulWidget {
   State<InspectionTab> createState() => _InspectionTabState();
 }
 
-class _InspectionTabState extends State<InspectionTab> {
+class _InspectionTabState extends State<InspectionTab> 
+    with ResponsiveBreakpointsMixin, ResponsiveSpacingMixin, ResponsiveDimensionsMixin {
   late InspectionTabController _controller;
 
   @override
@@ -63,7 +68,13 @@ class _InspectionTabState extends State<InspectionTab> {
               return _buildEmptyFieldsState();
             }
 
-            return _buildInspectionContent(inspectionFields);
+            // Use Stack to add fixed bottom buttons
+            return Stack(
+              children: [
+                _buildInspectionContent(inspectionFields),
+                _buildBottomActionBar(),
+              ],
+            );
           },
         );
       },
@@ -115,14 +126,19 @@ class _InspectionTabState extends State<InspectionTab> {
 
   Widget _buildInspectionContent(List<CustomAppDataField> inspectionFields) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.symmetric(
+        horizontal: spacingMD(context) * 2, // Increase side padding
+        vertical: spacingMD(context),
+      ).copyWith(
+        bottom: 80 + spacingMD(context) * 2, // Space for bottom buttons
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildInspectionHeader(inspectionFields),
-          const SizedBox(height: 24),
+          SizedBox(height: spacingLG(context)),
           _buildInspectionFieldsCard(inspectionFields),
-          const SizedBox(height: 16),
+          SizedBox(height: spacingMD(context)),
           // Use ValueListenableBuilder for efficient document list rebuilds
           ListenableBuilder(
             listenable: _controller,
@@ -236,15 +252,16 @@ class _InspectionTabState extends State<InspectionTab> {
     return Card(
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: cardPadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildFieldsHeader(),
-            const SizedBox(height: 16),
+            SizedBox(height: spacingMD(context)),
             ReorderableListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
+              buildDefaultDragHandles: false, // Disable automatic drag handles
               itemCount: inspectionFields.length,
               onReorder: (oldIndex, newIndex) => _handleFieldReorder(oldIndex, newIndex, inspectionFields),
               itemBuilder: (context, index) {
@@ -262,7 +279,10 @@ class _InspectionTabState extends State<InspectionTab> {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: EdgeInsets.symmetric(
+            horizontal: spacingMD(context), 
+            vertical: spacingXS(context),
+          ),
           decoration: BoxDecoration(
             color: Colors.blue.shade100,
             borderRadius: BorderRadius.circular(20),
@@ -272,20 +292,15 @@ class _InspectionTabState extends State<InspectionTab> {
             style: TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.blue.shade700,
-              fontSize: 14,
+              fontSize: isCompact(context) ? 12 : 14,
             ),
           ),
         ),
         const Spacer(),
-        Icon(
-          Icons.drag_indicator,
-          size: 16,
-          color: Colors.grey[600],
-        ),
         Text(
           'Drag to reorder',
           style: TextStyle(
-            fontSize: 11,
+            fontSize: isCompact(context) ? 10 : 11,
             color: Colors.grey[600],
           ),
         ),
@@ -296,9 +311,10 @@ class _InspectionTabState extends State<InspectionTab> {
   Widget _buildFieldItem(CustomAppDataField field, int index) {
     return Container(
       key: ValueKey(field.id),
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: spacingSM(context)),
       child: InspectionFieldWidget(
         field: field,
+        index: index,
         value: _controller.fieldValues[field.fieldName],
         onValueChanged: _controller.updateFieldValue,
         onDateTap: () => _controller.selectDate(field.fieldName),
@@ -315,6 +331,54 @@ class _InspectionTabState extends State<InspectionTab> {
       onAddPdf: _controller.addInspectionPdf,
       onDeleteDocument: _handleDeleteDocument,
       onEditNote: _handleEditNote,
+    );
+  }
+
+  Widget _buildBottomActionBar() {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      child: SafeArea(
+        bottom: true,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: spacingMD(context),
+            vertical: spacingSM(context),
+          ),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: RufkoSecondaryButton(
+                  onPressed: _handleAddNote,
+                  icon: Icons.note_add,
+                  isFullWidth: true,
+                  child: Text(isCompact(context) ? 'Note' : 'Add Note'),
+                ),
+              ),
+              SizedBox(width: spacingMD(context)),
+              Expanded(
+                child: RufkoSecondaryButton(
+                  onPressed: _controller.addInspectionPdf,
+                  icon: Icons.picture_as_pdf,
+                  isFullWidth: true,
+                  child: Text(isCompact(context) ? 'PDF' : 'Add PDF'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

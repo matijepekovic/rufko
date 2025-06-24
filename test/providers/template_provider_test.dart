@@ -23,7 +23,7 @@ void main() {
     when(() => db.getAllPDFTemplates()).thenAnswer((_) async => [pdf]);
     when(() => db.getAllMessageTemplates()).thenAnswer((_) async => <MessageTemplate>[]);
     when(() => db.getAllEmailTemplates()).thenAnswer((_) async => <EmailTemplate>[]);
-    when(() => db.getRawCategoriesBoxValues()).thenReturn(<TemplateCategory>[]);
+    when(() => db.getRawCategoriesBoxValues()).thenAnswer((_) async => <TemplateCategory>[]);
 
     await provider.loadTemplates();
 

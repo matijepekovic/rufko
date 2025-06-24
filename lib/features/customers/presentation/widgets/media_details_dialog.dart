@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../data/models/media/project_media.dart';
 import '../../../../core/utils/helpers/common_utils.dart';
+import '../../../../core/services/media/media_processing_service.dart';
+import '../../../../shared/widgets/buttons/rufko_dialog_actions.dart';
 class MediaDetailsDialog extends StatefulWidget {
   final File? file;
   final String? fileName;
@@ -47,18 +49,18 @@ class _MediaDetailsDialogState extends State<MediaDetailsDialog> {
   String _selectedCategory = 'general';
   List<String> _tags = [];
 
-  final List<String> _categories = [
-    'general',
-    'before_photos',
-    'after_photos',
-    'damage_report',
-    'progress_photos',
-    'roofscope_reports',
-    'contracts',
-    'invoices',
-    'permits',
-    'insurance_docs',
-  ];
+  List<String> get _categories {
+    if (widget.fileType != null) {
+      // Filter categories based on file type
+      return MediaProcessingService.getValidCategoriesForFileType(widget.fileType!);
+    } else if (widget.mediaItem != null) {
+      // For editing existing media, show all categories
+      return MediaProcessingService.getCategories();
+    } else {
+      // Fallback to all categories
+      return MediaProcessingService.getCategories();
+    }
+  }
 
   bool get _isEditing => widget.mediaItem != null;
 
@@ -70,6 +72,11 @@ class _MediaDetailsDialogState extends State<MediaDetailsDialog> {
       _descriptionController.text = media.description ?? '';
       _selectedCategory = media.category;
       _tags = List.from(media.tags);
+    } else {
+      // Set default category based on file type
+      if (widget.fileType != null) {
+        _selectedCategory = MediaProcessingService.getDefaultCategory(widget.fileType!);
+      }
     }
   }
 
@@ -300,19 +307,10 @@ class _MediaDetailsDialogState extends State<MediaDetailsDialog> {
                   bottomRight: Radius.circular(12),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: _saveMedia,
-                    child: Text(_isEditing ? 'Update' : 'Add Media'),
-                  ),
-                ],
+              child: RufkoDialogActions(
+                onCancel: () => Navigator.pop(context),
+                onConfirm: _saveMedia,
+                confirmText: _isEditing ? 'Update' : 'Add Media',
               ),
             ),
           ],

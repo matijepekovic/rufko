@@ -1,46 +1,19 @@
-// lib/models/inspection_document.dart
+// lib/models/inspection_document.dart (HIVE ANNOTATIONS REMOVED)
 
-import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part '../../generated/inspection_document.g.dart';
-
-@HiveType(typeId: 15) // New type ID - make sure this doesn't conflict with existing ones
-class InspectionDocument extends HiveObject {
-  @HiveField(0)
+class InspectionDocument {
   late String id;
-
-  @HiveField(1)
   String customerId; // Links to Customer
-
-  @HiveField(2)
   String type; // 'note' or 'pdf'
-
-  @HiveField(3)
   String title; // Display name
-
-  @HiveField(4)
   String? content; // For notes - the actual text content
-
-  @HiveField(5)
   String? filePath; // For PDFs - path to the file
-
-  @HiveField(6)
   int sortOrder; // For ordering documents
-
-  @HiveField(7)
   DateTime createdAt;
-
-  @HiveField(8)
   DateTime updatedAt;
-
-  @HiveField(9)
   String? quoteId; // Optional link to specific quote
-
-  @HiveField(10)
   int? fileSizeBytes; // For PDFs
-
-  @HiveField(11)
   List<String> tags; // For categorizing documents
 
   InspectionDocument({
@@ -81,34 +54,29 @@ class InspectionDocument extends HiveObject {
     if (isNote) {
       content = newContent;
       updatedAt = DateTime.now();
-      if (isInBox) save();
     }
   }
 
   void updateTitle(String newTitle) {
     title = newTitle;
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   void updateSortOrder(int newOrder) {
     sortOrder = newOrder;
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   void addTag(String tag) {
     if (!tags.contains(tag)) {
       tags.add(tag);
       updatedAt = DateTime.now();
-      if (isInBox) save();
     }
   }
 
   void removeTag(String tag) {
     if (tags.remove(tag)) {
       updatedAt = DateTime.now();
-      if (isInBox) save();
     }
   }
 

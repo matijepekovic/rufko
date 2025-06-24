@@ -1,26 +1,13 @@
 // lib/models/product.dart - ENHANCED WITH 3-TIER SYSTEM + MISSING METHODS
 
-import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
-part '../../generated/product.g.dart';
-
 // Enhanced level pricing with descriptions
-@HiveType(typeId: 7)
-class ProductLevelPrice extends HiveObject {
-  @HiveField(0)
+class ProductLevelPrice {
   String levelId;
-
-  @HiveField(1)
   String levelName;
-
-  @HiveField(2)
   double price;
-
-  @HiveField(3)
   String? description;
-
-  @HiveField(4)
   bool isActive;
 
   ProductLevelPrice({
@@ -57,65 +44,30 @@ class ProductLevelPrice extends HiveObject {
   }
 }
 
-@HiveType(typeId: 1)
-class Product extends HiveObject {
-  @HiveField(0)
+class Product {
   late String id;
-
-  @HiveField(1)
   late String name;
-
-  @HiveField(2)
   String? description;
-
-  @HiveField(3)
   late double unitPrice;
-
-  @HiveField(4)
   String unit;
-
-  @HiveField(5)
   String category;
-
-  @HiveField(6)
   String? sku;
-
-  @HiveField(7)
   bool isActive;
-
-  @HiveField(8)
   DateTime createdAt;
-
-  @HiveField(9)
   DateTime updatedAt;
-
-  @HiveField(10)
   Map<String, double> levelPrices; // DEPRECATED - kept for backward compatibility
-
-  @HiveField(11)
   bool isAddon;
-
-  @HiveField(12)
   bool isDiscountable;
-
-  @HiveField(13)
   List<ProductLevelPrice> enhancedLevelPrices;
-
-  @HiveField(14)
   int maxLevels;
-
-  @HiveField(15)
   String? notes;
 
   // NEW: 3-Tier System Fields
-  @HiveField(16)
   bool isMainDifferentiator; // Sets quote column headers (only one per quote)
-
-  @HiveField(17)
   bool enableLevelPricing; // Has different prices for different situations
-
-  @HiveField(18)
   ProductPricingType pricingType; // mainDifferentiator,  subLeveled, simple
+  bool hasInventory; // NEW: Track if product has inventory
+  String? photoPath; // NEW: Path to product photo
 
   Product({
     String? id,
@@ -135,6 +87,8 @@ class Product extends HiveObject {
     this.isMainDifferentiator = false, // NEW
     this.enableLevelPricing = false, // NEW
     ProductPricingType? pricingType, // NEW
+    this.hasInventory = false, // NEW
+    this.photoPath, // NEW
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : levelPrices = levelPrices ?? {},
@@ -237,6 +191,8 @@ class Product extends HiveObject {
     String? notes,
     bool? isMainDifferentiator, // NEW
     bool? enableLevelPricing, // NEW
+    bool? hasInventory, // NEW
+    String? photoPath, // NEW
   }) {
     if (name != null) this.name = name;
     if (description != null) this.description = description;
@@ -257,10 +213,11 @@ class Product extends HiveObject {
     // NEW: Update 3-tier system flags
     if (isMainDifferentiator != null) this.isMainDifferentiator = isMainDifferentiator;
     if (enableLevelPricing != null) this.enableLevelPricing = enableLevelPricing;
+    if (hasInventory != null) this.hasInventory = hasInventory;
+    if (photoPath != null) this.photoPath = photoPath;
 
     _updatePricingType(); // Recalculate pricing type
     updatedAt = DateTime.now();
-    if (isInBox) save();
   }
 
   // Helper to update level prices when base price changes
@@ -295,6 +252,8 @@ class Product extends HiveObject {
       'isMainDifferentiator': isMainDifferentiator, // NEW
       'enableLevelPricing': enableLevelPricing, // NEW
       'pricingType': pricingType.toString(), // NEW
+      'hasInventory': hasInventory, // NEW
+      'photoPath': photoPath, // NEW
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -324,6 +283,8 @@ class Product extends HiveObject {
             (type) => type.toString() == map['pricingType'],
         orElse: () => ProductPricingType.simple,
       ), // NEW
+      hasInventory: map['hasInventory'] ?? false, // NEW
+      photoPath: map['photoPath'], // NEW
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
     );
@@ -336,14 +297,8 @@ class Product extends HiveObject {
 }
 
 // NEW: Product pricing type enum
-@HiveType(typeId: 19)
 enum ProductPricingType {
-  @HiveField(0)
   mainDifferentiator, // Sets quote columns (Shingles: Builder/Homeowner/Platinum)
-
-  @HiveField(1)
-   subLeveled,        // Independent options (Gutters: mesh/no-mesh)
-
-  @HiveField(2)
+  subLeveled,        // Independent options (Gutters: mesh/no-mesh)
   simple              // Same price everywhere (Labor, Nails)
 }

@@ -25,7 +25,8 @@ class TemplateProvider extends ChangeNotifier {
     _messageTemplates = await _db.getAllMessageTemplates();
     _emailTemplates = await _db.getAllEmailTemplates();
     _categories.clear();
-    _categories.addAll(_db.getRawCategoriesBoxValues().whereType<TemplateCategory>());
+    final rawCategories = await _db.getRawCategoriesBoxValues();
+    _categories.addAll(rawCategories.whereType<TemplateCategory>());
     notifyListeners();
   }
 

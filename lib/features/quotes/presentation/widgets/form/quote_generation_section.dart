@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../../core/mixins/ui/responsive_breakpoints_mixin.dart';
 import '../../../../../core/mixins/ui/responsive_spacing_mixin.dart';
 import '../../../../../data/models/business/simplified_quote.dart';
+import '../../../../../shared/widgets/buttons/rufko_buttons.dart';
 
 class QuoteGenerationSection extends StatelessWidget
     with ResponsiveBreakpointsMixin, ResponsiveSpacingMixin {
@@ -29,11 +30,11 @@ class QuoteGenerationSection extends StatelessWidget
 
     String buttonText = isEditMode
         ? (quoteType == 'single-tier'
-            ? 'Update Single-Tier Quote'
-            : 'Update Multi-Level Quote')
+            ? 'Update Quote'
+            : 'Update Quote')
         : (quoteType == 'single-tier'
-            ? 'Generate Single-Tier Quote'
-            : 'Generate Multi-Level Quote');
+            ? 'Generate Quote'
+            : 'Generate Quote');
 
     return Column(
       children: [
@@ -63,20 +64,14 @@ class QuoteGenerationSection extends StatelessWidget
           ),
           SizedBox(height: spacingXL(context)),
         ],
-        ElevatedButton.icon(
+        const Divider(),
+        SizedBox(height: spacingMD(context)),
+        RufkoPrimaryButton(
           onPressed: permitsSatisfied ? onGenerate : null,
-          icon: Icon(isEditMode ? Icons.save : Icons.rocket_launch),
-          label: Text(buttonText),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: permitsSatisfied
-                ? (quoteType == 'single-tier'
-                    ? Colors.green.shade600
-                    : Theme.of(context).primaryColor)
-                : Colors.grey,
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: spacingXL(context)),
-            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
+          icon: isEditMode ? Icons.save : Icons.description,
+          isFullWidth: true,
+          size: ButtonSize.large,
+          child: Text(buttonText),
         ),
       ],
     );
