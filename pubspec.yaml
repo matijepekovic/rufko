@@ -1,0 +1,86 @@
+name: rufko
+description: "Professional roofing estimator and quote generator"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0' # Updated: Make sure this matches your actual Flutter/Dart SDK.
+    # Check with 'flutter --version' and use the Dart version.
+  # Example: if Dart is 3.4.0, use '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI Components
+  cupertino_icons: ^1.0.8 # No newer version was indicated for this direct dep, latest on pub.dev
+
+  # Excel Integration
+  excel: ^4.0.6 # Latest on pub.dev is 4.0.7 (archive was 4.0.7 in your output)
+  share_plus: ^11.0.0 # From your output: (11.0.0 available)
+
+  # PDF Generation and Parsing
+  pdf: ^3.11.3 # Latest on pub.dev
+  syncfusion_flutter_pdf: ^29.2.7+1 # From your output: (29.2.7+1 available)
+  syncfusion_flutter_pdfviewer: ^29.2.7 # From your output: (29.2.7 available)
+
+  # File Handling
+  file_picker: ^8.1.6 # # From your output: (10.1.9 available)
+  open_filex: ^4.7.0 # Latest on pub.dev
+  path_provider: ^2.1.5 # Latest on pub.dev
+
+  # Image/Camera
+  image_picker: ^1.1.2 # Latest on pub.dev
+  camera: ^0.11.0+3 # For embedded camera preview
+
+  # Local Storage
+  sqflite: ^2.4.2 # Latest on pub.dev
+  sqflite_common_ffi: ^2.3.4 # For desktop platforms
+  shared_preferences: ^2.3.4
+
+  # State Management & Utils
+  provider: ^6.1.5 # Latest on pub.dev
+  intl: ^0.20.2 # From your output: (0.20.2 available)
+  uuid: ^4.5.1 # Latest on pub.dev
+
+  # HTTP & Networking
+  http: ^1.2.1 # Latest STABLE on pub.dev (your output showed 1.4.0 for vm_service, not http directly)
+
+  # Calendar & Scheduling
+  table_calendar: ^3.0.9 # Interactive calendar widget for jobs scheduling
+
+  url_launcher: ^6.2.4        # ← ADD THIS for phone/email/SMS
+  permission_handler: ^11.3.0 # ← ADD THIS for permissions
+
+  path: any
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0 # From your output: (6.0.0 available for lints, implying flutter_lints)
+  mocktail: ^1.0.0
+
+  build_runner: ^2.4.15 # Latest on pub.dev
+
+  # Icon generation
+  flutter_launcher_icons: ^0.14.3 # From your output: (0.14.3 available)
+
+flutter:
+  uses-material-design: true
+
+  # Assets
+  assets:
+    - assets/images/
+    - assets/images/logo/
+    - assets/templates/
+    - assets/excel/
+    - assets/icon/
+
+# Flutter Launcher Icons Configuration
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/rufko_logo_1024.png"
+  min_sdk_android: 21 # This is fine
+  adaptive_icon_background: "#FFFFFF"
+  remove_alpha_ios: true
